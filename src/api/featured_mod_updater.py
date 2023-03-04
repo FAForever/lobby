@@ -18,7 +18,7 @@ class FeaturedModFiles(ApiBase):
         self.request({}, self.handleData)
 
     def handleData(self, message):
-        self.featuredModFiles = message
+        self.featuredModFiles = message["data"]
 
     def getFiles(self):
         self.requestData()
@@ -35,7 +35,7 @@ class FeaturedModId(ApiBase):
         self.request(queryDict, self.handleData)
 
     def handleFeaturedModId(self, message):
-        self.featuredModId = message[0]['id']
+        self.featuredModId = message['data'][0]['id']
 
     def requestFeaturedModIdByName(self, technicalName):
         queryDict = dict(filter='technicalName=={}'.format(technicalName))

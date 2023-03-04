@@ -13,18 +13,13 @@ class ModApiConnector(ApiBase):
     def requestData(self, query={}):
         self.request(query, self.handleData)
 
-    def handleData(self, message, meta):
-        if len(meta) > 0:
-            data = dict(
-                command='vault_meta',
-                page=meta['meta']['page'],
-            )
-            self.dispatch.dispatch(data)
+    def handleData(self, message: dict) -> None:
         preparedData = dict(
             command='modvault_info',
             values=[],
+            meta=message['meta'],
         )
-        for mod in message:
+        for mod in message['data']:
             preparedMod = dict(
                 name=mod['displayName'],
                 uid=mod['latestVersion']['uid'],
@@ -58,18 +53,13 @@ class MapApiConnector(ApiBase):
     def requestData(self, query={}):
         self.request(query, self.handleData)
 
-    def handleData(self, message, meta):
-        if len(meta) > 0:
-            data = dict(
-                command='vault_meta',
-                page=meta['meta']['page'],
-            )
-            self.dispatch.dispatch(data)
+    def handleData(self, message: dict) -> None:
         preparedData = dict(
             command='mapvault_info',
             values=[],
+            meta=message['meta'],
         )
-        for _map in message:
+        for _map in message['data']:
             preparedMap = dict(
                 name=_map['displayName'],
                 folderName=_map['latestVersion']['folderName'],
@@ -106,18 +96,13 @@ class MapPoolApiConnector(ApiBase):
     def requestData(self, query={}):
         self.request(query, self.handleData)
 
-    def handleData(self, message, meta):
-        if len(meta) > 0:
-            data = dict(
-                command='vault_meta',
-                page=meta['meta']['page'],
-            )
-            self.dispatch.dispatch(data)
+    def handleData(self, message: dict) -> None:
         preparedData = dict(
             command='mapvault_info',
             values=[],
+            meta=message['meta'],
         )
-        for data in message:
+        for data in message['data']:
             if len(data['mapVersion']) > 0:
                 _map = data['mapVersion']
                 preparedMap = dict(

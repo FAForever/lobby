@@ -1,6 +1,6 @@
 import logging
 
-from .ApiBase import ApiBase
+from api.ApiBase import ApiBase
 
 logger = logging.getLogger(__name__)
 
@@ -14,29 +14,30 @@ class LeaderboardRatingApiConnector(ApiBase):
     def requestData(self, queryDict={}):
         self.request(queryDict, self.handleData)
 
-    def handleData(self, message, meta):
+    def handleData(self, message: dict) -> None:
         preparedData = dict(
             command='stats',
             type='leaderboardRating',
             leaderboardName=self.leadeboardName,
-            values=message,
-            meta=meta['meta'],
+            values=message["data"],
+            meta=message["meta"],
         )
         self.dispatch.dispatch(preparedData)
 
 
 class LeaderboardApiConnector(ApiBase):
-    def __init__(self, dispatch):
+    def __init__(self, dispatch=None):
         ApiBase.__init__(self, '/data/leaderboard')
         self.dispatch = dispatch
 
     def requestData(self, queryDict={}):
         self.request(queryDict, self.handleData)
 
-    def handleData(self, message):
+    def handleData(self, message: dict) -> None:
         preparedData = dict(
             command='stats',
             type='leaderboard',
-            values=message,
+            values=message["data"],
+            meta=message["meta"],
         )
         self.dispatch.dispatch(preparedData)

@@ -59,12 +59,10 @@ class ApiBase(QtCore.QObject):
             message_bytes = reply.readAll().data()
             message = json.loads(message_bytes.decode('utf-8'))
             included = self.parseIncluded(message)
-            meta = self.parseMeta(message)
-            result = self.parseData(message, included)
-            if len(meta) > 0:
-                self.handlers[reply](result, meta)
-            else:
-                self.handlers[reply](result)
+            result = {}
+            result["data"] = self.parseData(message, included)
+            result["meta"] = self.parseMeta(message)
+            self.handlers[reply](result)
         self.handlers.pop(reply)
         reply.deleteLater()
 
@@ -127,10 +125,9 @@ class ApiBase(QtCore.QObject):
         return result
 
     def parseMeta(self, message):
-        result = {}
         if "meta" in message:
-            result["meta"] = message["meta"]
-        return result
+            return message["meta"]
+        return {}
 
     def waitForCompletion(self):
         waitFlag = QtCore.QEventLoop.WaitForMoreEvents

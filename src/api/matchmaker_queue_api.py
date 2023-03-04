@@ -13,12 +13,13 @@ class matchmakerQueueApiConnector(ApiBase):
     def requestData(self, queryDict={}):
         self.request(queryDict, self.handleData)
 
-    def handleData(self, message):
+    def handleData(self, message: dict) -> None:
         preparedData = {
             "command": "matchmaker_queue_info",
             "values": [],
+            "meta": message["meta"],
         }
-        for queue in message:
+        for queue in message["data"]:
             preparedQueue = {
                 "technicalName": queue["technicalName"],
                 "ratingType": queue["leaderboard"]["technicalName"],

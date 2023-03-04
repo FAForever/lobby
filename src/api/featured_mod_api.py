@@ -18,7 +18,7 @@ class FeaturedModApiConnector(ApiBase):
             "command": "mod_info_api",
             "values": [],
         }
-        for mod in message:
+        for mod in message["data"]:
             preparedMod = {
                 "command": "mod_info_api",
                 "name": mod["technicalName"],

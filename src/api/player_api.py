@@ -14,13 +14,13 @@ class PlayerApiConnector(ApiBase):
         self.leaderboardName = leaderboardName
         self.request(queryDict, self.handleDataForLeaderboard)
 
-    def handleDataForLeaderboard(self, message, meta):
+    def handleDataForLeaderboard(self, message: dict) -> None:
         preparedData = dict(
             command='stats',
             type='player',
             leaderboardName=self.leaderboardName,
-            values=message,
-            meta=meta['meta'],
+            values=message['data'],
+            meta=message['meta'],
         )
         self.dispatch.dispatch(preparedData)
 
@@ -35,9 +35,10 @@ class PlayerApiConnector(ApiBase):
         }
         self.request(queryDict, self.handleDataForAliasViewer)
 
-    def handleDataForAliasViewer(self, message, meta=None):
+    def handleDataForAliasViewer(self, message: dict) -> None:
         preparedData = dict(
             command='alias_info',
-            values=message,
+            values=message['data'],
+            meta=message['meta'],
         )
         self.dispatch.dispatch(preparedData)

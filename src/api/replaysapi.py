@@ -13,7 +13,7 @@ class ReplaysApiConnector(ApiBase):
     def requestData(self, args):
         self.request(args, self.handleData)
 
-    def handleData(self, message, meta):
+    def handleData(self, message):
         preparedData = dict(
             command="replay_vault",
             action="search_result",
@@ -24,6 +24,6 @@ class ReplaysApiConnector(ApiBase):
             playerStats={},
         )
 
-        preparedData['replays'] = message
+        preparedData["replays"] = message["data"]
 
         self.dispatch.dispatch(preparedData)
