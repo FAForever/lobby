@@ -18,6 +18,6 @@ repos:
     hooks:
     -   id: autopep8
 -   repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
+    rev: 5.10.1
     hooks:
     -   id: isort
