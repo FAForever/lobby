@@ -379,7 +379,6 @@ class LobbyInfo(QtCore.QObject):
     social = QtCore.pyqtSignal(dict)
     serverSession = QtCore.pyqtSignal(dict)
     mapVaultInfo = QtCore.pyqtSignal(dict)
-    vaultMeta = QtCore.pyqtSignal(dict)
     aliasInfo = QtCore.pyqtSignal(dict)
     matchmakerQueueInfo = QtCore.pyqtSignal(dict)
 
@@ -397,7 +396,6 @@ class LobbyInfo(QtCore.QObject):
         self._dispatcher["admin"] = self.handle_admin
         self._dispatcher["social"] = self._simple_emit(self.social)
         self._dispatcher["session"] = self._simple_emit(self.serverSession)
-        self._dispatcher["vault_meta"] = self._simple_emit(self.vaultMeta)
         self._dispatcher["alias_info"] = self._simple_emit(self.aliasInfo)
         self._dispatcher["modvault_list_info"] = self.handle_modvault_list_info
         self._dispatcher["modvault_info"] = self._simple_emit(

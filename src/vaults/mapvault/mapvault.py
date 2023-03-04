@@ -11,9 +11,9 @@ from PyQt5 import QtCore, QtWidgets
 import util
 from api.vaults_api import MapApiConnector, MapPoolApiConnector
 from fa import maps
-from mapGenerator import mapgenUtils
 from vaults import luaparser
-from vaults.vault import Vault, VaultItem
+from vaults.mapvault.mapitem import MapItem
+from vaults.vault import Vault
 
 from .mapwidget import MapWidget
 
@@ -44,22 +44,18 @@ class MapVault(Vault):
         )
         self.apiConnector = self.mapApiConnector
 
+        self.items_uid = "folderName"
+
         self.busy_entered()
         self.UIButton.hide()
         self.uploadButton.hide()
 
+    def createItem(self, item_key: str) -> MapItem:
+        return MapItem(self, item_key)
+
     @QtCore.pyqtSlot(dict)
-    def mapInfo(self, message):
-        for value in message["values"]:
-            folderName = value["folderName"]
-            if folderName not in self._items:
-                _map = MapItem(self, folderName)
-                self._items[folderName] = _map
-                self.itemList.addItem(_map)
-            else:
-                _map = self._items[folderName]
-            _map.update(value)
-        self.itemList.sortItems(1)
+    def mapInfo(self, message: dict) -> None:
+        super().itemsInfo(message)
 
     @QtCore.pyqtSlot(int)
     def sortChanged(self, index):
@@ -256,92 +252,3 @@ class MapVault(Vault):
             shutil.rmtree(maps_folder)
             self.installed_maps.remove(folder)
             self.updateVisibilities()
-
-
-class MapItem(VaultItem):
-    def __init__(self, parent, folderName, *args, **kwargs):
-        VaultItem.__init__(self, parent, *args, **kwargs)
-
-        self.formatterItem = str(
-            util.THEME.readfile("vaults/mapvault/mapinfo.qthtml"),
-        )
-
-        self.height = 0
-        self.width = 0
-        self.maxPlayers = 0
-        self.thumbnail = None
-        self.unranked = False
-        self.folderName = folderName
-        self.thumbstrSmall = ""
-        self.thumbnailLarge = ""
-
-    def update(self, item_dict):
-        self.name = maps.getDisplayName(item_dict["folderName"])
-        self.description = item_dict["description"]
-        self.version = item_dict["version"]
-        self.rating = item_dict["rating"]
-        self.reviews = item_dict["reviews"]
-
-        self.maxPlayers = item_dict["maxPlayers"]
-        self.height = int(item_dict["height"] / 51.2)
-        self.width = int(item_dict["width"] / 51.2)
-
-        self.folderName = item_dict["folderName"]
-        self.date = item_dict['date'][:10]
-        self.unranked = not item_dict["ranked"]
-        self.link = item_dict["link"]
-        self.thumbstrSmall = item_dict["thumbnailSmall"]
-        self.thumbnailLarge = item_dict["thumbnailLarge"]
-
-        self.thumbnail = maps.preview(self.folderName)
-        if self.thumbnail:
-            self.setIcon(self.thumbnail)
-        else:
-            if self.thumbstrSmall == "":
-                if mapgenUtils.isGeneratedMap(self.folderName):
-                    self.setItemIcon("games/generated_map.png")
-                else:
-                    self.setItemIcon("games/unknown_map.png")
-            else:
-                self.parent.client.map_downloader.download_preview(
-                    self.folderName, self._item_dl_request, self.thumbstrSmall,
-                )
-        VaultItem.update(self)
-
-    def shouldBeVisible(self):
-        p = self.parent
-        if p.showType == "all":
-            return True
-        elif p.showType == "unranked":
-            return self.unranked
-        elif p.showType == "ranked":
-            return not self.unranked
-        elif p.showType == "installed":
-            return maps.isMapAvailable(self.folderName)
-        else:
-            return True
-
-    def updateVisibility(self):
-        if self.unranked:
-            self.itemType_ = "Unranked map"
-        if maps.isMapAvailable(self.folderName):
-            self.color = "green"
-        else:
-            self.color = "white"
-
-        self.setText(
-            self.formatterItem.format(
-                color=self.color,
-                version=self.version,
-                title=self.name,
-                description=self.trimmedDescription,
-                rating=self.rating,
-                reviews=self.reviews,
-                date=self.date,
-                modtype=self.itemType_,
-                height=self.height,
-                width=self.width,
-            ),
-        )
-
-        VaultItem.updateVisibility(self)
