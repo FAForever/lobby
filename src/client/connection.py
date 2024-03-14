@@ -3,11 +3,13 @@ import logging
 import sys
 from enum import IntEnum
 
-from PyQt5 import QtCore, QtNetwork
+from PyQt6 import QtCore
+from PyQt6 import QtNetwork
 
 import fa
 from config import Settings
-from model.game import Game, message_to_game_args
+from model.game import Game
+from model.game import message_to_game_args
 
 logger = logging.getLogger(__name__)
 
@@ -154,8 +156,8 @@ class ServerConnection(QtCore.QObject):
         QtCore.QObject.__init__(self)
         self.socket = QtNetwork.QTcpSocket()
         self.socket.readyRead.connect(self.readFromServer)
-        self.socket.error.connect(self.socketError)
-        self.socket.setSocketOption(QtNetwork.QTcpSocket.KeepAliveOption, 1)
+        self.socket.errorOccurred.connect(self.socketError)
+        self.socket.setSocketOption(QtNetwork.QTcpSocket.SocketOption.KeepAliveOption, 1)
         self.socket.stateChanged.connect(self.on_socket_state_change)
 
         self._host = host
@@ -167,7 +169,7 @@ class ServerConnection(QtCore.QObject):
         self._dispatch = dispatch
 
     def on_socket_state_change(self, state):
-        states = QtNetwork.QAbstractSocket
+        states = QtNetwork.QAbstractSocket.SocketState
         my_state = None
         if state == states.UnconnectedState or state == states.BoundState:
             my_state = ConnectionState.DISCONNECTED
@@ -233,7 +235,7 @@ class ServerConnection(QtCore.QObject):
         self.connected.emit()
 
     def socket_connected(self):
-        return self.socket.state() == QtNetwork.QTcpSocket.ConnectedState
+        return self.socket.state() == QtNetwork.QTcpSocket.SocketState.ConnectedState
 
     def disconnect_(self):
         self.socket.disconnectFromHost()
@@ -279,7 +281,7 @@ class ServerConnection(QtCore.QObject):
         message = (action + "\n").encode()
         # it looks like there's a crash in Qt
         # when sending to an unconnected socket
-        if self.socket.state() == QtNetwork.QAbstractSocket.ConnectedState:
+        if self.socket.state() == QtNetwork.QAbstractSocket.SocketState.ConnectedState:
             self.socket.write(message)
 
     def send(self, message):
@@ -309,10 +311,10 @@ class ServerConnection(QtCore.QObject):
     @QtCore.pyqtSlot(QtNetwork.QAbstractSocket.SocketError)
     def socketError(self, error):
         if (
-            error == QtNetwork.QAbstractSocket.SocketTimeoutError
-            or error == QtNetwork.QAbstractSocket.NetworkError
-            or error == QtNetwork.QAbstractSocket.ConnectionRefusedError
-            or error == QtNetwork.QAbstractSocket.RemoteHostClosedError
+            error == QtNetwork.QAbstractSocket.SocketError.SocketTimeoutError
+            or error == QtNetwork.QAbstractSocket.SocketError.NetworkError
+            or error == QtNetwork.QAbstractSocket.SocketError.ConnectionRefusedError
+            or error == QtNetwork.QAbstractSocket.SocketError.RemoteHostClosedError
         ):
             logger.info(
                 "Timeout/network error: {}".format(self.socket.errorString()),

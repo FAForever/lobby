@@ -1,7 +1,12 @@
+from __future__ import annotations
+
 import logging
 from functools import partial
+from typing import TYPE_CHECKING
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import fa
 import util
@@ -13,10 +18,20 @@ FormClass, BaseClass = util.THEME.loadUiType("games/automatchframe.ui")
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from client._clientwindow import ClientWindow
+    from games._gameswidget import GamesWidget
+
 
 class MatchmakerQueue(FormClass, BaseClass):
 
-    def __init__(self, games, client, queueName, teamSize):
+    def __init__(
+            self,
+            games: GamesWidget,
+            client: ClientWindow,
+            queueName: str,
+            teamSize: int,
+    ) -> None:
         BaseClass.__init__(self, games)
         self.setupUi(self)
 
@@ -60,10 +75,10 @@ class MatchmakerQueue(FormClass, BaseClass):
         self.setFactionIcons(self.subFactions)
 
         keys = (
-            QtCore.Qt.Key_1, QtCore.Qt.Key_2, QtCore.Qt.Key_3, QtCore.Qt.Key_4,
+            QtCore.Qt.Key.Key_1, QtCore.Qt.Key.Key_2, QtCore.Qt.Key.Key_3, QtCore.Qt.Key.Key_4,
         )
-        self.shortcut = QtWidgets.QShortcut(
-            QtGui.QKeySequence(QtCore.Qt.CTRL + keys[self.teamSize - 1]),
+        self.shortcut = QtGui.QShortcut(
+            QtGui.QKeySequence(QtCore.Qt.Key.Key_Control + keys[self.teamSize - 1]),
             self.client,
             self.startSearchRanked,
         )

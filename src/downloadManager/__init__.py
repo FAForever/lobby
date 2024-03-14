@@ -4,9 +4,14 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QObject, QUrl, pyqtSignal
-from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtNetwork import QNetworkAccessManager
+from PyQt6.QtNetwork import QNetworkRequest
 
 from config import Settings
 
@@ -58,7 +63,7 @@ class FileDownload(QObject):
     def _finish(self):
         # check status code
         statusCode = self._dfile.attribute(
-            QNetworkRequest.HttpStatusCodeAttribute,
+            QNetworkRequest.Attribute.HttpStatusCodeAttribute,
         )
         if statusCode != 200:
             logger.debug(
@@ -71,13 +76,12 @@ class FileDownload(QObject):
         self._running = True
         req = QNetworkRequest(QUrl(self.addr))
         req.setRawHeader(b'User-Agent', b"FAF Client")
-        req.setAttribute(QNetworkRequest.FollowRedirectsAttribute, True)
         req.setMaximumRedirectsAllowed(3)
 
         self.start.emit(self)
 
         self._dfile = self._nam.get(req)
-        self._dfile.error.connect(self._error)
+        self._dfile.errorOccurred.connect(self._error)
         self._dfile.finished.connect(self._atFinished)
         self._dfile.downloadProgress.connect(self._atProgress)
         self._dfile.readyRead.connect(self._kick_read)
@@ -118,7 +122,7 @@ class FileDownload(QObject):
         return not self.error and not self.canceled
 
     def waitForCompletion(self):
-        waitFlag = QtCore.QEventLoop.WaitForMoreEvents
+        waitFlag = QtCore.QEventLoop.ProcessEventsFlag.WaitForMoreEvents
         while self._running:
             QtWidgets.QApplication.processEvents(waitFlag)
 
@@ -159,7 +163,7 @@ class PreviewDownload(QtCore.QObject):
     def _get_cachefile(self, name):
         imgpath = os.path.join(self._target_dir, name)
         img = QtCore.QFile(imgpath)
-        img.open(QtCore.QIODevice.WriteOnly)
+        img.open(QtCore.QIODevice.OpenModeFlag.WriteOnly)
         return img, imgpath
 
     def remove_request(self, req):

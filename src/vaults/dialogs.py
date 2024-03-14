@@ -3,7 +3,9 @@ import logging
 import os
 import zipfile
 
-from PyQt5 import QtCore, QtNetwork, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtNetwork
+from PyQt6 import QtWidgets
 
 from downloadManager import FileDownload
 
@@ -36,14 +38,14 @@ class VaultDownloadDialog(object):
         else:
             self._progress.setCancelButton(None)
         self._progress.setWindowFlags(
-            QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowTitleHint,
+            QtCore.Qt.WindowType.CustomizeWindowHint | QtCore.Qt.WindowType.WindowTitleHint,
         )
         self._progress.setAutoReset(False)
         self._progress.setModal(1)
         self._progress.canceled.connect(self._dler.cancel)
 
         progressBar = QtWidgets.QProgressBar(self._progress)
-        progressBar.setAlignment(QtCore.Qt.AlignCenter)
+        progressBar.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self._progress.setBar(progressBar)
 
         self.timer = QtCore.QTimer()

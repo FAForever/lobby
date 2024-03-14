@@ -1,7 +1,9 @@
 import logging
 from enum import IntEnum
 
-from PyQt5.QtCore import QCoreApplication, QObject, pyqtSignal
+from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import pyqtSignal
 
 import client
 from config import setup_file_handler

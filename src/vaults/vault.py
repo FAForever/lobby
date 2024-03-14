@@ -1,10 +1,11 @@
 import logging
 
-from PyQt5 import QtCore
+from PyQt6 import QtCore
 
 import util
 from ui.busy_widget import BusyWidget
-from vaults.vaultitem import VaultItem, VaultItemDelegate
+from vaults.vaultitem import VaultItem
+from vaults.vaultitem import VaultItemDelegate
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +103,7 @@ class Vault(FormClass, BaseClass, BusyWidget):
                 self._items[item_key] = item
                 self.itemList.addItem(item)
             item.update(value)
-        self.itemList.sortItems(1)
+        self.itemList.sortItems(QtCore.Qt.SortOrder.DescendingOrder)
         self.processMeta(message["meta"])
 
     def processMeta(self, message: dict) -> None:
@@ -143,4 +144,4 @@ class Vault(FormClass, BaseClass, BusyWidget):
         )
         for _item in self._items:
             self._items[_item].updateVisibility()
-        self.itemList.sortItems(1)
+        self.itemList.sortItems(QtCore.Qt.SortOrder.DescendingOrder)

@@ -2,14 +2,16 @@ import json
 import logging
 import time
 
-from PyQt5 import QtCore, QtNetwork, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtNetwork
+from PyQt6 import QtWidgets
 
 from config import Settings
 
 logger = logging.getLogger(__name__)
 
 DO_NOT_ENCODE = QtCore.QByteArray()
-DO_NOT_ENCODE.append(":/?&=.,")
+DO_NOT_ENCODE.append(b":/?&=.,")
 
 
 class ApiBase(QtCore.QObject):
@@ -29,7 +31,7 @@ class ApiBase(QtCore.QObject):
         query = QtCore.QUrlQuery()
         for key, value in queryDict.items():
             query.addQueryItem(key, str(value))
-        stringQuery = query.toString(QtCore.QUrl.FullyDecoded)
+        stringQuery = query.toString(QtCore.QUrl.ComponentFormattingOption.FullyDecoded)
         percentEncodedByteArrayQuery = QtCore.QUrl.toPercentEncoding(
             stringQuery,
             exclude=DO_NOT_ENCODE,
@@ -53,7 +55,7 @@ class ApiBase(QtCore.QObject):
 
     def onRequestFinished(self, reply):
         self._running = False
-        if reply.error() != QtNetwork.QNetworkReply.NoError:
+        if reply.error() != QtNetwork.QNetworkReply.NetworkError.NoError:
             logger.error("API request error: {}".format(reply.error()))
         else:
             message_bytes = reply.readAll().data()

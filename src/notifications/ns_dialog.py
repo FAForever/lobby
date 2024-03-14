@@ -3,7 +3,8 @@ The UI popup of the notification system
 """
 import time
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import util
 
@@ -29,7 +30,7 @@ class NotificationDialog(FormClass, BaseClass):
         self.updatePosition()
 
         # Frameless, always on top, steal no focus & no entry at the taskbar
-        self.setWindowFlags(QtCore.Qt.ToolTip)
+        self.setWindowFlags(QtCore.Qt.WindowType.ToolTip)
         self.labelEvent.setOpenExternalLinks(True)
 
         self.baseHeight = 165
@@ -91,11 +92,11 @@ class NotificationDialog(FormClass, BaseClass):
 
     # mouseReleaseEvent sometimes not fired
     def mousePressEvent(self, event):
-        if event.button() == QtCore.Qt.RightButton:
+        if event.button() == QtCore.Qt.MouseButton.RightButton:
             self.hide()
 
     def updatePosition(self):
-        screen = QtWidgets.QDesktopWidget().screenGeometry()
+        screen_size = QtWidgets.QApplication.primaryScreen().geometry()
         dialog_size = self.geometry()
         # self.client.notificationSystem.settings.popup_position
         position = self.settings.popup_position
@@ -103,13 +104,13 @@ class NotificationDialog(FormClass, BaseClass):
         if position == NotificationPosition.TOP_LEFT:
             self.move(0, 0)
         elif position == NotificationPosition.TOP_RIGHT:
-            self.move(screen.width() - dialog_size.width(), 0)
+            self.move(screen_size.width() - dialog_size.width(), 0)
         elif position == NotificationPosition.BOTTOM_LEFT:
-            self.move(0, screen.height() - dialog_size.height())
+            self.move(0, screen_size.height() - dialog_size.height())
         else:
             self.move(
-                screen.width() - dialog_size.width(),
-                screen.height() - dialog_size.height(),
+                screen_size.width() - dialog_size.width(),
+                screen_size.height() - dialog_size.height(),
             )
 
     @QtCore.pyqtSlot()

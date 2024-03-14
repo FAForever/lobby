@@ -1,6 +1,8 @@
-from datetime import datetime, timedelta
+from datetime import datetime
+from datetime import timedelta
 
-from PyQt5.QtCore import QObject, QTimer
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QTimer
 
 from decorators import with_logger
 

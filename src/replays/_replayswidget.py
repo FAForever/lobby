@@ -4,12 +4,12 @@ import os
 import time
 
 import jsonschema
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtNetwork import (
-    QNetworkAccessManager,
-    QNetworkReply,
-    QNetworkRequest,
-)
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
+from PyQt6.QtNetwork import QNetworkAccessManager
+from PyQt6.QtNetwork import QNetworkReply
+from PyQt6.QtNetwork import QNetworkRequest
 
 import client
 import fa
@@ -19,9 +19,11 @@ from config import Settings
 from downloadManager import DownloadRequest
 from fa.replay import replay
 from model.game import GameState
-from replays.replayitem import ReplayItem, ReplayItemDelegate
+from replays.replayitem import ReplayItem
+from replays.replayitem import ReplayItemDelegate
 from replays.replayToolbox import ReplayToolboxHandler
-from util.gameurl import GameUrl, GameUrlType
+from util.gameurl import GameUrl
+from util.gameurl import GameUrlType
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +56,7 @@ class LiveReplayItem(QtWidgets.QTreeWidgetItem):
             # Wait until the replayserver makes the replay available
             elapsed_time = time.time() - self.launch_time
             delay_time = self.LIVEREPLAY_DELAY - elapsed_time
-            QtCore.QTimer.singleShot(1000 * delay_time, self._show_item)
+            QtCore.QTimer.singleShot(int(1000 * delay_time), self._show_item)
 
     def _show_item(self):
         self.setHidden(False)
@@ -110,7 +112,7 @@ class LiveReplayItem(QtWidgets.QTreeWidgetItem):
             self.setText(1, game.title + "    -    [host: " + game.host + "]")
         self.setForeground(1, QtGui.QColor(colors.get_color("player")))
         self.setText(2, game.featured_mod)
-        self.setTextAlignment(2, QtCore.Qt.AlignCenter)
+        self.setTextAlignment(2, QtCore.Qt.AlignmentFlag.AlignCenter)
 
     def _is_me(self, name):
         return client.instance.login == name
@@ -190,13 +192,13 @@ class LiveReplaysWidgetHandler(object):
         self.liveTree.itemDoubleClicked.connect(self.liveTreeDoubleClicked)
         self.liveTree.itemPressed.connect(self.liveTreePressed)
         self.liveTree.header().setSectionResizeMode(
-            0, QtWidgets.QHeaderView.ResizeToContents,
+            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents,
         )
         self.liveTree.header().setSectionResizeMode(
-            1, QtWidgets.QHeaderView.Stretch,
+            1, QtWidgets.QHeaderView.ResizeMode.Stretch,
         )
         self.liveTree.header().setSectionResizeMode(
-            2, QtWidgets.QHeaderView.ResizeToContents,
+            2, QtWidgets.QHeaderView.ResizeMode.ResizeToContents,
         )
 
         self.client = client
@@ -207,7 +209,7 @@ class LiveReplaysWidgetHandler(object):
         self.games = {}
 
     def liveTreePressed(self, item):
-        if QtWidgets.QApplication.mouseButtons() != QtCore.Qt.RightButton:
+        if QtWidgets.QApplication.mouseButtons() != QtCore.Qt.MouseButton.RightButton:
             return
 
         if self.liveTree.indexOfTopLevelItem(item) != -1:
@@ -426,7 +428,7 @@ class LocalReplayItem(QtWidgets.QTreeWidgetItem):
         self.setToolTip(2, ", ".join(playerlist))
 
         self.setText(3, data['featured_mod'])
-        self.setTextAlignment(3, QtCore.Qt.AlignCenter)
+        self.setTextAlignment(3, QtCore.Qt.AlignmentFlag.AlignCenter)
 
     def replay_bucket(self):
         if self._metadata is None:
@@ -515,16 +517,16 @@ class LocalReplaysWidgetHandler(object):
         self.myTree.itemDoubleClicked.connect(self.myTreeDoubleClicked)
         self.myTree.itemPressed.connect(self.myTreePressed)
         self.myTree.header().setSectionResizeMode(
-            0, QtWidgets.QHeaderView.ResizeToContents,
+            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents,
         )
         self.myTree.header().setSectionResizeMode(
-            1, QtWidgets.QHeaderView.ResizeToContents,
+            1, QtWidgets.QHeaderView.ResizeMode.ResizeToContents,
         )
         self.myTree.header().setSectionResizeMode(
-            2, QtWidgets.QHeaderView.Stretch,
+            2, QtWidgets.QHeaderView.ResizeMode.Stretch,
         )
         self.myTree.header().setSectionResizeMode(
-            3, QtWidgets.QHeaderView.ResizeToContents,
+            3, QtWidgets.QHeaderView.ResizeMode.ResizeToContents,
         )
         self.myTree.modification_time = 0
 
@@ -534,7 +536,7 @@ class LocalReplaysWidgetHandler(object):
         )
 
     def myTreePressed(self, item):
-        if QtWidgets.QApplication.mouseButtons() != QtCore.Qt.RightButton:
+        if QtWidgets.QApplication.mouseButtons() != QtCore.Qt.MouseButton.RightButton:
             return
 
         if item.isDisabled():
@@ -792,10 +794,10 @@ class ReplayVaultWidgetHandler(object):
             if not self.showLatest:
                 timePeriod = []
                 timePeriod.append(
-                    w.dateStart.dateTime().toUTC().toString(QtCore.Qt.ISODate),
+                    w.dateStart.dateTime().toUTC().toString(QtCore.Qt.DateFormat.ISODate),
                 )
                 timePeriod.append(
-                    w.dateEnd.dateTime().toUTC().toString(QtCore.Qt.ISODate),
+                    w.dateEnd.dateTime().toUTC().toString(QtCore.Qt.DateFormat.ISODate),
                 )
 
         filters = self.prepareFilters(
@@ -911,7 +913,7 @@ class ReplayVaultWidgetHandler(object):
             startTime = (
                 QtCore.QDateTime.currentDateTimeUtc()
                 .addMonths(-months)
-                .toString(QtCore.Qt.ISODate)
+                .toString(QtCore.Qt.DateFormat.ISODate)
             )
             filters.append('startTime=ge="{}"'.format(startTime))
 
@@ -927,7 +929,7 @@ class ReplayVaultWidgetHandler(object):
                 self.searchVault(reset=True)
 
     def onlineTreeClicked(self, item):
-        if QtWidgets.QApplication.mouseButtons() == QtCore.Qt.RightButton:
+        if QtWidgets.QApplication.mouseButtons() == QtCore.Qt.MouseButton.RightButton:
             if isinstance(item.parent, ReplaysWidget):      # FIXME - hack
                 item.pressed(item)
         else:
@@ -989,17 +991,11 @@ class ReplayVaultWidgetHandler(object):
                         QtWidgets.QMessageBox.No,
                     ) == QtWidgets.QMessageBox.Yes:
                         req = QNetworkRequest(QtCore.QUrl(item.url))
-                        req.setAttribute(
-                            QNetworkRequest.FollowRedirectsAttribute, True,
-                        )
                         self.replayDownload.get(req)
 
             else:  # start replay
                 if hasattr(item, "url"):
                     req = QNetworkRequest(QtCore.QUrl(item.url))
-                    req.setAttribute(
-                        QNetworkRequest.FollowRedirectsAttribute, True,
-                    )
                     self.replayDownload.get(req)
 
     def _startReplay(self, name):
@@ -1048,7 +1044,7 @@ class ReplayVaultWidgetHandler(object):
             self.searchVault(reset=True)
 
     def onDownloadFinished(self, reply):
-        if reply.error() != QNetworkReply.NoError:
+        if reply.error() != QNetworkReply.NetworkError.NoError:
             QtWidgets.QMessageBox.warning(
                 self._w, "Network Error", reply.errorString(),
             )
@@ -1057,8 +1053,8 @@ class ReplayVaultWidgetHandler(object):
                 os.path.join(util.CACHE_DIR, "temp.fafreplay"),
             )
             faf_replay.open(
-                QtCore.QIODevice.WriteOnly
-                | QtCore.QIODevice.Truncate,
+                QtCore.QIODevice.OpenModeFlag.WriteOnly
+                | QtCore.QIODevice.OpenModeFlag.Truncate,
             )
             faf_replay.write(reply.readAll())
             faf_replay.flush()

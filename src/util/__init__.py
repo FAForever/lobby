@@ -8,17 +8,19 @@ import shutil
 import subprocess
 import sys
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QStandardPaths, QUrl
-from PyQt5.QtGui import QDesktopServices
-from PyQt5.QtWidgets import QMessageBox
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import QStandardPaths
+from PyQt6.QtCore import QUrl
+from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtWidgets import QMessageBox
 
 import fafpath
 from config import VERSION as VERSION_STRING
-from config import _settings  # Stolen from Config because reasons
 from config import Settings
+from config import _settings  # Stolen from Config because reasons
 from mapGenerator import mapgenUtils
-from util.theme import Theme, ThemeSet
+from util.theme import Theme
+from util.theme import ThemeSet
 
 if sys.platform == 'win32':
     import win32service
@@ -126,7 +128,7 @@ def getPersonalDir():
     else:
         dir_ = str(
             QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation,
+                QStandardPaths.StandardLocation.DocumentsLocation,
             )[0],
         )
         try:

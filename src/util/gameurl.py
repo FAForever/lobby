@@ -1,6 +1,7 @@
 from enum import Enum
 
-from PyQt5.QtCore import QUrl, QUrlQuery
+from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import QUrlQuery
 
 
 class GameUrlType(Enum):

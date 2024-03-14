@@ -1,4 +1,8 @@
-from PyQt5 import QtCore, QtGui, QtWebEngineWidgets, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWebEngineCore
+from PyQt6 import QtWebEngineWidgets
+from PyQt6 import QtWidgets
 
 import util
 
@@ -22,7 +26,7 @@ class TourneyItemDelegate(QtWidgets.QStyledItemDelegate):
 
         option.text = ""
         option.widget.style().drawControl(
-            QtWidgets.QStyle.CE_ItemViewItem, option, painter, option.widget,
+            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
         )
 
         # Description
@@ -43,9 +47,9 @@ class TourneyItemDelegate(QtWidgets.QStyledItemDelegate):
         )
 
 
-class QWebPageChrome(QtWebEngineWidgets.QWebEnginePage):
+class QWebPageChrome(QtWebEngineCore.QWebEnginePage):
     def __init__(self, *args, **kwargs):
-        QtWebEngineWidgets.QWebEnginePage.__init__(self, *args, **kwargs)
+        QtWebEngineCore.QWebEnginePage.__init__(self, *args, **kwargs)
 
     def userAgentForUrl(self, url):
         return (
@@ -131,9 +135,9 @@ class TourneyItem(QtWidgets.QListWidgetItem):
         return self.viewtext
 
     def data(self, role):
-        if role == QtCore.Qt.DisplayRole:
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
             return self.display()
-        elif role == QtCore.Qt.UserRole:
+        elif role == QtCore.Qt.ItemDataRole.UserRole:
             return self
         return super(TourneyItem, self).data(role)
 

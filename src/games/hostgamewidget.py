@@ -1,6 +1,6 @@
 import logging
 
-from PyQt5 import QtCore
+from PyQt6 import QtCore
 
 import fa.check
 import games.mapgenoptionsdialog as MapGenDialog
@@ -8,7 +8,9 @@ import util
 import vaults.modvault.utils
 from fa import maps
 from games.gamemodel import GameModel
-from model.game import Game, GameState, GameVisibility
+from model.game import Game
+from model.game import GameState
+from model.game import GameVisibility
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +67,7 @@ class GameLauncher:
         if mapname is not None:
             self._game_widget.set_map(mapname)
 
-        return self._game_widget.exec_()
+        return self._game_widget.exec()
 
     def _launch_game(self, game, password, mods):
         # Make sure the binaries are all up to date, and abort if the update
@@ -155,7 +157,7 @@ class HostGameWidget(FormClass, BaseClass):
         ]
         logger.debug("Active Mods detected: {}".format(str(names)))
         for name in names:
-            ml = self.modList.findItems(name, QtCore.Qt.MatchExactly)
+            ml = self.modList.findItems(name, QtCore.Qt.MatchFlag.MatchExactly.MatchExactly)
             logger.debug("found item: {}".format(ml[0].text()))
             if ml:
                 ml[0].setSelected(True)
@@ -252,7 +254,7 @@ class HostGameWidget(FormClass, BaseClass):
     @QtCore.pyqtSlot()
     def generateMap(self):
         dialog = MapGenDialog.MapGenDialog(self)
-        dialog.exec_()
+        dialog.exec()
 
 
 def build_launcher(playerset, me, client, view_builder, map_preview_dler):

@@ -2,8 +2,11 @@ import os
 import subprocess
 import tempfile
 
-from PyQt5.QtCore import QObject, QUrl, pyqtSignal
-from PyQt5.QtNetwork import QNetworkReply, QNetworkRequest
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtNetwork import QNetworkReply
+from PyQt6.QtNetwork import QNetworkRequest
 
 import client
 from decorators import with_logger
@@ -47,7 +50,7 @@ class ClientUpdater(QObject):
         self._rep.setReadBufferSize(0)
         self._rep.downloadProgress.connect(self._on_progress)
         self._rep.finished.connect(self._on_finished)
-        self._rep.error.connect(self.error)
+        self._rep.errorOccurred.connect(self.error)
         self._rep.readyRead.connect(self._buffer)
         self._rep.sslErrors.connect(self.ssl_error)
 
@@ -66,7 +69,7 @@ class ClientUpdater(QObject):
         self._logger.debug('_on_finished')
         assert self._tmp
         assert self._rep.atEnd()
-        if self._rep.error() != QNetworkReply.NoError:
+        if self._rep.error() != QNetworkReply.NetworkError.NoError:
             self._logger.error(self._rep.errorString())
             return          # FIXME - handle
 

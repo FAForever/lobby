@@ -1,12 +1,16 @@
 import logging
 import os
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
+from PyQt6.QtNetwork import QNetworkAccessManager
+from PyQt6.QtNetwork import QNetworkRequest
 
 import fa
 import util
-from coop.coopmapitem import CoopMapItem, CoopMapItemDelegate
+from coop.coopmapitem import CoopMapItem
+from coop.coopmapitem import CoopMapItemDelegate
 from coop.coopmodel import CoopGameFilterModel
 from fa.replay import replay
 from ui.busy_widget import BusyWidget
@@ -43,7 +47,7 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
         self.client.lobby_info.coopInfo.connect(self.processCoopInfo)
 
         self.coopList.header().setSectionResizeMode(
-            0, QtWidgets.QHeaderView.ResizeToContents,
+            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents,
         )
         self.coopList.setItemDelegate(CoopMapItemDelegate(self))
 
@@ -100,7 +104,8 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
                 "temp.fafreplay",
             ),
         )
-        faf_replay.open(QtCore.QIODevice.WriteOnly | QtCore.QIODevice.Truncate)
+        open_mode = QtCore.QIODevice.OpenModeFlag.WriteOnly | QtCore.QIODevice.OpenModeFlag.Truncate
+        faf_replay.open(open_mode)
         faf_replay.write(reply.readAll())
         faf_replay.flush()
         faf_replay.close()
@@ -144,7 +149,7 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
         formatter = self.FORMATTER_LADDER
         formatter_header = self.FORMATTER_LADDER_HEADER
         cursor = w.textCursor()
-        cursor.movePosition(QtGui.QTextCursor.End)
+        cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
         w.setTextCursor(cursor)
         color = "lime"
         line = formatter_header.format(

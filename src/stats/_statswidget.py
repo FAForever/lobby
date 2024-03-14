@@ -1,7 +1,10 @@
 import logging
 import time
 
-from PyQt5 import QtCore, QtWebEngineWidgets, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWebEngineCore
+from PyQt6 import QtWebEngineWidgets
+from PyQt6 import QtWidgets
 
 import util
 from api.stats_api import LeaderboardApiConnector
@@ -341,7 +344,7 @@ class StatsWidget(BaseClass, FormClass, BusyWidget):
             )
 
 
-class WebEnginePage(QtWebEngineWidgets.QWebEnginePage):
+class WebEnginePage(QtWebEngineCore.QWebEnginePage):
     def acceptNavigationRequest(self, url, type, isMainFrame):
         if (
             url.url().startswith("https://faforever.com/competitive/")

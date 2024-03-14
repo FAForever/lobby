@@ -1,16 +1,16 @@
 import logging
 import os
 
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtNetwork import (
-    QNetworkAccessManager,
-    QNetworkReply,
-    QNetworkRequest,
-)
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
+from PyQt6.QtNetwork import QNetworkAccessManager
+from PyQt6.QtNetwork import QNetworkReply
+from PyQt6.QtNetwork import QNetworkRequest
 
 import fa
 import util
-from tutorials.tutorialitem import TutorialItem, TutorialItemDelegate
+from tutorials.tutorialitem import TutorialItem
+from tutorials.tutorialitem import TutorialItemDelegate
 
 logger = logging.getLogger(__name__)
 
@@ -33,14 +33,14 @@ class TutorialsWidget(FormClass, BaseClass):
         logger.info("Tutorials instantiated.")
 
     def finishReplay(self, reply):
-        if reply.error() != QNetworkReply.NoError:
+        if reply.error() != QNetworkReply.NetworkError.NoError:
             QtWidgets.QMessageBox.warning(
                 self, "Network Error", reply.errorString(),
             )
         else:
             filename = os.path.join(util.CACHE_DIR, str("tutorial.fafreplay"))
             replay = QtCore.QFile(filename)
-            replay.open(QtCore.QIODevice.WriteOnly | QtCore.QIODevice.Text)
+            replay.open(QtCore.QIODevice.OpenModeFlag.WriteOnly | QtCore.QIODevice.Text)
             replay.write(reply.readAll())
             replay.close()
 

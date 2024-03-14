@@ -1,13 +1,15 @@
 import logging
 import webbrowser
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import util
 from config import Settings
 from util.qt import ExternalLinkPage
 
-from .newsitem import NewsItem, NewsItemDelegate
+from .newsitem import NewsItem
+from .newsitem import NewsItemDelegate
 from .newsmanager import NewsManager
 
 logger = logging.getLogger(__name__)
@@ -24,7 +26,7 @@ class Hider(QtCore.QObject):
         super(Hider, self).__init__(parent)
 
     def eventFilter(self, obj, ev):
-        return ev.type() == QtCore.QEvent.Paint
+        return ev.type() == QtCore.QEvent.Type.Paint
 
     def hide(self, widget):
         widget.installEventFilter(self)

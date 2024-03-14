@@ -1,9 +1,12 @@
 from enum import Enum
 
-from PyQt5.QtCore import QObject, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QTabBar
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QTabBar
 
-from model.chat.channel import PARTY_CHANNEL_SUFFIX, ChannelType
+from model.chat.channel import PARTY_CHANNEL_SUFFIX
+from model.chat.channel import ChannelType
 
 
 class TabIcon(Enum):
@@ -37,7 +40,7 @@ class ChatWidget(QObject):
         self.remove_server_tab_close_button()
 
     def remove_server_tab_close_button(self):
-        self.base.tabBar().setTabButton(0, QTabBar.RightSide, None)
+        self.base.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
 
     def add_channel(self, widget, key, index=None):
         if key in self._channels:

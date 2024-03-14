@@ -3,7 +3,8 @@ import os
 import re
 import sys
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import config
 import util
@@ -106,7 +107,7 @@ class GameProcess(QtCore.QProcess):
 
             self.setWorkingDirectory(os.path.dirname(executable))
             if not detach:
-                self.start(command)
+                self.startCommand(command)
             else:
                 # Remove the wrapping " at the start and end of some
                 # arguments as QT will double wrap when launching
@@ -127,7 +128,7 @@ class GameProcess(QtCore.QProcess):
             return False
 
     def running(self):
-        return self.state() == QtCore.QProcess.Running
+        return self.state() == QtCore.QProcess.ProcessState.Running
 
     def available(self):
         if self.running():
@@ -147,7 +148,7 @@ class GameProcess(QtCore.QProcess):
             progress = QtWidgets.QProgressDialog()
             progress.setCancelButtonText("Terminate")
             progress.setWindowFlags(
-                QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowTitleHint,
+                QtCore.Qt.WindowType.CustomizeWindowHint | QtCore.Qt.WindowType.WindowTitleHint,
             )
             progress.setAutoClose(False)
             progress.setAutoReset(False)

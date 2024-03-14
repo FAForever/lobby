@@ -1,7 +1,8 @@
 import json
 import logging
 
-from PyQt5 import QtCore, QtNetwork
+from PyQt6 import QtCore
+from PyQt6 import QtNetwork
 
 from config import Settings
 
@@ -61,7 +62,7 @@ class SecondaryServer(QtCore.QObject):
         self.blockSize = 0
         self.serverSocket = QtNetwork.QTcpSocket()
 
-        self.serverSocket.error.connect(self.handleServerError)
+        self.serverSocket.errorOccurred.connect(self.handleServerError)
         self.serverSocket.readyRead.connect(self.readDataFromServer)
         self.serverSocket.connected.connect(self.send_pending)
         self.invisible = False
@@ -80,7 +81,7 @@ class SecondaryServer(QtCore.QObject):
         self.logger.info("Pending requests: {}".format(len(self._requests)))
         if not (
             self.serverSocket.state()
-            == QtNetwork.QAbstractSocket.ConnectedState
+            == QtNetwork.QAbstractSocket.SocketState.ConnectedState
         ):
             self.logger.info(
                 "Connecting to {} {}:{}".format(
@@ -123,7 +124,7 @@ class SecondaryServer(QtCore.QObject):
 
     def writeToServer(self, action, *args, **kw):
         block = QtCore.QByteArray()
-        out = QtCore.QDataStream(block, QtCore.QIODevice.ReadWrite)
+        out = QtCore.QDataStream(block, QtCore.QIODevice.OpenModeFlag.ReadWrite)
         out.setVersion(QtCore.QDataStream.Qt_4_2)
         out.writeUInt32(0)
         out.writeQString(action)

@@ -3,7 +3,8 @@ __author__ = 'Thygrrr'
 import collections
 
 import pytest
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 from fa import updater
 
@@ -93,7 +94,7 @@ def test_updater_hides_and_accepts_if_all_watches_are_finished(application):
 
     application.processEvents()
     assert not u.isVisible()
-    assert u.result() == QtWidgets.QDialog.Accepted
+    assert u.result() == QtWidgets.QDialog.DialogCode.Accepted
 
 
 def test_updater_does_not_hide_and_accept_before_all_watches_are_finished(
@@ -113,4 +114,4 @@ def test_updater_does_not_hide_and_accept_before_all_watches_are_finished(
 
     application.processEvents()
     assert u.isVisible()
-    assert not u.result() == QtWidgets.QDialog.Accepted
+    assert not u.result() == QtWidgets.QDialog.DialogCode.Accepted

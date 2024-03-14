@@ -1,11 +1,13 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import util
 
 
 class CoopMapItemDelegate(QtWidgets.QStyledItemDelegate):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         QtWidgets.QStyledItemDelegate.__init__(self, *args, **kwargs)
 
     def paint(self, painter, option, index, *args, **kwargs):
@@ -15,7 +17,7 @@ class CoopMapItemDelegate(QtWidgets.QStyledItemDelegate):
 
         html = QtGui.QTextDocument()
         textOption = QtGui.QTextOption()
-        textOption.setWrapMode(QtGui.QTextOption.WordWrap)
+        textOption.setWrapMode(QtGui.QTextOption.WrapMode.WordWrap)
         html.setDefaultTextOption(textOption)
 
         html.setTextWidth(option.rect.width())
@@ -25,7 +27,7 @@ class CoopMapItemDelegate(QtWidgets.QStyledItemDelegate):
         # rendering these parts ourselves
         option.text = ""
         option.widget.style().drawControl(
-            QtWidgets.QStyle.CE_ItemViewItem, option, painter, option.widget,
+            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
         )
         # Description
         painter.translate(option.rect.left(), option.rect.top())
@@ -34,11 +36,17 @@ class CoopMapItemDelegate(QtWidgets.QStyledItemDelegate):
 
         painter.restore()
 
-    def sizeHint(self, option, index, *args, **kwargs):
+    def sizeHint(
+            self,
+            option: QtWidgets.QStyleOptionViewItem,
+            index: QtCore.QModelIndex,
+            *args,
+            **kwargs,
+    ) -> None:
         self.initStyleOption(option, index)
         html = QtGui.QTextDocument()
         textOption = QtGui.QTextOption()
-        textOption.setWrapMode(QtGui.QTextOption.WordWrap)
+        textOption.setWrapMode(QtGui.QTextOption.WrapMode.WordWrap)
         html.setTextWidth(option.rect.width())
         html.setDefaultTextOption(textOption)
         html.setHtml(option.text)
@@ -88,9 +96,9 @@ class CoopMapItem(QtWidgets.QTreeWidgetItem):
             return self.viewtext
 
     def data(self, column, role):
-        if role == QtCore.Qt.DisplayRole:
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
             return self.display(column)
-        elif role == QtCore.Qt.UserRole:
+        elif role == QtCore.Qt.ItemDataRole.UserRole:
             return self
         return super(CoopMapItem, self).data(column, role)
 

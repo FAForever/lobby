@@ -3,7 +3,9 @@ import logging
 import os
 import random
 
-from PyQt5 import QtCore, QtNetwork, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtNetwork
+from PyQt6 import QtWidgets
 
 import util
 # local imports
@@ -77,7 +79,7 @@ class MapGeneratorManager(object):
                     | QtWidgets.QMessageBox.YesToAll
                     | QtWidgets.QMessageBox.No,
                 )
-                result = msgbox.exec_()
+                result = msgbox.exec()
                 if result == QtWidgets.QMessageBox.No:
                     return False
                 elif result == QtWidgets.QMessageBox.YesToAll:
@@ -162,7 +164,7 @@ class MapGeneratorManager(object):
         progress = QtWidgets.QProgressDialog()
         progress.setCancelButtonText("Cancel")
         progress.setWindowFlags(
-            QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowTitleHint,
+            QtCore.Qt.WindowType.CustomizeWindowHint | QtCore.Qt.WindowType.WindowTitleHint,
         )
         progress.setAutoClose(False)
         progress.setAutoReset(False)

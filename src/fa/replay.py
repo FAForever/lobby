@@ -3,13 +3,15 @@ import logging
 import os
 
 import zstandard
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import fa
 import util
 from fa.check import check
 from fa.replayparser import replayParser
-from util.gameurl import GameUrl, GameUrlType
+from util.gameurl import GameUrl
+from util.gameurl import GameUrlType
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +73,11 @@ def replay(source, detach=False):
                 scfa_replay = QtCore.QFile(
                     os.path.join(util.CACHE_DIR, "temp.scfareplay"),
                 )
-                scfa_replay.open(
-                    QtCore.QIODevice.WriteOnly | QtCore.QIODevice.Truncate,
+                open_mode = (
+                    QtCore.QIODevice.OpenModeFlag.WriteOnly
+                    | QtCore.QIODevice.OpenModeFlag.Truncate
                 )
+                scfa_replay.open(open_mode)
                 scfa_replay.write(binary)
                 scfa_replay.flush()
                 scfa_replay.close()

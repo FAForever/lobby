@@ -1,8 +1,9 @@
-from PyQt5.QtWidgets import QLayout
+from PyQt6.QtWidgets import QLayout
 
 import util
 from decorators import with_logger
-from updater.base import ReleaseType, UpdateChannel
+from updater.base import ReleaseType
+from updater.base import UpdateChannel
 from updater.process import ClientUpdater
 
 FormClass, BaseClass = util.THEME.loadUiType("client/update.ui")
@@ -23,7 +24,7 @@ class UpdateDialog(FormClass, BaseClass):
         self.btnAbort.clicked.connect(self.abort)
         self.btnSettings.clicked.connect(self.showSettings)
         self.cbReleases.currentIndexChanged.connect(self.indexChanged)
-        self.layout().setSizeConstraint(QLayout.SetFixedSize)
+        self.layout().setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
 
     @classmethod
     def build(cls, settings, parent_widget, current_version, **kwargs):

@@ -41,7 +41,8 @@ the modvault.
 import logging
 import os
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 from api.vaults_api import ModApiConnector
 from vaults.modvault import utils
@@ -111,12 +112,12 @@ class ModVault(Vault):
     @QtCore.pyqtSlot(QtWidgets.QListWidgetItem)
     def modClicked(self, item):
         widget = ModWidget(self, item)
-        widget.exec_()
+        widget.exec()
 
     @QtCore.pyqtSlot()
     def openUIModForm(self):
         dialog = UIModWidget(self)
-        dialog.exec_()
+        dialog.exec()
 
     @QtCore.pyqtSlot()
     def openUploadForm(self):
@@ -163,7 +164,7 @@ class ModVault(Vault):
                         modinfo.setFolder(os.path.split(modDir)[1])
                         modinfo.update()
                         dialog = UploadModWidget(self, modDir, modinfo)
-                        dialog.exec_()
+                        dialog.exec()
             else:
                 QtWidgets.QMessageBox.information(
                     self.client,

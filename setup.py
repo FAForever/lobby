@@ -3,7 +3,7 @@ import site
 import sys
 from pathlib import Path
 
-import PyQt5.uic
+import PyQt6.uic
 import sip
 
 sip.setapi('QString', 2)
@@ -13,7 +13,8 @@ sip.setapi('QList', 2)
 sip.setapi('QProcess', 2)
 
 if sys.platform == 'win32':
-    from cx_Freeze import Executable, setup
+    from cx_Freeze import Executable
+    from cx_Freeze import setup
 else:
     from distutils.core import setup
 
@@ -36,7 +37,7 @@ if sys.platform == 'win32':
 # Ugly hack to fix broken PyQt5 (FIXME - necessary?)
 for module in ["invoke.py", "load_plugin.py"]:
     try:
-        silly_file = Path(PyQt5.__path__[0]) / "uic" / "port_v2" / module
+        silly_file = Path(PyQt6.__path__[0]) / "uic" / "port_v2" / module
         print("Removing {}".format(silly_file))
         silly_file.unlink()
     except OSError:

@@ -1,7 +1,9 @@
 import logging
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QDateTime, Qt, QTimer
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import QDateTime
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QTimer
 
 from api.player_api import PlayerApiConnector
 
@@ -79,7 +81,7 @@ class AliasFormatter:
         ]
 
         for record in past_records:
-            isoTime = QDateTime.fromString(record["changeTime"], Qt.ISODate)
+            isoTime = QDateTime.fromString(record["changeTime"], Qt.DateFormat.ISODate)
             record["changeTime"] = isoTime.toLocalTime()
 
         past_records.sort(key=lambda record: record["changeTime"])

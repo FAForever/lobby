@@ -1,4 +1,7 @@
-from PyQt5.QtCore import QAbstractTableModel, QDateTime, QModelIndex, Qt
+from PyQt6.QtCore import QAbstractTableModel
+from PyQt6.QtCore import QDateTime
+from PyQt6.QtCore import QModelIndex
+from PyQt6.QtCore import Qt
 
 
 class LeaderboardTableModel(QAbstractTableModel):
@@ -22,8 +25,8 @@ class LeaderboardTableModel(QAbstractTableModel):
         return self.column_count
 
     def headerData(self, section, orientation, role):
-        if role == Qt.DisplayRole:
-            if orientation == Qt.Horizontal:
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
                 return (
                     "Name", "Rating", "Mean", "Deviation", "Games", "Won",
                     "Win rate", "Updated", "Player Id",
@@ -35,14 +38,14 @@ class LeaderboardTableModel(QAbstractTableModel):
                     + section
                     + 1,
                 )
-        elif role == Qt.TextAlignmentRole:
-            return Qt.AlignCenter
+        elif role == Qt.ItemDataRole.TextAlignmentRole:
+            return Qt.AlignmentFlag.AlignCenter
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         column = index.column()
         row = index.row()
 
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             if column == 0:
                 return "{}".format(self.values[row]["player"]["login"])
             elif column == 1:
@@ -66,7 +69,7 @@ class LeaderboardTableModel(QAbstractTableModel):
                     )
             elif column == 7:
                 dateUTC = QDateTime.fromString(
-                    self.values[row]["updateTime"], Qt.ISODate,
+                    self.values[row]["updateTime"], Qt.DateFormat.ISODate,
                 )
                 dateLocal = dateUTC.toLocalTime().toString("yyyy-MM-dd")
                 return "{}".format(dateLocal)

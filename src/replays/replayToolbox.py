@@ -1,7 +1,9 @@
 import logging
 import os
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 from config import Settings
 from downloadManager import DownloadRequest
@@ -304,7 +306,7 @@ class ReplayToolboxHandler(object):
 
                 if filterName == "Start time":
                     startDate = filterBox.dateEdit.dateTime().toUTC().toString(
-                        QtCore.Qt.ISODate,
+                        QtCore.Qt.DateFormat.ISODate,
                     )
                     if opName == ">":
                         finalFilters.append(

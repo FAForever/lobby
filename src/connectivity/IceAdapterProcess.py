@@ -1,9 +1,11 @@
 import os
 import sys
 
-from PyQt5.QtCore import QProcess, QProcessEnvironment
-from PyQt5.QtNetwork import QHostAddress, QTcpServer
-from PyQt5.QtWidgets import QMessageBox
+from PyQt6.QtCore import QProcess
+from PyQt6.QtCore import QProcessEnvironment
+from PyQt6.QtNetwork import QHostAddress
+from PyQt6.QtNetwork import QTcpServer
+from PyQt6.QtWidgets import QMessageBox
 
 import fafpath
 from config import Settings
@@ -17,7 +19,7 @@ class IceAdapterProcess(object):
         # determine free listen port for the RPC server inside the ice adapter
         # process
         s = QTcpServer()
-        s.listen(QHostAddress.LocalHost, 0)
+        s.listen(QHostAddress.SpecialAddress.LocalHost, 0)
         self._rpc_server_port = s.serverPort()
         s.close()
 
@@ -93,8 +95,8 @@ class IceAdapterProcess(object):
         for line in standard_error.splitlines():
             self._logger.debug("ICEERROR: " + line)
 
-    def on_exit(self, code, status):
-        if status == QProcess.CrashExit:
+    def on_exit(self, code: int, status: QProcess.ExitStatus) -> None:
+        if status == QProcess.ExitStatus.CrashExit:
             self._logger.error("the ICE crashed")
             QMessageBox.critical(
                 None, "ICE adapter error",
@@ -119,10 +121,10 @@ class IceAdapterProcess(object):
         return self._rpc_server_port
 
     def close(self):
-        if self.ice_adapter_process.state() == QProcess.Running:
+        if self.ice_adapter_process.state() == QProcess.ProcessState.Running:
             self._logger.info("Waiting for ice adapter process shutdown")
             if not self.ice_adapter_process.waitForFinished(1000):
-                if self.ice_adapter_process.state() == QProcess.Running:
+                if self.ice_adapter_process.state() == QProcess.ProcessState.Running:
                     self._logger.error("Terminating ice adapter process")
                     self.ice_adapter_process.terminate()
                     if not self.ice_adapter_process.waitForFinished(1000):

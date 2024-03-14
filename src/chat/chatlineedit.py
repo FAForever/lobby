@@ -4,7 +4,8 @@ Created on Dec 8, 2011
 
 @author: thygrrr
 """
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 
 class ChatLineEdit(QtWidgets.QLineEdit):
@@ -29,20 +30,20 @@ class ChatLineEdit(QtWidgets.QLineEdit):
         self.channel = channel
 
     def event(self, event):
-        if event.type() == QtCore.QEvent.KeyPress:
+        if event.type() == QtCore.QEvent.Type.KeyPress:
             # Swallow a selection of keypresses that we want for our history
             # support.
-            if event.key() == QtCore.Qt.Key_Tab:
+            if event.key() == QtCore.Qt.Key.Key_Tab:
                 self.try_completion()
                 return True
-            elif event.key() == QtCore.Qt.Key_Space:
+            elif event.key() == QtCore.Qt.Key.Key_Space:
                 self.accept_completion()
                 return QtWidgets.QLineEdit.event(self, event)
-            elif event.key() == QtCore.Qt.Key_Up:
+            elif event.key() == QtCore.Qt.Key.Key_Up:
                 self.cancel_completion()
                 self.prev_history()
                 return True
-            elif event.key() == QtCore.Qt.Key_Down:
+            elif event.key() == QtCore.Qt.Key.Key_Down:
                 self.cancel_completion()
                 self.next_history()
                 return True
@@ -59,7 +60,7 @@ class ChatLineEdit(QtWidgets.QLineEdit):
         self.currentHistoryIndex = len(self.history) - 1
 
     def showEvent(self, event):
-        self.setFocus(True)
+        self.setFocus()
         return QtWidgets.QLineEdit.showEvent(self, event)
 
     def try_completion(self):

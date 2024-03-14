@@ -1,8 +1,11 @@
 import logging
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QColor, QCursor
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QCursor
 
 import fa
 import util
@@ -10,7 +13,8 @@ from api.featured_mod_api import FeaturedModApiConnector
 from config import Settings
 from games.automatchframe import MatchmakerQueue
 from games.gamemodel import CustomGameFilterModel
-from games.moditem import ModItem, mod_invisible
+from games.moditem import ModItem
+from games.moditem import mod_invisible
 from model.chat.channel import PARTY_CHANNEL_SUFFIX
 
 logger = logging.getLogger(__name__)
@@ -265,12 +269,12 @@ class GamesWidget(FormClass, BaseClass):
         self._game_model.sort_type = CustomGameFilterModel.SortType(index)
 
     def teamListItemClicked(self, item):
-        if QtWidgets.QApplication.mouseButtons() == Qt.LeftButton:
+        if QtWidgets.QApplication.mouseButtons() == Qt.MouseButton.LeftButton:
             # for no good reason doesn't always work as expected
             item.setSelected(False)
 
         if (
-            QtWidgets.QApplication.mouseButtons() == Qt.RightButton
+            QtWidgets.QApplication.mouseButtons() == Qt.MouseButton.RightButton
             and self.party.owner_id == self._me.id
         ):
             self.teamList.setCurrentItem(item)

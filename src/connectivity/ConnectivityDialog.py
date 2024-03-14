@@ -1,9 +1,13 @@
 import pprint
 
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import QHeaderView, QInputDialog, QTableWidgetItem
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QHeaderView
+from PyQt6.QtWidgets import QInputDialog
+from PyQt6.QtWidgets import QTableWidgetItem
 
 import client as clientwindow
+from connectivity.IceAdapterClient import IceAdapterClient
 from decorators import with_logger
 from util import THEME
 
@@ -21,7 +25,7 @@ class ConnectivityDialog(object):
 
     columnCount = 8
 
-    def __init__(self, ice_adapter_client):
+    def __init__(self, ice_adapter_client: IceAdapterClient) -> None:
         self.client = ice_adapter_client
         self.client.statusChanged.connect(self.onStatus)
         self.client.gpgnetmessageReceived.connect(self.onGpgnetMessage)
@@ -29,7 +33,7 @@ class ConnectivityDialog(object):
         self.dialog = THEME.loadUi('connectivity/connectivity.ui')
         # need to set the parent like this to make sure this dialog closes on
         # closing the client. also needed for consistent theming
-        self.dialog.setParent(clientwindow.instance, Qt.Dialog)
+        self.dialog.setParent(clientwindow.instance, Qt.WindowType.Dialog)
 
         # the table header needs theming,
         # and using "QHeaderView::section { background-color: green; }"
@@ -43,12 +47,10 @@ class ConnectivityDialog(object):
         """
         self.dialog.table_relays.horizontalHeader().setStyleSheet(stylesheet)
         self.dialog.table_relays.horizontalHeader().setSectionResizeMode(
-            QHeaderView.Stretch,
+            QHeaderView.ResizeMode.Stretch,
         )
         self.dialog.table_relays.horizontalHeader().setFixedHeight(30)
-        self.dialog.table_relays.verticalHeader().setSectionResizeMode(
-            QHeaderView.Fixed,
-        )
+        self.dialog.table_relays.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self.dialog.table_relays.verticalHeader().hide()
 
         self.dialog.finished.connect(self.close)
@@ -157,5 +159,5 @@ class ConnectivityDialog(object):
 
     def tableItem(self, data):
         item = QTableWidgetItem(str(data))
-        item.setTextAlignment(Qt.AlignCenter)
+        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         return item

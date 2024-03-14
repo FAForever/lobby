@@ -12,7 +12,8 @@ import urllib.parse
 import urllib.request
 import zipfile
 
-from PyQt5 import QtCore, QtGui
+from PyQt6 import QtCore
+from PyQt6 import QtGui
 
 # module imports
 import util
@@ -184,7 +185,7 @@ def getUserMapsFolder():
     )
 
 
-def genPrevFromDDS(sourcename, destname, small=False):
+def genPrevFromDDS(sourcename: str, destname: str, small: bool = False) -> None:
     """
     this opens supcom's dds file (format: bgra8888) and saves to png
     """
@@ -203,18 +204,18 @@ def genPrevFromDDS(sourcename, destname, small=False):
                 img,
                 size,
                 size,
-                QtGui.QImage.Format_RGB888,
+                QtGui.QImage.Format.Format_RGB888,
             ).rgbSwapped().scaled(
                 100,
                 100,
-                transformMode=QtCore.Qt.SmoothTransformation,
+                transformMode=QtCore.Qt.TransformationMode.SmoothTransformation,
             )
         else:
             imageFile = QtGui.QImage(
                 img,
                 size,
                 size,
-                QtGui.QImage.Format_RGB888,
+                QtGui.QImage.Format.Format_RGB888,
             ).rgbSwapped()
         imageFile.save(destname)
     except IOError:

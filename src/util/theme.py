@@ -1,7 +1,11 @@
 import logging
 import os
 
-from PyQt5 import QtCore, QtGui, QtMultimedia, QtWidgets, uic
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtMultimedia
+from PyQt6 import QtWidgets
+from PyQt6 import uic
 from semantic_version import Version
 
 logger = logging.getLogger(__name__)
@@ -272,7 +276,7 @@ class ThemeSet(QtCore.QObject):
                 QtWidgets.QMessageBox.NoRole,
             )
             b_no = box.addButton("Abort", QtWidgets.QMessageBox.NoRole)
-            box.exec_()
+            box.exec()
             result = box.clickedButton()
 
             if result == b_always:
@@ -382,7 +386,7 @@ class ThemeSet(QtCore.QObject):
             return self.pixmap(filename, themed)
         else:
             icon = QtGui.QIcon()
-            icon.addPixmap(self.pixmap(filename, themed), QtGui.QIcon.Normal)
+            icon.addPixmap(self.pixmap(filename, themed), QtGui.QIcon.Mode.Normal)
             splitExt = os.path.splitext(filename)
             if len(splitExt) == 2:
                 pixDisabled = self.pixmap(
@@ -390,7 +394,7 @@ class ThemeSet(QtCore.QObject):
                 )
                 if pixDisabled is not None:
                     icon.addPixmap(
-                        pixDisabled, QtGui.QIcon.Disabled, QtGui.QIcon.On,
+                        pixDisabled, QtGui.QIcon.Mode.Disabled, QtGui.QIcon.State.On,
                     )
 
                 pixActive = self.pixmap(
@@ -398,7 +402,7 @@ class ThemeSet(QtCore.QObject):
                 )
                 if pixActive is not None:
                     icon.addPixmap(
-                        pixActive, QtGui.QIcon.Active, QtGui.QIcon.On,
+                        pixActive, QtGui.QIcon.Mode.Active, QtGui.QIcon.State.On,
                     )
 
                 pixSelected = self.pixmap(
@@ -406,6 +410,6 @@ class ThemeSet(QtCore.QObject):
                 )
                 if pixSelected is not None:
                     icon.addPixmap(
-                        pixSelected, QtGui.QIcon.Selected, QtGui.QIcon.On,
+                        pixSelected, QtGui.QIcon.Mode.Selected, QtGui.QIcon.State.On,
                     )
             return icon

@@ -1,15 +1,17 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 from .leaderboardheaderview import VerticalHeaderView
 from .leaderboardtablemenu import LeaderboardTableMenu
 
 
 class LeaderboardTableView(QtWidgets.QTableView):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.setMouseTracking(True)
-        self.setSelectionBehavior(self.SelectRows)
-        self.setSelectionMode(self.SingleSelection)
+        self.setSelectionBehavior(self.SelectionBehavior.SelectRows)
+        self.setSelectionMode(self.SelectionMode.SingleSelection)
         self.setAlternatingRowColors(True)
         self.setSortingEnabled(True)
 
@@ -19,13 +21,13 @@ class LeaderboardTableView(QtWidgets.QTableView):
     def hoverIndex(self):
         return QtCore.QModelIndex(self.model().index(self.mHoverRow, 0))
 
-    def updateHoverRow(self, event):
-        index = self.indexAt(event.pos())
+    def updateHoverRow(self, event: QtGui.QHoverEvent) -> None:
+        index = self.indexAt(event.position().toPoint())
         oldHoverRow = self.mHoverRow
         self.mHoverRow = index.row()
 
         if (
-            self.selectionBehavior() == self.SelectRows
+            self.selectionBehavior() is self.SelectionBehavior.SelectRows
             and oldHoverRow != self.mHoverRow
         ):
             if oldHoverRow != -1:
@@ -45,8 +47,8 @@ class LeaderboardTableView(QtWidgets.QTableView):
         self.updateHoverRow(event)
         self.verticalHeader().updateHoverSection(event)
 
-    def mousePressEvent(self, event):
-        if event.button() == QtCore.Qt.RightButton:
+    def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
+        if event.button() is QtCore.Qt.MouseButton.RightButton:
             row = self.indexAt(event.pos()).row()
             if row != -1:
                 name_index = self.model().index(row, 0)

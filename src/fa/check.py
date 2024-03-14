@@ -1,22 +1,29 @@
+from __future__ import annotations
+
 import binascii
 import logging
 import os
 import zipfile
+from typing import TYPE_CHECKING
 
-from PyQt5 import QtWidgets
+from PyQt6 import QtWidgets
 
 import config
 import fa
 import util
 from fa.mods import checkMods
-from fa.path import validatePath, writeFAPathLua
+from fa.path import validatePath
+from fa.path import writeFAPathLua
 from fa.wizards import Wizard
 from mapGenerator.mapgenUtils import isGeneratedMap
+
+if TYPE_CHECKING:
+    from client._clientwindow import ClientWindow
 
 logger = logging.getLogger(__name__)
 
 
-def map_(mapname, force=False, silent=False):
+def map_(mapname: str, force: bool = False, silent: bool = False) -> bool:
     """
     Assures that the map is available in FA, or returns false.
     """
@@ -28,10 +35,12 @@ def map_(mapname, force=False, silent=False):
 
     if isGeneratedMap(mapname):
         import client
-        return client.instance.map_generator.generateMap(mapname)
+
+        # FIXME: generateMap, downloadMap should also return bool
+        return bool(client.instance.map_generator.generateMap(mapname))
 
     if force:
-        return fa.maps.downloadMap(mapname, silent=silent)
+        return bool(fa.maps.downloadMap(mapname, silent=silent))
 
     auto = config.Settings.get('maps/autodownload', default=False, type=bool)
     if not auto:
@@ -46,17 +55,17 @@ def map_(mapname, force=False, silent=False):
             "downloaded automatically in the future",
         )
         msgbox.setStandardButtons(
-            QtWidgets.QMessageBox.Yes
-            | QtWidgets.QMessageBox.YesToAll
-            | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes
+            | QtWidgets.QMessageBox.StandardButton.YesToAll
+            | QtWidgets.QMessageBox.StandardButton.No,
         )
-        result = msgbox.exec_()
-        if result == QtWidgets.QMessageBox.No:
+        result = msgbox.exec()
+        if result == QtWidgets.QMessageBox.StandardButton.No:
             return False
-        elif result == QtWidgets.QMessageBox.YesToAll:
+        elif result == QtWidgets.QMessageBox.StandardButton.YesToAll:
             config.Settings.set('maps/autodownload', True)
 
-    return fa.maps.downloadMap(mapname, silent=silent)
+    return bool(fa.maps.downloadMap(mapname, silent=silent))
 
 
 def featured_mod(featured_mod, version):
@@ -67,7 +76,7 @@ def sim_mod(sim_mod, version):
     pass
 
 
-def path(parent):
+def path(parent: ClientWindow) -> bool:
     while not validatePath(
         util.settings.value(
             "ForgedAlliance/app/path", "",
@@ -80,8 +89,8 @@ def path(parent):
             ),
         )
         wizard = Wizard(parent)
-        result = wizard.exec_()
-        if result == QtWidgets.QWizard.Rejected:
+        result = wizard.exec()
+        if result == QtWidgets.QWizard.DialogCode.Rejected:
             return False
 
     logger.info("Writing fa_path.lua config file.")

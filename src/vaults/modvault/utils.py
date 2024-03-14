@@ -4,7 +4,9 @@ import re
 import shutil
 import zipfile
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import util
 from config import Settings
@@ -406,7 +408,7 @@ def generateThumbnail(sourcename, destname):
         size = int((len(img) / 3) ** (1.0 / 2))
         image = QtGui.QImage(img, size, size, QtGui.QImage.Format_RGB888)
         imageFile = image.rgbSwapped().scaled(
-            100, 100, transformMode=QtCore.Qt.SmoothTransformation,
+            100, 100, transformMode=QtCore.Qt.TransformationMode.SmoothTransformation,
         )
         imageFile.save(destname)
     except IOError:

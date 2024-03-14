@@ -4,7 +4,9 @@ import logging
 import os
 import time
 
-from PyQt5 import QtCore, QtNetwork, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtNetwork
+from PyQt6 import QtWidgets
 
 import fa
 import util
@@ -166,7 +168,7 @@ class ReplayRecorder(QtCore.QObject):
         )
 
         replay = QtCore.QFile(filename)
-        replay.open(QtCore.QIODevice.WriteOnly | QtCore.QIODevice.Text)
+        replay.open(QtCore.QIODevice.OpenModeFlag.WriteOnly | QtCore.QIODevice.Text)
         replay.write(json.dumps(self.replayInfo).encode('utf-8'))
         replay.write(b'\n')
         replay.write(QtCore.qCompress(self.replayData).toBase64())
@@ -188,9 +190,9 @@ class ReplayServer(QtNetwork.QTcpServer):
         self.__logger.debug("initializing...")
         self.newConnection.connect(self.acceptConnection)
 
-    def doListen(self):
+    def doListen(self) -> bool:
         while not self.isListening():
-            self.listen(QtNetwork.QHostAddress.LocalHost, 0)
+            self.listen(QtNetwork.QHostAddress.SpecialAddress.LocalHost, 0)
             if self.isListening():
                 self.__logger.info(
                     "listening on address {}:{}".format(

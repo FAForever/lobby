@@ -1,7 +1,7 @@
 """
 Settings for notifications: if a new game is hosted.
 """
-from PyQt5 import QtCore
+from PyQt6 import QtCore
 
 import config
 import notifications as ns
@@ -31,7 +31,7 @@ class NewGameDialog(FormClass, BaseClass):
 
         # remove help button
         self.setWindowFlags(
-            self.windowFlags() & (~QtCore.Qt.WindowContextHelpButtonHint),
+            self.windowFlags() & (~QtCore.Qt.WindowType.WindowContextHelpButtonHint),
         )
 
         self.loadSettings()
@@ -40,9 +40,9 @@ class NewGameDialog(FormClass, BaseClass):
         self.mode = Settings.get(self._settings_key + '/mode', 'friends')
 
         if self.mode == 'friends':
-            self.checkBoxFriends.setCheckState(QtCore.Qt.Checked)
+            self.checkBoxFriends.setCheckState(QtCore.Qt.CheckState.Checked)
         else:
-            self.checkBoxFriends.setCheckState(QtCore.Qt.Unchecked)
+            self.checkBoxFriends.setCheckState(QtCore.Qt.CheckState.Unchecked)
         self.parent.mode = self.mode
 
     def saveSettings(self):
@@ -51,7 +51,7 @@ class NewGameDialog(FormClass, BaseClass):
 
     @QtCore.pyqtSlot()
     def on_btnSave_clicked(self):
-        if self.checkBoxFriends.checkState() == QtCore.Qt.Checked:
+        if self.checkBoxFriends.checkState() == QtCore.Qt.CheckState.Checked:
             self.mode = 'friends'
         else:
             self.mode = 'all'

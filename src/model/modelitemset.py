@@ -1,4 +1,4 @@
-from PyQt5.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 
 from model.qobjectmapping import QObjectMapping
 from model.transaction import transactional

@@ -4,7 +4,8 @@ Each module/hook for the notification system must be registered here.
 """
 from enum import Enum
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import notifications as ns
 import util
@@ -54,7 +55,7 @@ class NsSettingsDialog(FormClass2, BaseClass2):
 
         # remove help button
         self.setWindowFlags(
-            self.windowFlags() & (~QtCore.Qt.WindowContextHelpButtonHint),
+            self.windowFlags() & (~QtCore.Qt.WindowType.WindowContextHelpButtonHint),
         )
 
         # init hooks
@@ -68,7 +69,7 @@ class NsSettingsDialog(FormClass2, BaseClass2):
         self.tableView.setModel(model)
         # stretch first column
         self.tableView.horizontalHeader().setSectionResizeMode(
-            0, QtWidgets.QHeaderView.Stretch,
+            0, QtWidgets.QHeaderView.ResizeMode.Stretch,
         )
 
         for row in range(0, model.rowCount(None)):
@@ -165,9 +166,9 @@ class NotificationHooks(QtCore.QAbstractTableModel):
     def flags(self, index):
         flags = super(QtCore.QAbstractTableModel, self).flags(index)
         if index.column() == self.POPUP or index.column() == self.SOUND:
-            return flags | QtCore.Qt.ItemIsUserCheckable
+            return flags | QtCore.Qt.ItemFlag.ItemIsUserCheckable
         if index.column() == self.SETTINGS:
-            return flags | QtCore.Qt.ItemIsEditable
+            return flags | QtCore.Qt.ItemFlag.ItemIsEditable
         return flags
 
     def rowCount(self, parent):
@@ -179,14 +180,14 @@ class NotificationHooks(QtCore.QAbstractTableModel):
     def getHook(self, row):
         return self.hooks[row]
 
-    def data(self, index, role=QtCore.Qt.EditRole):
+    def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole.EditRole):
         if not index.isValid():
             return None
 
-        # if role == QtCore.Qt.TextAlignmentRole and index.column() != 0:
-        #    return QtCore.Qt.AlignHCenter
+        # if role == QtCore.Qt.ItemDataRole.TextAlignmentRole and index.column() != 0:
+        #    return QtCore.Qt.AlignmentFlag.AlignHCenter
 
-        if role == QtCore.Qt.CheckStateRole:
+        if role == QtCore.Qt.ItemDataRole.CheckStateRole:
             if index.column() == self.POPUP:
                 return self.returnChecked(
                     self.hooks[index.row()].popupEnabled(),
@@ -197,7 +198,7 @@ class NotificationHooks(QtCore.QAbstractTableModel):
                 )
             return None
 
-        if role != QtCore.Qt.DisplayRole:
+        if role != QtCore.Qt.ItemDataRole.DisplayRole:
             return None
 
         if index.column() == 0:
@@ -205,9 +206,9 @@ class NotificationHooks(QtCore.QAbstractTableModel):
         return ''
 
     def returnChecked(self, state):
-        return QtCore.Qt.Checked if state else QtCore.Qt.Unchecked
+        return QtCore.Qt.CheckState.Checked if state else QtCore.Qt.CheckState.Unchecked
 
-    def setData(self, index, value, role=QtCore.Qt.EditRole):
+    def setData(self, index, value, role=QtCore.Qt.ItemDataRole.DisplayRole.EditRole):
         if index.column() == self.POPUP:
             self.hooks[index.row()].switchPopup()
             self.dataChanged.emit(index, index)
@@ -220,8 +221,8 @@ class NotificationHooks(QtCore.QAbstractTableModel):
 
     def headerData(self, col, orientation, role):
         if (
-            orientation == QtCore.Qt.Horizontal
-            and role == QtCore.Qt.DisplayRole
+            orientation == QtCore.Qt.Orientation.Horizontal
+            and role == QtCore.Qt.ItemDataRole.DisplayRole
         ):
             return self.headerdata[col]
         return None

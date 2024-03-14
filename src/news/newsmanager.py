@@ -1,7 +1,8 @@
 import logging
 
-from PyQt5 import QtCore
-from PyQt5.QtCore import QObject, Qt
+from PyQt6 import QtCore
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import Qt
 
 import client
 
@@ -93,7 +94,7 @@ class NewsManager(QObject):
             for frame in self.newsFrames:
                 frame.collapse()
 
-        selectedFrame.expand(Qt.ScrollBarAsNeeded, set_filter=False)
+        selectedFrame.expand(Qt.ScrollBarPolicy.ScrollBarAsNeeded, set_filter=False)
 
         self.selectedFrame = selectedFrame
 
@@ -101,7 +102,7 @@ class NewsManager(QObject):
         logger.info('resetFrames')
         self.selectedFrame = None
         for frame in self.newsFrames:
-            frame.expand(Qt.ScrollBarAlwaysOff, set_filter=True)
+            frame.expand(Qt.ScrollBarPolicy.ScrollBarAlwaysOff, set_filter=True)
 
     def nextPage(self):
         pb = client.instance.pageBox

@@ -1,6 +1,7 @@
 import os
 
-from PyQt5 import QtGui, QtWidgets
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import client
 import util

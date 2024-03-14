@@ -1,5 +1,7 @@
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QAction, QLabel, QMenu
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QMenu
 
 import util
 from client.clientstate import ClientState
@@ -74,7 +76,7 @@ class StatusLogo(QLabel):
         menu.addAction(conn)
         menu.addAction(about)
 
-        action = menu.exec_(self.mapToGlobal(event.pos()))
+        action = menu.exec(self.mapToGlobal(event.pos()))
         if action == dc:
             self.disconnect_requested.emit()
         elif action == rc:

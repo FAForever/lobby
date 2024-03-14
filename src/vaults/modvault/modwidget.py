@@ -2,7 +2,9 @@
 import os
 import urllib.parse
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import util
 from util import strtodate
@@ -128,7 +130,7 @@ class CommentItemDelegate(QtWidgets.QStyledItemDelegate):
 
         option.text = ""
         option.widget.style().drawControl(
-            QtWidgets.QStyle.CE_ItemViewItem, option, painter, option.widget,
+            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
         )
 
         # Description

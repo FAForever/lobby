@@ -1,6 +1,7 @@
 import logging
 
-from PyQt5 import QtCore, QtGui
+from PyQt6 import QtCore
+from PyQt6 import QtGui
 
 import config
 import util

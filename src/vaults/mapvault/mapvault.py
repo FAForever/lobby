@@ -6,10 +6,12 @@ import urllib.parse
 import urllib.request
 from stat import S_IWRITE
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import util
-from api.vaults_api import MapApiConnector, MapPoolApiConnector
+from api.vaults_api import MapApiConnector
+from api.vaults_api import MapPoolApiConnector
 from fa import maps
 from vaults import luaparser
 from vaults.mapvault.mapitem import MapItem
@@ -84,7 +86,7 @@ class MapVault(Vault):
     @QtCore.pyqtSlot(QtWidgets.QListWidgetItem)
     def itemClicked(self, item):
         widget = MapWidget(self, item)
-        widget.exec_()
+        widget.exec()
 
     def requestMapPool(self, queueName, minRating):
         self.apiConnector = self.mapPoolApiConnector

@@ -14,11 +14,13 @@ import shutil
 import stat
 import time
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import config
 import util
-from api.featured_mod_updater import FeaturedModFiles, FeaturedModId
+from api.featured_mod_updater import FeaturedModFiles
+from api.featured_mod_updater import FeaturedModId
 from api.sim_mod_updater import SimModFiles
 from config import Settings
 from vaults.dialogs import downloadFile
@@ -51,12 +53,12 @@ class UpdaterProgressDialog(FormClass, BaseClass):
         watch.finished.connect(self.watchFinished)
 
     @QtCore.pyqtSlot()
-    def watchFinished(self):
+    def watchFinished(self) -> None:
         for watch in self.watches:
             if not watch.isFinished():
                 return
         # equivalent to self.accept(), but clearer
-        self.done(QtWidgets.QDialog.Accepted)
+        self.done(QtWidgets.QDialog.DialogCode.Accepted)
 
 
 def clearLog():
@@ -115,7 +117,7 @@ class Updater(QtCore.QObject):
         sim=False,
         silent=False,
         *args,
-        **kwargs
+        **kwargs,
     ):
         """
         Constructor
@@ -154,7 +156,7 @@ class Updater(QtCore.QObject):
         else:
             self.progress.setCancelButtonText("Cancel")
         self.progress.setWindowFlags(
-            QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowTitleHint,
+            QtCore.Qt.WindowType.CustomizeWindowHint | QtCore.Qt.WindowType.WindowTitleHint,
         )
         self.progress.setAutoClose(False)
         self.progress.setAutoReset(False)

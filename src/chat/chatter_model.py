@@ -1,11 +1,21 @@
-from enum import Enum, IntEnum
+from enum import Enum
+from enum import IntEnum
+from typing import Any
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QObject, QRectF, QSortFilterProxyModel, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QIcon
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QRect
+from PyQt6.QtCore import QSortFilterProxyModel
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QIcon
 
 import util
 from chat.chatter_model_item import ChatterModelItem
+from chat.chatterlistview import ChatterListView
 from chat.gameinfo import SensitiveMapInfoChecker
 from fa import maps
 from model.game import GameState
@@ -72,8 +82,8 @@ class ChatterSortFilterModel(QSortFilterProxyModel):
 
     def lessThan(self, leftIndex, rightIndex):
         source = self.sourceModel()
-        left = source.data(leftIndex, Qt.DisplayRole)
-        right = source.data(rightIndex, Qt.DisplayRole)
+        left = source.data(leftIndex, Qt.ItemDataRole.DisplayRole)
+        right = source.data(rightIndex, Qt.ItemDataRole.DisplayRole)
 
         comp_list = [self._lt_me, self._lt_rank, self._lt_alphabetical]
         for lt in comp_list:
@@ -119,14 +129,14 @@ class ChatterSortFilterModel(QSortFilterProxyModel):
             return ChatterRank.USER
         return ChatterRank.NONPLAYER
 
-    def filterAcceptsRow(self, row, parent):
+    def filterAcceptsRow(self, row: int, parent: QtCore.QModelIndex) -> bool:
         source = self.sourceModel()
         index = source.index(row, 0, parent)
         if not index.isValid():
             return False
-        data = source.data(index, Qt.DisplayRole)
+        data = source.data(index, Qt.ItemDataRole.DisplayRole)
         displayed_name = ChatterFormat.chatter_name(data.chatter)
-        return self.filterRegExp().indexIn(displayed_name) != -1
+        return self.filterRegularExpression().match(displayed_name).hasMatch()
 
     def _check_sort_changed(self, option):
         if option == "friendsontop":
@@ -369,17 +379,21 @@ class ChatterItemDelegate(QtWidgets.QStyledItemDelegate):
         option.icon = QtGui.QIcon()
         option.text = ""
         option.widget.style().drawControl(
-            QtWidgets.QStyle.CE_ItemViewItem, option, painter, option.widget,
+            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
         )
 
-    def _handle_highlight(self, painter, option):
-        if option.state & QtWidgets.QStyle.State_Selected:
+    def _handle_highlight(
+            self,
+            painter: QtGui.QPainter,
+            option: QtWidgets.QStyleOptionViewItem,
+    ) -> None:
+        if option.state & QtWidgets.QStyle.StateFlag.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight)
 
-    def _draw_nick(self, painter, data):
+    def _draw_nick(self, painter: QtGui.QPainter, data: str) -> None:
         text = self._formatter.chatter_name(data)
         color = QColor(self._formatter.chatter_color(data))
-        clip = QRectF(self.layout.sizes[ChatterLayoutElements.NICK])
+        clip = QRect(self.layout.sizes[ChatterLayoutElements.NICK])
         text = self._get_elided_text(painter, text, clip.width())
 
         painter.save()
@@ -387,13 +401,13 @@ class ChatterItemDelegate(QtWidgets.QStyledItemDelegate):
         pen.setColor(color)
         painter.setPen(pen)
 
-        painter.drawText(clip, Qt.AlignLeft | Qt.AlignVCenter, text)
+        painter.drawText(clip, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, text)
 
         painter.restore()
 
-    def _get_elided_text(self, painter, text, width):
+    def _get_elided_text(self, painter: QtGui.QPainter, text: str, width: int) -> str:
         metrics = painter.fontMetrics()
-        return metrics.elidedText(text, Qt.ElideRight, width)
+        return metrics.elidedText(text, Qt.TextElideMode.ElideRight, width)
 
     def _draw_status(self, painter, data):
         status = self._formatter.chatter_status(data)
@@ -427,7 +441,7 @@ class ChatterItemDelegate(QtWidgets.QStyledItemDelegate):
 
     def _draw_icon(self, painter, icon, element):
         rect = self.layout.sizes[element]
-        icon.paint(painter, rect, QtCore.Qt.AlignCenter)
+        icon.paint(painter, rect, QtCore.Qt.AlignmentFlag.AlignCenter)
 
     def sizeHint(self, option, index):
         return self.layout.size
@@ -551,18 +565,22 @@ class ChatterEventFilter(QObject):
         return cls(chatter_layout, tooltip_handler, menu_handler)
 
     def eventFilter(self, obj, event):
-        if event.type() == QtCore.QEvent.ToolTip:
+        if event.type() == QtCore.QEvent.Type.ToolTip:
             return self._handle_tooltip(obj, event)
-        elif event.type() == QtCore.QEvent.MouseButtonRelease:
-            if event.button() == QtCore.Qt.RightButton:
+        elif event.type() == QtCore.QEvent.Type.MouseButtonRelease:
+            if event.button() == QtCore.Qt.MouseButton.RightButton:
                 return self._handle_context_menu(obj, event)
-        elif event.type() == QtCore.QEvent.MouseButtonDblClick:
-            if event.button() == QtCore.Qt.LeftButton:
+        elif event.type() == QtCore.QEvent.Type.MouseButtonDblClick:
+            if event.button() == QtCore.Qt.MouseButton.LeftButton:
                 return self._handle_double_click(obj, event)
         return super().eventFilter(obj, event)
 
-    def _get_data_and_elem(self, widget, event):
-        view = widget.parent()
+    def _get_data_and_elem(
+            self,
+            widget: QtWidgets.QWidget,
+            event: QtGui.QMouseEvent,
+    ) -> tuple[Any, ChatterLayoutElements | None]:
+        view: ChatterListView = widget.parent()
         idx = view.indexAt(event.pos())
         if not idx.isValid():
             return None, None
@@ -571,7 +589,7 @@ class ChatterEventFilter(QObject):
         elem = self._chatter_layout.element_at_point(point)
         return idx.data(), elem
 
-    def _handle_tooltip(self, widget, event):
+    def _handle_tooltip(self, widget: QtWidgets.QWidget, event: QtGui.QMouseEvent) -> bool:
         data, elem = self._get_data_and_elem(widget, event)
         if data is None:
             return False

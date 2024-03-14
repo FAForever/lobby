@@ -1,11 +1,16 @@
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import QModelIndex
+from PyQt6.QtCore import QRect
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QHoverEvent
+from PyQt6.QtGui import QPainter
 
 
 class VerticalHeaderView(QtWidgets.QHeaderView):
-    def __init__(self, *args, **kwargs):
-        super().__init__(QtCore.Qt.Vertical, *args, **kwargs)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(Qt.Orientation.Vertical, *args, **kwargs)
         self.setHighlightSections(True)
-        self.setSectionResizeMode(self.Fixed)
+        self.setSectionResizeMode(self.ResizeMode.Fixed)
         self.setVisible(True)
         self.setSectionsClickable(True)
         self.setAlternatingRowColors(True)
@@ -13,33 +18,28 @@ class VerticalHeaderView(QtWidgets.QHeaderView):
 
         self.hover = -1
 
-    def paintSection(self, painter, rect, index):
+    def paintSection(self, painter: QPainter, rect: QRect, index: QModelIndex) -> None:
         opt = QtWidgets.QStyleOptionHeader()
         self.initStyleOption(opt)
         opt.rect = rect
         opt.section = index
-        opt.text = str(
-            self.model().headerData(
-                index, self.orientation(), QtCore.Qt.DisplayRole,
-            ),
-        )
-        opt.textAlignment = QtCore.Qt.AlignCenter
 
-        state = QtWidgets.QStyle.State_None
+        data = self.model().headerData(index, self.orientation(), Qt.ItemDataRole.DisplayRole)
+        opt.text = str(data)
+
+        opt.textAlignment = Qt.AlignmentFlag.AlignCenter
+
+        state = QtWidgets.QStyle.StateFlag.State_None
 
         if self.highlightSections():
-            if self.selectionModel().rowIntersectsSelection(
-                index, QtCore.QModelIndex(),
-            ):
-                state |= QtWidgets.QStyle.State_On
+            if self.selectionModel().rowIntersectsSelection(index, QModelIndex()):
+                state |= QtWidgets.QStyle.StateFlag.State_On
             elif index == self.hover:
-                state |= QtWidgets.QStyle.State_MouseOver
+                state |= QtWidgets.QStyle.StateFlag.State_MouseOver
 
         opt.state |= state
 
-        self.style().drawControl(
-            QtWidgets.QStyle.CE_Header, opt, painter, self,
-        )
+        self.style().drawControl(QtWidgets.QStyle.ControlElement.CE_Header, opt, painter, self)
 
     def mouseMoveEvent(self, event):
         QtWidgets.QHeaderView.mouseMoveEvent(self, event)
@@ -56,8 +56,8 @@ class VerticalHeaderView(QtWidgets.QHeaderView):
         self.parent().updateHoverRow(event)
         self.updateHoverSection(event)
 
-    def updateHoverSection(self, event):
-        index = self.logicalIndexAt(event.pos())
+    def updateHoverSection(self, event: QHoverEvent) -> None:
+        index = self.logicalIndexAt(event.position().toPoint())
         oldHover = self.hover
         self.hover = index
 

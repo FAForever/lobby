@@ -1,8 +1,11 @@
 import logging
 
-from PyQt5.QtCore import QObject, QUrl, pyqtSignal
-from PyQt5.QtNetwork import QNetworkCookie
-from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineProfile
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtNetwork import QNetworkCookie
+from PyQt6.QtWebEngineCore import QWebEnginePage
+from PyQt6.QtWebEngineCore import QWebEngineProfile
 
 import util
 from config import Settings

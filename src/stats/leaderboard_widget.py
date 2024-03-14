@@ -1,4 +1,9 @@
-from PyQt5 import QtCore, QtWidgets
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import util
 from api.player_api import PlayerApiConnector
@@ -9,14 +14,24 @@ from .itemviews.leaderboarditemdelegate import LeaderboardItemDelegate
 from .models.leaderboardfiltermodel import LeaderboardFilterModel
 from .models.leaderboardtablemodel import LeaderboardTableModel
 
+if TYPE_CHECKING:
+    from client._clientwindow import ClientWindow
+
 FormClass, BaseClass = util.THEME.loadUiType("stats/leaderboard.ui")
 
-DATE_FORMAT = QtCore.Qt.ISODate
+DATE_FORMAT = QtCore.Qt.DateFormat.ISODate
 
 
 class LeaderboardWidget(BaseClass, FormClass):
 
-    def __init__(self, client, parent, leaderboardName, *args, **kwargs):
+    def __init__(
+            self,
+            client: ClientWindow,
+            parent: QtWidgets.QWidget,
+            leaderboardName: str,
+            *args,
+            **kwargs,
+    ) -> None:
         super(BaseClass, self).__init__()
 
         self.setupUi(self)
@@ -115,7 +130,7 @@ class LeaderboardWidget(BaseClass, FormClass):
             checkbox.stateChanged.connect(self.setShownColumns)
 
         self.tableView.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.Stretch,
+            QtWidgets.QHeaderView.ResizeMode.Stretch,
         )
         self.tableView.horizontalHeader().setFixedHeight(30)
         self.tableView.horizontalHeader().setHighlightSections(False)
@@ -177,7 +192,7 @@ class LeaderboardWidget(BaseClass, FormClass):
         completer = QtWidgets.QCompleter(
             sorted(self.model.logins, key=lambda login: login.lower()),
         )
-        completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        completer.setCaseSensitivity(QtCore.Qt.CaseSensitivity.CaseInsensitive)
         completer.popup().setStyleSheet(
             "background: rgb(32, 32, 37); color: orange;",
         )
@@ -223,7 +238,7 @@ class LeaderboardWidget(BaseClass, FormClass):
         completer = QtWidgets.QCompleter(
             sorted(logins, key=lambda login: login.lower()),
         )
-        completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        completer.setCaseSensitivity(QtCore.Qt.CaseSensitivity.CaseInsensitive)
         completer.popup().setStyleSheet(
             "background: rgb(32, 32, 37); color: orange;",
         )

@@ -1,7 +1,7 @@
 import types
 
-from PyQt5.QtGui import QDesktopServices
-from PyQt5.QtWebEngineWidgets import QWebEnginePage
+from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtWebEngineCore import QWebEnginePage
 
 
 class ExternalLinkPage(QWebEnginePage):
@@ -12,7 +12,7 @@ class ExternalLinkPage(QWebEnginePage):
         self.linkUnderCursor = ""
 
     def acceptNavigationRequest(self, url, navtype, isMainFrame):
-        if navtype == QWebEnginePage.NavigationTypeLinkClicked:
+        if navtype == QWebEnginePage.NavigationType.NavigationTypeLinkClicked:
             if url.toString() == self.linkUnderCursor:
                 QDesktopServices.openUrl(url)
             return False

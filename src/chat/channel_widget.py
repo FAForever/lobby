@@ -1,8 +1,12 @@
 import logging
 import re
 
-from PyQt5.QtCore import QObject, Qt, QUrl, pyqtSignal
-from PyQt5.QtGui import QTextCursor, QTextDocument
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QTextCursor
+from PyQt6.QtGui import QTextDocument
 
 from util.qt import monkeypatch_method
 
@@ -101,8 +105,8 @@ class ChannelWidget(QObject):
     def add_avatar_resource(self, url, pix):
         doc = self.chat_area.document()
         link = QUrl(url)
-        if not doc.resource(QTextDocument.ImageResource, link):
-            doc.addResource(QTextDocument.ImageResource, link, pix)
+        if not doc.resource(QTextDocument.ResourceType.ImageResource, link):
+            doc.addResource(QTextDocument.ResourceType.ImageResource, link, pix)
 
     def _set_chatter_filter(self, text):
         self.nick_list.model().setFilterFixedString(text)
@@ -127,7 +131,7 @@ class ChannelWidget(QObject):
         self._sticky_scroll.save_scroll()
 
         cursor = self.chat_area.textCursor()
-        cursor.movePosition(QTextCursor.End)
+        cursor.movePosition(QTextCursor.MoveOperation.End)
         self.chat_area.setTextCursor(cursor)
         self.chat_area.insertHtml(text)
 
@@ -135,8 +139,8 @@ class ChannelWidget(QObject):
 
     def remove_lines(self, number):
         cursor = self.chat_area.textCursor()
-        cursor.movePosition(QTextCursor.Start)
-        cursor.movePosition(QTextCursor.Down, QTextCursor.KeepAnchor, number)
+        cursor.movePosition(QTextCursor.MoveOperation.Start)
+        cursor.movePosition(QTextCursor.MoveOperation.Down, QTextCursor.MoveMode.KeepAnchor, number)
         cursor.removeSelectedText()
 
     def set_chatter_delegate(self, delegate):
@@ -144,7 +148,7 @@ class ChannelWidget(QObject):
 
     def set_chatter_model(self, model):
         self.nick_list.setModel(model)
-        model.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        model.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
 
     def set_chatter_event_filter(self, event_filter):
         self.nick_list.viewport().installEventFilter(event_filter)

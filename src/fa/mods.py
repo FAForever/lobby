@@ -1,6 +1,6 @@
 import logging
 
-from PyQt5 import QtWidgets
+from PyQt6 import QtWidgets
 
 import config
 import fa
@@ -40,7 +40,7 @@ def checkMods(mods):  # mods is a dictionary of uid-name pairs
             | QtWidgets.QMessageBox.YesToAll
             | QtWidgets.QMessageBox.No,
         )
-        result = msgbox.exec_()
+        result = msgbox.exec()
         if result == QtWidgets.QMessageBox.No:
             return False
         elif result == QtWidgets.QMessageBox.YesToAll:

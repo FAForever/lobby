@@ -1,6 +1,9 @@
 import logging
 
-from PyQt5 import QtCore, QtGui, QtWebEngineWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWebEngineCore
+from PyQt6 import QtWebEngineWidgets
 
 import util
 
@@ -44,11 +47,11 @@ class OAuthWidget(FormClass, BaseClass):
             self.finished.emit("", "", error)
 
 
-class OAuthWebPage(QtWebEngineWidgets.QWebEnginePage):
+class OAuthWebPage(QtWebEngineCore.QWebEnginePage):
     navigationRequestAccepted = QtCore.pyqtSignal(QtCore.QUrl)
 
     def __init__(self):
-        QtWebEngineWidgets.QWebEnginePage.__init__(self)
+        QtWebEngineCore.QWebEnginePage.__init__(self)
 
     def acceptNavigationRequest(self, url, type_, isMainFrame):
         if "oauth" in url.url() or "localhost" in url.url():
