@@ -1,46 +1,59 @@
 import json
 import logging
 import time
+from typing import Any
+from typing import Callable
 
-from PyQt6 import QtCore
-from PyQt6 import QtNetwork
 from PyQt6 import QtWidgets
+from PyQt6.QtCore import QByteArray
+from PyQt6.QtCore import QEventLoop
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import QUrlQuery
+from PyQt6.QtNetwork import QNetworkAccessManager
+from PyQt6.QtNetwork import QNetworkReply
+from PyQt6.QtNetwork import QNetworkRequest
 
 from config import Settings
 
 logger = logging.getLogger(__name__)
 
-DO_NOT_ENCODE = QtCore.QByteArray()
+DO_NOT_ENCODE = QByteArray()
 DO_NOT_ENCODE.append(b":/?&=.,")
 
 
-class ApiBase(QtCore.QObject):
-    def __init__(self, route):
-        QtCore.QObject.__init__(self)
-
+class ApiBase(QObject):
+    def __init__(self, route: str = "") -> None:
+        QObject.__init__(self)
         self.route = route
-        self.manager = QtNetwork.QNetworkAccessManager()
+        self.manager = QNetworkAccessManager()
         self.manager.finished.connect(self.onRequestFinished)
         self._running = False
-
-        self.handlers = {}
+        self.handlers: dict[QNetworkReply | None, Callable[[dict], Any]] = {}
 
     # query arguments like filter=login==Rhyza
-    def request(self, queryDict, responseHandler):
+    def request(self, queryDict: dict, responseHandler: Callable[[dict], Any]) -> None:
         self._running = True
-        query = QtCore.QUrlQuery()
-        for key, value in queryDict.items():
+        url = self.build_query_url(queryDict)
+        self.get(url, responseHandler)
+
+    def build_query_url(self, query_dict: dict) -> QUrl:
+        query = QUrlQuery()
+        for key, value in query_dict.items():
             query.addQueryItem(key, str(value))
-        stringQuery = query.toString(QtCore.QUrl.ComponentFormattingOption.FullyDecoded)
-        percentEncodedByteArrayQuery = QtCore.QUrl.toPercentEncoding(
+        stringQuery = query.toString(QUrl.ComponentFormattingOption.FullyDecoded)
+        percentEncodedByteArrayQuery = QUrl.toPercentEncoding(
             stringQuery,
             exclude=DO_NOT_ENCODE,
         )
         percentEncodedStrQuery = percentEncodedByteArrayQuery.data().decode()
-        url = QtCore.QUrl(Settings.get('api') + self.route)
+        url = url = QUrl(Settings.get('api') + self.route)
         url.setQuery(percentEncodedStrQuery)
-        request = QtNetwork.QNetworkRequest(url)
+        return url
 
+    @staticmethod
+    def prepare_request(url: QUrl | None) -> QNetworkRequest:
+        request = QNetworkRequest(url) if url else QNetworkRequest()
         api_token = Settings.get('oauth/token', None)
         if api_token is not None and api_token.get('expires_at') > time.time():
             access_token = api_token.get('access_token')
@@ -49,13 +62,19 @@ class ApiBase(QtCore.QObject):
 
         request.setRawHeader(b'User-Agent', b"FAF Client")
         request.setRawHeader(b'Content-Type', b'application/vnd.api+json')
-        logger.debug("Sending API request with URL: {}".format(url.toString()))
-        reply = self.manager.get(request)
-        self.handlers[reply] = responseHandler
+        # FIXME: remove when https://bugreports.qt.io/browse/QTBUG-123891 is deployed
+        request.setAttribute(QNetworkRequest.Attribute.Http2AllowedAttribute, False)
+        return request
 
-    def onRequestFinished(self, reply):
+    def get(self, url: QUrl, response_handler: Callable[[dict], Any]) -> None:
+        self._running = True
+        logger.debug("Sending API request with URL: {}".format(url.toString()))
+        reply = self.manager.get(self.prepare_request(url))
+        self.handlers[reply] = response_handler
+
+    def onRequestFinished(self, reply: QNetworkReply) -> None:
         self._running = False
-        if reply.error() != QtNetwork.QNetworkReply.NetworkError.NoError:
+        if reply.error() != QNetworkReply.NetworkError.NoError:
             logger.error("API request error: {}".format(reply.error()))
         else:
             message_bytes = reply.readAll().data()
@@ -132,6 +151,6 @@ class ApiBase(QtCore.QObject):
         return {}
 
     def waitForCompletion(self):
-        waitFlag = QtCore.QEventLoop.WaitForMoreEvents
+        waitFlag = QEventLoop.ProcessEventsFlag.WaitForMoreEvents
         while self._running:
             QtWidgets.QApplication.processEvents(waitFlag)
