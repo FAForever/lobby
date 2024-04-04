@@ -1,6 +1,5 @@
 import json
 import logging
-import time
 from typing import Any
 from typing import Callable
 
@@ -15,6 +14,7 @@ from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
 from config import Settings
+from oauth.oauth_flow import OAuth2Flow
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,8 @@ DO_NOT_ENCODE.append(b":/?&=.,")
 
 
 class ApiBase(QObject):
+    oauth: OAuth2Flow = OAuth2Flow()
+
     def __init__(self, route: str = "") -> None:
         QObject.__init__(self)
         self.route = route
@@ -31,11 +33,9 @@ class ApiBase(QObject):
         self._running = False
         self.handlers: dict[QNetworkReply | None, Callable[[dict], Any]] = {}
 
-    # query arguments like filter=login==Rhyza
-    def request(self, queryDict: dict, responseHandler: Callable[[dict], Any]) -> None:
-        self._running = True
-        url = self.build_query_url(queryDict)
-        self.get(url, responseHandler)
+    @classmethod
+    def set_oauth(cls, oauth: OAuth2Flow) -> None:
+        cls.oauth = oauth
 
     def build_query_url(self, query_dict: dict) -> QUrl:
         query = QUrlQuery()
@@ -54,14 +54,8 @@ class ApiBase(QObject):
     @staticmethod
     def prepare_request(url: QUrl | None) -> QNetworkRequest:
         request = QNetworkRequest(url) if url else QNetworkRequest()
-        api_token = Settings.get('oauth/token', None)
-        if api_token is not None and api_token.get('expires_at') > time.time():
-            access_token = api_token.get('access_token')
-            bearer = 'Bearer {}'.format(access_token).encode('utf-8')
-            request.setRawHeader(b'Authorization', bearer)
-
-        request.setRawHeader(b'User-Agent', b"FAF Client")
-        request.setRawHeader(b'Content-Type', b'application/vnd.api+json')
+        # last 2 args are unused, but for some reason they are required
+        ApiBase.oauth.prepareRequest(request, QByteArray(), QByteArray())
         # FIXME: remove when https://bugreports.qt.io/browse/QTBUG-123891 is deployed
         request.setAttribute(QNetworkRequest.Attribute.Http2AllowedAttribute, False)
         return request

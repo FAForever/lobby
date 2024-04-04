@@ -42,6 +42,8 @@ default_values = {
     'oauth/redirect_uri': "http://localhost",
     'oauth/scope': ["openid", "offline", "public_profile", "lobby"],
     'oauth/token': None,
+    'oauth/auth_endpoint': '/oauth2/auth',
+    'oauth/token_endpoint': '/oauth2/token',
     'replay_vault/host': 'https://replay.{host}',
     'replay_server/host': 'lobby.{host}',
     'replay_server/port': 15000,

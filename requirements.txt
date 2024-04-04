@@ -13,5 +13,3 @@ jsonschema
 jinja2
 zstandard
 irc
-oauthlib
-requests_oauthlib

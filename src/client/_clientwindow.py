@@ -1,20 +1,18 @@
 import logging
-import sys
 import time
 from functools import partial
 
-from oauthlib.oauth2 import WebApplicationClient
 from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 from PyQt6.QtNetwork import QNetworkAccessManager
-from requests_oauthlib import OAuth2Session
 
 import config
 import fa
 import notifications as ns
 import util
 import util.crash
+from api.ApiBase import ApiBase
 from chat import ChatMVC
 from chat._avatarWidget import AvatarWidget
 from chat.channel_autojoiner import ChannelAutojoiner
@@ -69,6 +67,7 @@ from model.playerset import Playerset
 from model.rating import MatchmakerQueueType
 from model.rating import RatingType
 from news import NewsWidget
+from oauth.oauth_flow import OAuth2Flow
 from power import PowerTools
 from replays import ReplaysWidget
 from secondaryServer import SecondaryServer
@@ -83,12 +82,8 @@ from vaults.modvault.utils import getModFolder
 from vaults.modvault.utils import setModFolder
 
 from .mouse_position import MousePosition
-from .oauth_dialog import OAuthWidget
 
 logger = logging.getLogger(__name__)
-
-OAUTH_TOKEN_PATH = "/oauth2/token"
-OAUTH_AUTH_PATH = "/oauth2/auth"
 
 FormClass, BaseClass = util.THEME.loadUiType("client/client.ui")
 
@@ -148,9 +143,11 @@ class ClientWindow(FormClass, BaseClass):
         )
 
         self._network_access_manager = QNetworkAccessManager(self)
-        self.OAuthSession = None
-        self.tokenTimer = QtCore.QTimer()
-        self.tokenTimer.timeout.connect(self.checkOAuthToken)
+        self.oauth_flow = OAuth2Flow(parent=self)
+        ApiBase.set_oauth(self.oauth_flow)
+        self.oauth_flow.granted.connect(self.do_connect)
+        self.oauth_flow.granted.connect(self.save_refresh_token)
+        self.oauth_flow.requestFailed.connect(self.show_login_widget)
 
         self.unique_id = None
         self._chat_config = ChatConfig(util.settings)
@@ -917,7 +914,7 @@ class ClientWindow(FormClass, BaseClass):
             self.lobby_connection.disconnect_()
             self._chatMVC.connection.disconnect_()
             self.games.onLogOut()
-            self.tokenTimer.stop()
+            self.oauth_flow.stop_checking_expiration()
             config.Settings.set("oauth/token", None, persist=False)
 
     def chat_reconnect(self):
@@ -1504,7 +1501,13 @@ class ClientWindow(FormClass, BaseClass):
         except BaseException:
             pass
 
-    def do_connect(self):
+    def save_refresh_token(self) -> None:
+        self.refresh_token = self.oauth_flow.refreshToken()
+
+    def do_connect(self) -> bool:
+        if self.state in (ClientState.CONNECTING, ClientState.CONNECTED, ClientState.LOGGED_IN):
+            return True
+
         if not self.replayServer.doListen():
             return False
 
@@ -1516,67 +1519,23 @@ class ClientWindow(FormClass, BaseClass):
         # FIXME - option updating is silly
         self.actionSetAutoLogin.setChecked(self.remember)
 
-    def try_to_auto_login(self):
+    def try_to_auto_login(self) -> None:
         if (
             self._auto_relogin
             and self.refresh_token
-            and self.refreshOAuthToken()
         ):
-            self.do_connect()
+            self.oauth_flow.setRefreshToken(self.refresh_token)
+            self.oauth_flow.refreshAccessToken()
         else:
             self.show_login_widget()
 
-    def get_creds_and_login(self):
-        if self.OAuthSession.token and self.checkOAuthToken():
-            if self.send_token(self.OAuthSession.token.get("access_token")):
-                return
+    def get_creds_and_login(self) -> None:
+        if self.send_token(self.oauth_flow.token()):
+            return
         QtWidgets.QMessageBox.warning(
             self, "Log In", "OAuth token verification failed, please relogin",
         )
         self.show_login_widget()
-
-    def createOAuthSession(self):
-        client_id = config.Settings.get("oauth/client_id")
-        refresh_kwargs = dict(client_id=client_id)
-        redirect_uri = config.Settings.get("oauth/redirect_uri")
-        scope = config.Settings.get("oauth/scope")
-        app_client = WebApplicationClient(client_id=client_id)
-        OAuth = OAuth2Session(
-            client=app_client,
-            redirect_uri=redirect_uri,
-            scope=scope,
-            auto_refresh_kwargs=refresh_kwargs,
-        )
-        return OAuth
-
-    def checkOAuthToken(self):
-        if self.OAuthSession.token.get("expires_at", 0) < time.time() + 5:
-            self.tokenTimer.stop()
-            logger.info("Token expired, going to refresh")
-            return self.refreshOAuthToken()
-        return True
-
-    def refreshOAuthToken(self):
-        token_url = config.Settings.get('oauth/host') + OAUTH_TOKEN_PATH
-        if not self.OAuthSession:
-            self.OAuthSession = self.createOAuthSession()
-        try:
-            logger.debug("Refreshing OAuth token")
-            token = self.OAuthSession.refresh_token(
-                token_url,
-                refresh_token=self.refresh_token,
-                verify=False,
-            )
-            self.saveOAuthToken(token)
-            return True
-        except BaseException:
-            logger.error("Error during refreshing token")
-            return False
-
-    def saveOAuthToken(self, token):
-        config.Settings.set("oauth/token", token, persist=False)
-        self.refresh_token = token.get("refresh_token")
-        self.tokenTimer.start(1 * 1000)
 
     def show_login_widget(self):
         login_widget = LoginWidget(self.remember)
@@ -1599,46 +1558,8 @@ class ClientWindow(FormClass, BaseClass):
             self.news.updateNews()
             self.games.refreshMods()
 
-        oauth_host = config.Settings.get("oauth/host")
-        authorization_endpoint = oauth_host + OAUTH_AUTH_PATH
-        self.OAuthSession = self.createOAuthSession()
-        authorization_url, oauth_state = self.OAuthSession.authorization_url(
-            authorization_endpoint,
-        )
-        oauth_widget = OAuthWidget(
-            oauth_state=oauth_state,
-            url=authorization_url,
-        )
-        oauth_widget.finished.connect(self.oauth_finished)
-        oauth_widget.rejected.connect(self.on_widget_no_login)
-        oauth_widget.exec()
-
-    def oauth_finished(self, state, code, error):
-        token_url = config.Settings.get("oauth/host") + OAUTH_TOKEN_PATH
-        if state:
-            try:
-                logger.debug("Fetching OAuth token")
-                token = self.OAuthSession.fetch_token(
-                    token_url,
-                    code=code,
-                    include_client_id=True,
-                    verify=False,
-                )
-                self.saveOAuthToken(token)
-                self.do_connect()
-                return
-            except BaseException:
-                logger.error(
-                    "Fetching token failed: ",
-                    exc_info=sys.exc_info(),
-                )
-        elif error:
-            logger.error("Error during logging in: {}".format(error))
-
-        QtWidgets.QMessageBox.warning(
-            self, "Log In", "Error occured, please retry",
-        )
-        self.on_widget_no_login()
+        self.oauth_flow.setup_credentials()
+        self.oauth_flow.grant()
 
     def on_widget_no_login(self):
         self.state = ClientState.DISCONNECTED
