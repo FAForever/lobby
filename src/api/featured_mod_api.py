@@ -1,19 +1,20 @@
 import logging
 
-from .ApiBase import ApiBase
+from api.ApiAccessors import DataApiAccessor
+from client.connection import Dispatcher
 
 logger = logging.getLogger(__name__)
 
 
-class FeaturedModApiConnector(ApiBase):
-    def __init__(self, dispatch):
-        ApiBase.__init__(self, '/data/featuredMod')
+class FeaturedModApiConnector(DataApiAccessor):
+    def __init__(self, dispatch: Dispatcher) -> None:
+        super().__init__('/data/featuredMod')
         self.dispatch = dispatch
 
-    def requestData(self):
-        self.request({}, self.handleData)
+    def requestData(self) -> None:
+        self.get_by_query({}, self.handleData)
 
-    def handleData(self, message):
+    def handleData(self, message: dict) -> None:
         preparedData = {
             "command": "mod_info_api",
             "values": [],

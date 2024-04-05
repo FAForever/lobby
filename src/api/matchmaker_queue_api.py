@@ -1,17 +1,19 @@
 import logging
 
-from .ApiBase import ApiBase
+from api.ApiAccessors import DataApiAccessor
+from client.connection import Dispatcher
 
 logger = logging.getLogger(__name__)
 
 
-class matchmakerQueueApiConnector(ApiBase):
-    def __init__(self, dispatch):
-        ApiBase.__init__(self, '/data/matchmakerQueue')
+class matchmakerQueueApiConnector(DataApiAccessor):
+    def __init__(self, dispatch: Dispatcher) -> None:
+        super().__init__('/data/matchmakerQueue')
         self.dispatch = dispatch
 
-    def requestData(self, queryDict={}):
-        self.request(queryDict, self.handleData)
+    def requestData(self, queryDict: dict | None = None) -> None:
+        queryDict = queryDict or {}
+        self.get_by_query(queryDict, self.handleData)
 
     def handleData(self, message: dict) -> None:
         preparedData = {

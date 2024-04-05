@@ -12,6 +12,7 @@ else:
 default_values = {
     'display_name': 'Main Server (recommended)',
     'api': 'https://api.{host}',
+    'user_api': 'https://user.{host}',
     'chat/host': 'irc.{host}',
     'chat/port': 6697,
     'client/data_path': APPDATA_DIR,

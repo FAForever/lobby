@@ -1,17 +1,19 @@
 import logging
 
-from .ApiBase import ApiBase
+from api.ApiAccessors import DataApiAccessor
+from client.connection import Dispatcher
 
 logger = logging.getLogger(__name__)
 
 
-class ModApiConnector(ApiBase):
-    def __init__(self, dispatch):
-        ApiBase.__init__(self, '/data/mod')
+class ModApiConnector(DataApiAccessor):
+    def __init__(self, dispatch: Dispatcher) -> None:
+        super().__init__('/data/mod')
         self.dispatch = dispatch
 
-    def requestData(self, query={}):
-        self.request(query, self.handleData)
+    def requestData(self, params: dict | None = None) -> None:
+        params = params or {}
+        self.get_by_query(params, self.handleData)
 
     def handleData(self, message: dict) -> None:
         preparedData = dict(
@@ -45,13 +47,14 @@ class ModApiConnector(ApiBase):
         self.dispatch.dispatch(preparedData)
 
 
-class MapApiConnector(ApiBase):
-    def __init__(self, dispatch):
-        ApiBase.__init__(self, '/data/map')
+class MapApiConnector(DataApiAccessor):
+    def __init__(self, dispatch: Dispatcher) -> None:
+        super().__init__('/data/map')
         self.dispatch = dispatch
 
-    def requestData(self, query={}):
-        self.request(query, self.handleData)
+    def requestData(self, params: dict | None = None) -> None:
+        params = params or {}
+        self.get_by_query(params, self.handleData)
 
     def handleData(self, message: dict) -> None:
         preparedData = dict(
@@ -88,13 +91,14 @@ class MapApiConnector(ApiBase):
         self.dispatch.dispatch(preparedData)
 
 
-class MapPoolApiConnector(ApiBase):
-    def __init__(self, dispatch):
-        ApiBase.__init__(self, '/data/mapPoolAssignment')
+class MapPoolApiConnector(DataApiAccessor):
+    def __init__(self, dispatch: Dispatcher) -> None:
+        super().__init__('/data/mapPoolAssignment')
         self.dispatch = dispatch
 
-    def requestData(self, query={}):
-        self.request(query, self.handleData)
+    def requestData(self, params: dict | None) -> None:
+        params = params or {}
+        self.get_by_query(params, self.handleData)
 
     def handleData(self, message: dict) -> None:
         preparedData = dict(

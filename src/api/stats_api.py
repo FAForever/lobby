@@ -1,18 +1,20 @@
 import logging
 
-from api.ApiBase import ApiBase
+from api.ApiAccessors import DataApiAccessor
+from client.connection import Dispatcher
 
 logger = logging.getLogger(__name__)
 
 
-class LeaderboardRatingApiConnector(ApiBase):
-    def __init__(self, dispatch, leaderboardName):
-        ApiBase.__init__(self, '/data/leaderboardRating')
+class LeaderboardRatingApiConnector(DataApiAccessor):
+    def __init__(self, dispatch: Dispatcher, leaderboardName: str) -> None:
+        super().__init__('/data/leaderboardRating')
         self.dispatch = dispatch
         self.leadeboardName = leaderboardName
 
-    def requestData(self, queryDict={}):
-        self.request(queryDict, self.handleData)
+    def requestData(self, queryDict: dict | None = None) -> None:
+        queryDict = queryDict or {}
+        self.get_by_query(queryDict, self.handleData)
 
     def handleData(self, message: dict) -> None:
         preparedData = dict(
@@ -25,13 +27,14 @@ class LeaderboardRatingApiConnector(ApiBase):
         self.dispatch.dispatch(preparedData)
 
 
-class LeaderboardApiConnector(ApiBase):
-    def __init__(self, dispatch=None):
-        ApiBase.__init__(self, '/data/leaderboard')
+class LeaderboardApiConnector(DataApiAccessor):
+    def __init__(self, dispatch: Dispatcher | None = None) -> None:
+        super().__init__('/data/leaderboard')
         self.dispatch = dispatch
 
-    def requestData(self, queryDict={}):
-        self.request(queryDict, self.handleData)
+    def requestData(self, queryDict: dict | None = None) -> None:
+        queryDict = queryDict or {}
+        self.get_by_query(queryDict, self.handleData)
 
     def handleData(self, message: dict) -> None:
         preparedData = dict(

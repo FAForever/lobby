@@ -28,6 +28,7 @@ class ApiBase(QObject):
     def __init__(self, route: str = "") -> None:
         QObject.__init__(self)
         self.route = route
+        self.host_config_key = ""
         self.manager = QNetworkAccessManager()
         self.manager.finished.connect(self.onRequestFinished)
         self._running = False
@@ -47,9 +48,21 @@ class ApiBase(QObject):
             exclude=DO_NOT_ENCODE,
         )
         percentEncodedStrQuery = percentEncodedByteArrayQuery.data().decode()
-        url = url = QUrl(Settings.get('api') + self.route)
+        url = self._get_host_url().resolved(QUrl(self.route))
         url.setQuery(percentEncodedStrQuery)
         return url
+
+    def _get_host_url(self) -> QUrl:
+        return QUrl(Settings.get(self.host_config_key))
+
+    # query arguments like filter=login==Rhyza
+    def get_by_query(self, query_dict: dict, response_handler: Callable[[dict], Any]) -> None:
+        url = self.build_query_url(query_dict)
+        self.get(url, response_handler)
+
+    def get_by_endpoint(self, endpoint: str, response_handler: Callable[[dict], Any]) -> None:
+        url = self._get_host_url().resolved(QUrl(endpoint))
+        self.get(url, response_handler)
 
     @staticmethod
     def prepare_request(url: QUrl | None) -> QNetworkRequest:
@@ -66,6 +79,9 @@ class ApiBase(QObject):
         reply = self.manager.get(self.prepare_request(url))
         self.handlers[reply] = response_handler
 
+    def parse_message(self, message: dict) -> dict:
+        return message
+
     def onRequestFinished(self, reply: QNetworkReply) -> None:
         self._running = False
         if reply.error() != QNetworkReply.NetworkError.NoError:
@@ -73,76 +89,10 @@ class ApiBase(QObject):
         else:
             message_bytes = reply.readAll().data()
             message = json.loads(message_bytes.decode('utf-8'))
-            included = self.parseIncluded(message)
-            result = {}
-            result["data"] = self.parseData(message, included)
-            result["meta"] = self.parseMeta(message)
+            result = self.parse_message(message)
             self.handlers[reply](result)
         self.handlers.pop(reply)
         reply.deleteLater()
-
-    def parseIncluded(self, message):
-        result = {}
-        relationships = []
-        if "included" in message:
-            for inc_item in message["included"]:
-                if not inc_item["type"] in result:
-                    result[inc_item["type"]] = {}
-                if "attributes" in inc_item:
-                    type_ = inc_item["type"]
-                    id_ = inc_item["id"]
-                    result[type_][id_] = inc_item["attributes"]
-                if "relationships" in inc_item:
-                    for key, value in inc_item["relationships"].items():
-                        relationships.append((
-                            inc_item["type"], inc_item["id"], key, value,
-                        ))
-            message.pop('included')
-        # resolve relationships
-        for r in relationships:
-            result[r[0]][r[1]][r[2]] = self.parseData(r[3], result)
-        return result
-
-    def parseData(self, message, included):
-        if "data" in message:
-            if isinstance(message["data"], (list)):
-                result = []
-                for data in message["data"]:
-                    result.append(self.parseSingleData(data, included))
-                return result
-            elif isinstance(message["data"], (dict)):
-                return self.parseSingleData(message["data"], included)
-        else:
-            logger.error("error in response", message)
-        if "included" in message:
-            logger.error("unexpected 'included' in message", message)
-        return {}
-
-    def parseSingleData(self, data, included):
-        result = {}
-        try:
-            if (
-                data["type"] in included
-                and data["id"] in included[data["type"]]
-            ):
-                result = included[data["type"]][data["id"]]
-            result["id"] = data["id"]
-            if "type" not in result:
-                result["type"] = data["type"]
-            if "attributes" in data:
-                for key, value in data["attributes"].items():
-                    result[key] = value
-            if "relationships" in data:
-                for key, value in data["relationships"].items():
-                    result[key] = self.parseData(value, included)
-        except BaseException:
-            logger.error("error parsing ", data)
-        return result
-
-    def parseMeta(self, message):
-        if "meta" in message:
-            return message["meta"]
-        return {}
 
     def waitForCompletion(self):
         waitFlag = QEventLoop.ProcessEventsFlag.WaitForMoreEvents

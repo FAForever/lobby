@@ -1,21 +1,17 @@
 import logging
 
-from .ApiBase import ApiBase
+from api.ApiAccessors import DataApiAccessor
 
 logger = logging.getLogger(__name__)
 
 
-class FeaturedModFiles(ApiBase):
-
-    def __init__(self, mod_id, version):
-        ApiBase.__init__(
-            self,
-            '/featuredMods/{}/files/{}'.format(mod_id, version),
-        )
+class FeaturedModFiles(DataApiAccessor):
+    def __init__(self, mod_id: int, version: str) -> None:
+        super().__init__('/featuredMods/{}/files/{}'.format(mod_id, version))
         self.featuredModFiles = []
 
-    def requestData(self):
-        self.request({}, self.handleData)
+    def requestData(self) -> None:
+        self.get_by_query({}, self.handleData)
 
     def handleData(self, message):
         self.featuredModFiles = message["data"]
@@ -26,20 +22,21 @@ class FeaturedModFiles(ApiBase):
         return self.featuredModFiles
 
 
-class FeaturedModId(ApiBase):
-    def __init__(self):
-        ApiBase.__init__(self, '/data/featuredMod')
+class FeaturedModId(DataApiAccessor):
+    def __init__(self) -> None:
+        super().__init__('/data/featuredMod')
         self.featuredModId = 0
 
-    def requestData(self, queryDict={}):
-        self.request(queryDict, self.handleData)
+    def requestData(self, queryDict: dict | None = None) -> None:
+        queryDict = queryDict or {}
+        self.get_by_query(queryDict, self.handleData)
 
     def handleFeaturedModId(self, message):
         self.featuredModId = message['data'][0]['id']
 
-    def requestFeaturedModIdByName(self, technicalName):
+    def requestFeaturedModIdByName(self, technicalName: str) -> None:
         queryDict = dict(filter='technicalName=={}'.format(technicalName))
-        self.request(queryDict, self.handleFeaturedModId)
+        self.get_by_query(queryDict, self.handleFeaturedModId)
 
     def requestAndGetFeaturedModIdByName(self, technicalName):
         self.requestFeaturedModIdByName(technicalName)

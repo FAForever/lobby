@@ -1,18 +1,24 @@
 import logging
 
-from .ApiBase import ApiBase
+from api.ApiAccessors import DataApiAccessor
+from client.connection import Dispatcher
 
 logger = logging.getLogger(__name__)
 
 
-class PlayerApiConnector(ApiBase):
-    def __init__(self, dispatch):
-        ApiBase.__init__(self, '/data/player')
+class PlayerApiConnector(DataApiAccessor):
+    def __init__(self, dispatch: Dispatcher) -> None:
+        super().__init__('/data/player')
         self.dispatch = dispatch
 
-    def requestDataForLeaderboard(self, leaderboardName, queryDict={}):
+    def requestDataForLeaderboard(
+            self,
+            leaderboardName: str,
+            queryDict: dict | None = None,
+    ) -> None:
+        queryDict = queryDict or {}
         self.leaderboardName = leaderboardName
-        self.request(queryDict, self.handleDataForLeaderboard)
+        self.get_by_query(queryDict, self.handleDataForLeaderboard)
 
     def handleDataForLeaderboard(self, message: dict) -> None:
         preparedData = dict(
@@ -24,7 +30,7 @@ class PlayerApiConnector(ApiBase):
         )
         self.dispatch.dispatch(preparedData)
 
-    def requestDataForAliasViewer(self, nameToFind):
+    def requestDataForAliasViewer(self, nameToFind: str) -> None:
         queryDict = {
             'include': 'names',
             'filter': '(login=="{name}",names.name=="{name}")'.format(
@@ -33,7 +39,7 @@ class PlayerApiConnector(ApiBase):
             'fields[player]': 'login,names',
             'fields[nameRecord]': 'name,changeTime,player',
         }
-        self.request(queryDict, self.handleDataForAliasViewer)
+        self.get_by_query(queryDict, self.handleDataForAliasViewer)
 
     def handleDataForAliasViewer(self, message: dict) -> None:
         preparedData = dict(
