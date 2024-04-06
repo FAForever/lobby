@@ -5,8 +5,12 @@ from enum import IntEnum
 
 from PyQt6 import QtCore
 from PyQt6 import QtNetwork
+from PyQt6.QtCore import QByteArray
+from PyQt6.QtCore import QUrl
+from PyQt6.QtWebSockets import QWebSocket
 
 import fa
+from api.ApiAccessors import UserApiAccessor
 from config import Settings
 from model.game import Game
 from model.game import message_to_game_args
@@ -151,13 +155,13 @@ class ServerConnection(QtCore.QObject):
     connected = QtCore.pyqtSignal()
     disconnected = QtCore.pyqtSignal()
     received_pong = QtCore.pyqtSignal()
+    access_url_ready = QtCore.pyqtSignal(QtCore.QUrl)
 
     def __init__(self, host, port, dispatch):
         QtCore.QObject.__init__(self)
-        self.socket = QtNetwork.QTcpSocket()
-        self.socket.readyRead.connect(self.readFromServer)
+        self.socket = QWebSocket()
+        self.socket.binaryMessageReceived.connect(self.on_binary_message_received)
         self.socket.errorOccurred.connect(self.socketError)
-        self.socket.setSocketOption(QtNetwork.QTcpSocket.SocketOption.KeepAliveOption, 1)
         self.socket.stateChanged.connect(self.on_socket_state_change)
 
         self._host = host
@@ -167,6 +171,9 @@ class ServerConnection(QtCore.QObject):
         self._disconnect_requested = False
 
         self._dispatch = dispatch
+
+        self.api_accessor = UserApiAccessor()
+        self.access_url_ready.connect(self.open_websocket)
 
     def on_socket_state_change(self, state):
         states = QtNetwork.QAbstractSocket.SocketState
@@ -225,7 +232,22 @@ class ServerConnection(QtCore.QObject):
     def do_connect(self):
         self._disconnect_requested = False
         self.state = ConnectionState.CONNECTING
-        self.socket.connectToHost(self._host, self._port)
+        self.api_accessor.get_by_endpoint("/lobby/access", self.handle_lobby_access_api_response)
+
+    def extract_url_from_api_response(self, data: dict) -> None:
+        # FIXME: remove this workaround when bug is resolved
+        # see https://bugreports.qt.io/browse/QTBUG-120492
+        url = data["accessUrl"].replace("com?", "com/?")
+        return QUrl(url)
+
+    def handle_lobby_access_api_response(self, data: dict) -> None:
+        url = self.extract_url_from_api_response(data)
+        self.access_url_ready.emit(url)
+
+    @QtCore.pyqtSlot(QtCore.QUrl)
+    def open_websocket(self, url: QUrl) -> None:
+        logger.debug(f"Opening WebSocket url: {url}")
+        self.socket.open(url)
 
     def on_connecting(self):
         self.state = ConnectionState.CONNECTING
@@ -238,7 +260,7 @@ class ServerConnection(QtCore.QObject):
         return self.socket.state() == QtNetwork.QTcpSocket.SocketState.ConnectedState
 
     def disconnect_(self):
-        self.socket.disconnectFromHost()
+        self.socket.close()
 
     def set_upnp(self, port):
         fa.upnp.createPortMapping(
@@ -265,15 +287,11 @@ class ServerConnection(QtCore.QObject):
                         exc_info=sys.exc_info(),
                     )
 
-    @QtCore.pyqtSlot()
-    def readFromServer(self):
-        while not self.socket.atEnd():
-            if self.socket.bytesAvailable() == 0:
-                return
-
-            data = self.socket.readAll().data().decode()
-            logger.debug("Server: '{}'".format(data))
-            self._data += data
+    @QtCore.pyqtSlot(QByteArray)
+    def on_binary_message_received(self, message: QByteArray) -> None:
+        data = message.data().decode()
+        logger.debug("Server: '{}'".format(data))
+        self._data += data
         if self._data.endswith("\n"):
             self.processDataFromServer(self._data)
 
@@ -282,7 +300,7 @@ class ServerConnection(QtCore.QObject):
         # it looks like there's a crash in Qt
         # when sending to an unconnected socket
         if self.socket.state() == QtNetwork.QAbstractSocket.SocketState.ConnectedState:
-            self.socket.write(message)
+            self.socket.sendBinaryMessage(message)
 
     def send(self, message):
         data = json.dumps(message)
