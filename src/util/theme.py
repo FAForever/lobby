@@ -3,7 +3,6 @@ import os
 
 from PyQt6 import QtCore
 from PyQt6 import QtGui
-from PyQt6 import QtMultimedia
 from PyQt6 import QtWidgets
 from PyQt6 import uic
 from semantic_version import Version
@@ -361,8 +360,9 @@ class ThemeSet(QtCore.QObject):
         return self._theme_callchain("readfile", filename, themed)
 
     @_warn_resource_null
-    def _sound(self, filename, themed=True):
-        return self._theme_callchain("sound", filename, themed)
+    def sound(self, filename: str, themed: bool = True) -> QtCore.QUrl:
+        filepath = self._theme_callchain("sound", filename, themed)
+        return QtCore.QUrl.fromLocalFile(filepath)
 
     def pixmap(self, filename, themed=True):
         # If we receive None, return the default pixmap
@@ -370,9 +370,6 @@ class ThemeSet(QtCore.QObject):
         if ret is None:
             return QtGui.QPixmap()
         return ret
-
-    def sound(self, filename, themed=True):
-        QtMultimedia.QSound.play(self._sound(filename, themed))
 
     def reloadStyleSheets(self):
         self.stylesheets_reloaded.emit()

@@ -5,6 +5,7 @@ import time
 
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
+from PyQt6.QtMultimedia import QSoundEffect
 
 import util
 
@@ -41,6 +42,8 @@ class NotificationDialog(FormClass, BaseClass):
             lambda: self.acceptPartyInvite(sender_id=self.sender_id),
         )
 
+        self.sound_effect = QSoundEffect()
+        self.sound_effect.setSource(util.THEME.sound("chat/sfx/query.wav"))
         # TODO: integrate into client.css
         # self.setStyleSheet(self.client.styleSheet())
 
@@ -71,7 +74,7 @@ class NotificationDialog(FormClass, BaseClass):
         self.labelTime.setText(time.strftime("%H:%M:%S", time.localtime()))
         QtCore.QTimer.singleShot(lifetime * 1000, self.hide)
         if sound:
-            util.THEME.sound("chat/sfx/query.wav")
+            self.sound_effect.play()
         self.setFixedHeight(height or self.baseHeight)
         self.setFixedWidth(width or self.baseWidth)
 
