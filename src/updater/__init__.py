@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QDialog
 from PyQt6.QtWidgets import QMessageBox
 from semantic_version import Version
 
+from updater.base import Releases
 from updater.base import UpdateChecker
 from updater.base import UpdateNotifier
 from updater.base import UpdateSettings
@@ -41,7 +42,7 @@ class ClientUpdateTools(QObject):
         )
         return cls(update_settings, checker, notifier, dialog, parent_widget)
 
-    def _handle_update(self, releases, mandatory):
+    def _handle_update(self, releases: Releases, mandatory: bool) -> None:
         branch = self.update_settings.updater_branch.to_reltype()
         versions = releases.versions(
             branch, self.update_settings.updater_downgrade,
@@ -54,7 +55,7 @@ class ClientUpdateTools(QObject):
             return
         self.dialog.setup(releases)
         result = self.dialog.exec()
-        if result == QDialog.Rejected and mandatory:
+        if result is QDialog.DialogCode.Rejected and mandatory:
             self.mandatory_update_aborted.emit()
 
     def settings_dialog(self):
