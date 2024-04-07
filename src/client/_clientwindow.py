@@ -490,7 +490,7 @@ class ClientWindow(FormClass, BaseClass):
 
     def appStateChanged(self, state):
         if state == QtCore.Qt.ApplicationState.ApplicationInactive:
-            self._lastDeactivateTime = time.time()
+            self._lastDeactivateTime = time.monotonic()
 
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.Type.HoverMove:
@@ -541,7 +541,11 @@ class ClientWindow(FormClass, BaseClass):
             reason: QtWidgets.QSystemTrayIcon.ActivationReason,
     ) -> None:
         if reason is QtWidgets.QSystemTrayIcon.ActivationReason.Trigger:
-            inactiveTime = time.time() - self._lastDeactivateTime
+            if self._lastDeactivateTime is None:
+                self.showMinimized()
+                return
+
+            inactiveTime = time.monotonic() - self._lastDeactivateTime
             if (
                 self.isMinimized()
                 or inactiveTime >= self.keepActiveForTrayIcon
