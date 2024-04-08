@@ -888,7 +888,8 @@ class ClientWindow(FormClass, BaseClass):
     def _connect_chat(self, me):
         if not self.use_chat:
             return
-        self._chatMVC.connection.connect_(me.login, me.id, self.irc_password)
+        self._chatMVC.connection.set_nick_and_username(me.login, f"{me.login}@FAF")
+        self._chatMVC.connection.begin_connection_process()
 
     def warningHide(self):
         """
@@ -1750,8 +1751,10 @@ class ClientWindow(FormClass, BaseClass):
 
         self.game_session.gameFullSignal.connect(self.emit_game_full)
 
-    def handle_irc_password(self, message):
-        self.irc_password = message.get("password", "")
+    def handle_irc_password(self, message: dict) -> None:
+        # DEPRECATED: this command is meaningless and can be removed at any time
+        # see https://github.com/FAForever/server/issues/977
+        ...
 
     def handle_registration_response(self, message):
         if message["result"] == "SUCCESS":

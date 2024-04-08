@@ -12,6 +12,7 @@ from PyQt6.QtCore import pyqtSignal
 
 import config
 import util
+from api.ApiAccessors import UserApiAccessor
 from model.chat.channel import ChannelID
 from model.chat.channel import ChannelType
 from model.chat.chatline import ChatLine
@@ -81,13 +82,17 @@ class IrcSignals(QObject):
 
 
 class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
-    def __init__(self, host, port, use_ssl):
+    token_received = pyqtSignal(str)
+
+    def __init__(self, host: int, port: int, use_ssl: bool) -> None:
         IrcSignals.__init__(self)
         irc.client.SimpleIRCClient.__init__(self)
 
         self.host = host
         self.port = port
         self.use_ssl = use_ssl
+        self.api_accessor = UserApiAccessor()
+        self.token_received.connect(self.on_token_received)
         if self.use_ssl:
             self.factory = irc.connection.Factory(wrapper=ssl.wrap_socket)
         else:
@@ -127,7 +132,21 @@ class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
             self._notifier.activated.disconnect()
             self._notifier = None
 
-    def connect_(self, nick, username, password):
+    def set_nick_and_username(self, nick: str, username: str) -> None:
+        self._nick = nick
+        self._username = username
+
+    def begin_connection_process(self) -> None:
+        self.api_accessor.get_by_endpoint("/irc/ergochat/token", self.handle_irc_token)
+
+    def handle_irc_token(self, data: dict) -> None:
+        irc_token = data["value"]
+        self.token_received.emit(irc_token)
+
+    def on_token_received(self, token: str) -> None:
+        self.connect_(self._nick, self._username, f"token:{token}")
+
+    def connect_(self, nick: str, username: str, password: str) -> bool:
         logger.info(
             "Connecting to IRC at: {}:{}. TLS: {}".format(
                 self.host, self.port, self.use_ssl,
@@ -145,13 +164,13 @@ class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
                 nick,
                 connect_factory=self.factory,
                 ircname=nick,
-                username=username,
+                sasl_login=username,
                 password=password,
             )
             self._notifier = QSocketNotifier(
-                self.connection.socket.fileno(), QSocketNotifier.Read, self,
+                self.connection.socket.fileno(), QSocketNotifier.Type.Read, self,
             )
-            self._notifier.activated.connect(self.reactor.process_once)
+            self._notifier.activated.connect(lambda: self.reactor.process_once())
             self._timer.start(PONG_INTERVAL)
             return True
         except irc.client.IRCError:
@@ -205,6 +224,9 @@ class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
 
     def on_welcome(self, c, e):
         self._log_event(e)
+        if not self._connected:
+            self._connected = True
+            self.on_connected()
 
     def _send_nickserv_creds(self, fmt):
         self._log_client_message(
