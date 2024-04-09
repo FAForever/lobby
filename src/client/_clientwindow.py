@@ -1833,7 +1833,7 @@ class ClientWindow(FormClass, BaseClass):
         self.lobby_connection.send(msg)
 
     def handle_game_launch(self, message):
-
+        self.game_session.game_uid = message['uid']
         self.game_session.startIceAdapter()
 
         logger.info("Handling game_launch via JSON {}".format(message))
@@ -1910,8 +1910,6 @@ class ClientWindow(FormClass, BaseClass):
             featured_mod=message['mod'],
             launched_at=time.time(),
         )
-
-        self.game_session.game_uid = message['uid']
 
         fa.run(
             info, self.game_session.relay_port, self.replayServer.serverPort(),

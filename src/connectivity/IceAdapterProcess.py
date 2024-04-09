@@ -14,7 +14,7 @@ from decorators import with_logger
 
 @with_logger
 class IceAdapterProcess(object):
-    def __init__(self, player_id, player_login):
+    def __init__(self, player_id: int, player_login: str, game_id: int) -> None:
 
         # determine free listen port for the RPC server inside the ice adapter
         # process
@@ -24,12 +24,13 @@ class IceAdapterProcess(object):
         s.close()
 
         if sys.platform == 'win32':
-            exe_path = os.path.join(
-                fafpath.get_libdir(), "ice-adapter", "faf-ice-adapter.exe",
-            )
+            exe_path = fafpath.get_java_path()
+            args = [
+                "-jar", os.path.join(fafpath.get_libdir(), "ice-adapter", "faf-ice-adapter.jar"),
+            ]
         else:  # Expect it to be in PATH already
             exe_path = "faf-ice-adapter"
-
+            args = []
         show_adapter_window = Settings.get(
             "iceadapter/info_window", default=False, type=bool,
         )
@@ -37,13 +38,12 @@ class IceAdapterProcess(object):
             "iceadapter/delay_ui_seconds", default=10, type=int,
         )
         self.ice_adapter_process = QProcess()
-        args = [
+        args.extend([
             "--id", str(player_id),
             "--login", player_login,
+            "--game-id", str(game_id),
             "--rpc-port", str(self._rpc_server_port),
-            "--gpgnet-port", "0",
-            "--log-level", "debug",
-        ]
+        ])
         if show_adapter_window:
             args.extend(["--info-window", "--delay-ui", str(delay_adapter_ui)])
         if Settings.contains('iceadapter/args'):
