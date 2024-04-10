@@ -204,7 +204,14 @@ def downloadVaultAsset(url, target_dir, exist_handler, name, category, silent):
     return ret
 
 
-def downloadFile(url, target_dir, name, category, silent):
+def downloadFile(
+        url: str,
+        target_dir: str,
+        name: str,
+        category: str,
+        silent: bool,
+        request_params: dict | None = None,
+) -> None:
     """
     Basically a copy of downloadVaultAssetNoMsg without zip
     """
@@ -214,7 +221,7 @@ def downloadFile(url, target_dir, name, category, silent):
     output = io.BytesIO()
     capitCat = category[0].upper() + category[1:]
 
-    dler = FileDownload(_global_nam, url, output)
+    dler = FileDownload(_global_nam, url, output, request_params=request_params)
     ddialog = VaultDownloadDialog(
         dler, "Downloading {}".format(category), name, silent,
     )

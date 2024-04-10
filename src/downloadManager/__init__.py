@@ -26,12 +26,20 @@ class FileDownload(QObject):
     progress = pyqtSignal(object)
     finished = pyqtSignal(object)
 
-    def __init__(self, nam, addr, dest, destpath=None):
+    def __init__(
+            self,
+            nam: QNetworkAccessManager,
+            addr: str,
+            dest: str,
+            destpath: str | None = None,
+            request_params: dict | None = None,
+    ) -> None:
         QObject.__init__(self)
         self._nam = nam
         self.addr = addr
         self.dest = dest
         self.destpath = destpath
+        self.request_params = request_params or {}
 
         self.canceled = False
         self.error = False
@@ -72,15 +80,22 @@ class FileDownload(QObject):
             self.error = True
         self.finished.emit(self)
 
-    def run(self):
-        self._running = True
-        req = QNetworkRequest(QUrl(self.addr))
+    def prepare_request(self) -> QNetworkRequest:
+        qurl = QUrl(self.addr)
+        # in https://github.com/FAForever/faf-java-api/pull/637
+        # hmac verification was introduced
+        req = QNetworkRequest(qurl)
+        for key, value in self.request_params.items():
+            req.setRawHeader(key.encode(), value.encode())
         req.setRawHeader(b'User-Agent', b"FAF Client")
         req.setMaximumRedirectsAllowed(3)
+        return req
 
+    def run(self):
+        self._running = True
         self.start.emit(self)
 
-        self._dfile = self._nam.get(req)
+        self._dfile = self._nam.get(self.prepare_request())
         self._dfile.errorOccurred.connect(self._error)
         self._dfile.finished.connect(self._atFinished)
         self._dfile.downloadProgress.connect(self._atProgress)

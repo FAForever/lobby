@@ -202,21 +202,22 @@ class Updater(QtCore.QObject):
     def requestSimUrlByUid(self, uid):
         return SimModFiles().requestAndGetSimModUrlByUid(uid)
 
-    def fetchFile(self, _file, filegroup):
+    def fetchFile(self, _file: dict, filegroup: str) -> None:
         name = _file['name']
         targetDir = os.path.join(util.APPDATA_DIR, filegroup, name)
 
-        logger.info('Updater: Downloading {}'.format(_file['url']))
+        logger.info('Updater: Downloading {}'.format(_file['cacheableUrl']))
 
         downloaded = downloadFile(
-            url=_file['url'],
+            url=_file['cacheableUrl'],
             target_dir=targetDir,
             name=(
                 'Downloading FA file : <a href="{url}">{url}</a><p> '
-                .format(url=_file['url'])
+                .format(url=_file['cacheableUrl'])
             ),
             category='Update',
             silent=False,
+            request_params={_file["hmacParameter"]: _file["hmacToken"]},
         )
 
         if not downloaded:
