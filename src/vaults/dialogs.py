@@ -48,28 +48,31 @@ class VaultDownloadDialog(object):
         progressBar.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self._progress.setBar(progressBar)
 
+        self.progress_measure_interaval = 250
         self.timer = QtCore.QTimer()
-        self.timer.setInterval(500)
+        self.timer.setInterval(self.progress_measure_interaval)
         self.timer.timeout.connect(self.updateLabel)
         self.bytes_prev = 0
 
-    def updateLabel(self):
-        self._progress.setLabelText(
-            '{label}\n\n{downloaded} MiB ({speed} MiB/s)'
-            .format(
-                label=self.label,
-                downloaded=self.getDownloadProgressMiB(),
-                speed=self.getDownloadSpeed(),
-            ),
-        )
+    def updateLabel(self) -> None:
+        label_text = f"{self.label}\n\n{self.get_download_progress_mb()}"
+        speed_text = f"({self.get_download_speed()} MB/s)"
+        if self._dler.bytes_total > 0:
+            label_text = f"{label_text}/{self.get_download_size_mb()} MB\n\n{speed_text}"
+        else:
+            label_text = f"{label_text} MB {speed_text}"
+        self._progress.setLabelText(label_text)
 
-    def getDownloadSpeed(self):
+    def get_download_speed(self) -> float:
         bytes_diff = self._dler.bytes_progress - self.bytes_prev
         self.bytes_prev = self._dler.bytes_progress
-        return round(bytes_diff * 2 / 1024 / 1024, 2)
+        return round(bytes_diff * (1000 / self.progress_measure_interaval) / 1024 / 1024, 2)
 
-    def getDownloadProgressMiB(self):
+    def get_download_progress_mb(self) -> float:
         return round(self._dler.bytes_progress / 1024 / 1024, 2)
+
+    def get_download_size_mb(self) -> float:
+        return round(self._dler.bytes_total / 1024 / 1024, 2)
 
     def run(self):
         self.updateLabel()
