@@ -853,34 +853,11 @@ class ReplayVaultWidgetHandler(object):
                 .format(leaderboardId),
             )
 
-            if minRating and minRating > 0:
-                if leaderboardId == 1:
-                    filters.append(
-                        'playerStats.player.globalRating.rating=ge="{}"'
-                        .format(minRating),
-                    )
-                elif leaderboardId == 2:
-                    filters.append(
-                        'playerStats.player.ladder1v1Rating.rating=ge="{}"'
-                        .format(minRating),
-                    )
-                else:
-                    filters.append(
-                        'playerStats.ratingChanges.meanBefore=ge="{}"'
-                        .format(minRating + 300),
-                    )
-        else:
-            if minRating and minRating > 0:
-                if modListIndex == "ladder1v1":
-                    filters.append(
-                        'playerStats.player.ladder1v1Rating.rating=ge="{}"'
-                        .format(minRating),
-                    )
-                else:
-                    filters.append(
-                        'playerStats.player.globalRating.rating=ge="{}"'
-                        .format(minRating),
-                    )
+        if minRating and minRating > 0:
+            filters.append(
+                'playerStats.ratingChanges.meanBefore=ge="{}"'
+                .format(minRating + 300),
+            )
 
         if mapName:
             filters.append(
