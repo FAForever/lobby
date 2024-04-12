@@ -1,4 +1,6 @@
-img { display: block; max-width: 100%; height: auto !important; }
+img {
+    float: left;
+}
 body {
     font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 15px;
