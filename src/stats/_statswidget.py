@@ -2,14 +2,11 @@ import logging
 import time
 
 from PyQt6 import QtCore
-from PyQt6 import QtWebEngineCore
-from PyQt6 import QtWebEngineWidgets
 from PyQt6 import QtWidgets
 
 import util
 from api.stats_api import LeaderboardApiConnector
 from ui.busy_widget import BusyWidget
-from util.qt import injectWebviewCSS
 
 from .leaderboard_widget import LeaderboardWidget
 
@@ -34,15 +31,8 @@ class StatsWidget(BaseClass, FormClass, BusyWidget):
 
         self.client.lobby_info.statsInfo.connect(self.processStatsInfos)
 
-        self.webview = QtWebEngineWidgets.QWebEngineView()
-        self.webpage = WebEnginePage()
-        self.webpage.profile().setHttpUserAgent("FAF Client")
-
-        self.websiteTab.layout().addWidget(self.webview)
-
         self.selected_player = None
         self.selected_player_loaded = False
-        self.webview.loadFinished.connect(self.webview.show)
         self.leagues.currentChanged.connect(self.leagueUpdate)
         self.currentChanged.connect(self.busy_entered)
         self.pagesDivisions = {}
@@ -65,10 +55,6 @@ class StatsWidget(BaseClass, FormClass, BusyWidget):
         self.load_stylesheet()
 
         # setup other tabs
-        self.webpage.setUrl(
-            QtCore.QUrl("https://faforever.com/competitive/leaderboards/1v1"),
-        )
-        self.webview.setPage(self.webpage)
 
         self.apiConnector = LeaderboardApiConnector(self.client.lobby_dispatch)
         self.apiConnector.requestData(dict(sort="id"))
@@ -329,27 +315,9 @@ class StatsWidget(BaseClass, FormClass, BusyWidget):
                 self.leaderboardsTabChanged,
             )
 
-    def _injectCSS(self):
-        if util.THEME.themeurl("ladder/style.css"):
-            injectWebviewCSS(
-                self.webview.page(),
-                util.THEME.readstylesheet("ladder/style.css"),
-            )
-
     @QtCore.pyqtSlot()
     def busy_entered(self):
         if self.currentIndex() == self.indexOf(self.leaderboardsTab):
             self.leaderboards.currentChanged.emit(
                 self.leaderboards.currentIndex(),
             )
-
-
-class WebEnginePage(QtWebEngineCore.QWebEnginePage):
-    def acceptNavigationRequest(self, url, type, isMainFrame):
-        if (
-            url.url().startswith("https://faforever.com/competitive/")
-            or url.url().startswith("https://challonge.com/")
-        ):
-            return True
-        else:
-            return False
