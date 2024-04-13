@@ -571,9 +571,7 @@ class ClientWindow(FormClass, BaseClass):
         else:
             self.is_window_maximized = True
             self.current_geometry = self.geometry()
-            self.setGeometry(
-                QtWidgets.QApplication.primaryScreen().availableGeometry(),
-            )
+            self.setGeometry(self.screen().availableGeometry())
 
     def mouseDoubleClickEvent(self, event):
         self.show_max_restore()
@@ -607,8 +605,7 @@ class ClientWindow(FormClass, BaseClass):
             self.resize_widget(event.globalPosition())
 
         elif self.moving and self.offset is not None:
-            desktop = QtWidgets.QApplication.primaryScreen().availableGeometry()
-            # desktop = QtWidgets.QDesktopWidget().availableGeometry(self)
+            desktop = self.screen().availableGeometry()
             if event.globalPosition().y() == 0:
                 self.rubber_band.setGeometry(desktop)
                 self.rubber_band.show()
