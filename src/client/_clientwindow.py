@@ -1359,6 +1359,8 @@ class ClientWindow(FormClass, BaseClass):
     def saveWindow(self):
         util.settings.beginGroup("window")
         util.settings.setValue("geometry", self.saveGeometry())
+        if self.is_window_maximized:
+            util.settings.setValue("maximized", True)
         util.settings.endGroup()
 
     def show_autojoin_settings_dialog(self):
@@ -1459,12 +1461,14 @@ class ClientWindow(FormClass, BaseClass):
         # Load settings
         util.settings.beginGroup("window")
         geometry = util.settings.value("geometry", None)
-        if geometry:
+        # FIXME: looks like bug in Qt: restoring from maximized geometry doesn't work
+        # see https://bugreports.qt.io/browse/QTBUG-123335 (?)
+        maximized = util.settings.value("maximized", False)
+        util.settings.endGroup()
+        if maximized:
+            self.setGeometry(self.screen().availableGeometry())
+        elif geometry:
             self.restoreGeometry(geometry)
-        util.settings.endGroup()
-
-        util.settings.beginGroup("ForgedAlliance")
-        util.settings.endGroup()
 
     def load_chat(self):
         cc = self._chat_config
