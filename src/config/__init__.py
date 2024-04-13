@@ -33,7 +33,6 @@ _settings = QtCore.QSettings(
 _unpersisted_settings = {}
 
 CONFIG_PATH = os.path.dirname(_settings.fileName())
-UNITDB_CONFIG_FILE = os.path.join(CONFIG_PATH, "unitdb.conf")
 
 
 class Settings:

@@ -74,7 +74,7 @@ from secondaryServer import SecondaryServer
 from stats import StatsWidget
 from ui.busy_widget import BusyWidget
 from ui.status_logo import StatusLogo
-from unitdb import unitdbtab
+from unitdb.unitdbtab import UnitDBTab
 from updater import ClientUpdateTools
 from vaults.mapvault.mapvault import MapVault
 from vaults.modvault.modvault import ModVault
@@ -816,7 +816,7 @@ class ClientWindow(FormClass, BaseClass):
             self, self.gameset, self.players, self.me,
         )
 
-        self._unitdb = unitdbtab.build_db_tab(config.UNITDB_CONFIG_FILE)
+        self._unitdb = UnitDBTab()
 
         # TODO: some day when the tabs only do UI we'll have all this in the
         # .ui file
