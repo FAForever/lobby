@@ -9,9 +9,6 @@ import os
 import sys
 from types import TracebackType
 
-# According to PyQt5 docs we need to import QtWebEngineWidgets before we create
-# QApplication
-from PyQt6 import QtWebEngineWidgets  # noqa: F401
 from PyQt6 import uic
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication

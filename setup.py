@@ -104,11 +104,8 @@ if sys.platform == 'win32':
             'audio',
             'libeay32.dll',
             'ssleay32.dll',
-            'libEGL.dll',  # For QtWebEngine
             'libGLESv2.dll',  # ditto
             'icudtl.dat',  # ditto
-            'qtwebengine_resources.pak',  # ditto
-            'QtWebEngineProcess.exe',  # ditto
             ('lib/faf-uid.exe', 'lib/faf-uid.exe'),
             ('lib/ice-adapter', 'lib/ice-adapter'),
             ('lib/qt.conf', 'qt.conf'),
