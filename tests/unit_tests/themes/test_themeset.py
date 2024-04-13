@@ -154,8 +154,8 @@ def test_loadTheme(mocker):
 
 
 def test_returns_when_not_found(mocker):
-    mocker.patch("PyQt5.QtMultimedia.QSound")
-    mocker.patch("PyQt5.QtGui.QPixmap")
+    mocker.patch("PyQt6.QtMultimedia.QSoundEffect")
+    mocker.patch("PyQt6.QtGui.QPixmap")
 
     setting_mock = mocker.Mock()
     setting_mock.configure_mock(get=lambda x, y=None: None)
@@ -202,8 +202,8 @@ def test_returns_when_not_found(mocker):
 
 
 def test_theme_call_order(mocker):
-    mocker.patch("PyQt5.QtMultimedia.QSound")
-    mocker.patch("PyQt5.QtGui.QPixmap")
+    mocker.patch("PyQt6.QtCore.QUrl.fromLocalFile")
+    mocker.patch("PyQt6.QtGui.QPixmap")
 
     setting_mock = mocker.Mock()
     setting_mock.configure_mock(get=lambda x, y=None: None)

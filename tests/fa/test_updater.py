@@ -1,6 +1,6 @@
 __author__ = 'Thygrrr'
 
-import collections
+from typing import Callable
 
 import pytest
 from PyQt6 import QtCore
@@ -46,7 +46,7 @@ def test_updater_has_progress_bar_mod_progress(application):
 def test_updater_has_method_append_log(application):
     assert isinstance(
         updater.UpdaterProgressDialog(None).appendLog,
-        collections.Callable,
+        Callable,
     )
 
 
@@ -57,7 +57,7 @@ def test_updater_append_log_accepts_string(application):
 def test_updater_has_method_add_watch(application):
     assert isinstance(
         updater.UpdaterProgressDialog(None).addWatch,
-        collections.Callable,
+        Callable,
     )
 
 
