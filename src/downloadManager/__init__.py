@@ -30,7 +30,7 @@ class FileDownload(QObject):
             self,
             nam: QNetworkAccessManager,
             addr: str,
-            dest: str,
+            dest: QtCore.QIODevice,
             destpath: str | None = None,
             request_params: dict | None = None,
     ) -> None:
