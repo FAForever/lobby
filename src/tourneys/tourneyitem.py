@@ -1,7 +1,5 @@
 from PyQt6 import QtCore
 from PyQt6 import QtGui
-from PyQt6 import QtWebEngineCore
-from PyQt6 import QtWebEngineWidgets
 from PyQt6 import QtWidgets
 
 import util
@@ -47,17 +45,6 @@ class TourneyItemDelegate(QtWidgets.QStyledItemDelegate):
         )
 
 
-class QWebPageChrome(QtWebEngineCore.QWebEnginePage):
-    def __init__(self, *args, **kwargs):
-        QtWebEngineCore.QWebEnginePage.__init__(self, *args, **kwargs)
-
-    def userAgentForUrl(self, url):
-        return (
-            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.2 "
-            "(KHTML, like Gecko) Chrome/15.0.874.121 Safari/535.2"
-        )
-
-
 class TourneyItem(QtWidgets.QListWidgetItem):
     FORMATTER_SWISS_OPEN = str(
         util.THEME.readfile("tournaments/formatters/open.qthtml"),
@@ -98,11 +85,9 @@ class TourneyItem(QtWidgets.QListWidgetItem):
         self.players = message.get('participants', [])
 
         if old_state != self.state and self.state == "started":
-            widget = QtWebEngineWidgets.QWebEngineView()
-            webPage = QWebPageChrome()
-            widget.setPage(webPage)
-            widget.setUrl(QtCore.QUrl(self.url))
-            self.parent.topTabs.addTab(widget, self.title)
+            # create a widget and add it to the parent's tabs
+            # anyway, this tournaments feature most likely won't return
+            ...
 
         self.playersname = []
         for player in self.players:
