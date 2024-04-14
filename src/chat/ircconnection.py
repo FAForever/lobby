@@ -84,19 +84,15 @@ class IrcSignals(QObject):
 class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
     token_received = pyqtSignal(str)
 
-    def __init__(self, host: int, port: int, use_ssl: bool) -> None:
+    def __init__(self, host: int, port: int) -> None:
         IrcSignals.__init__(self)
         irc.client.SimpleIRCClient.__init__(self)
 
         self.host = host
         self.port = port
-        self.use_ssl = use_ssl
         self.api_accessor = UserApiAccessor()
         self.token_received.connect(self.on_token_received)
-        if self.use_ssl:
-            self.factory = irc.connection.Factory(wrapper=ssl.wrap_socket)
-        else:
-            self.factory = irc.connection.Factory()
+        self.factory = self.create_connection_factory(self.port_uses_ssl(port))
 
         self._password = None
         self._nick = None
@@ -109,19 +105,26 @@ class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
         self._connected = False
 
     @classmethod
-    def build(cls, settings, use_ssl=True, **kwargs):
-        port = settings.get('chat/port', 6697 if use_ssl else 6667, int)
+    def build(cls, settings, **kwargs):
+        port = settings.get('chat/port', 6697, int)
         host = settings.get('chat/host', 'irc.' + config.defaults['host'], str)
-        return cls(host, port, use_ssl)
+        return cls(host, port)
+
+    @staticmethod
+    def port_uses_ssl(port: int) -> bool:
+        return port == 6697
+
+    @staticmethod
+    def create_connection_factory(use_ssl: bool) -> irc.connection.Factory:
+        if use_ssl:
+            # unverified because certificate is self-signed
+            context = ssl._create_unverified_context()
+            return irc.connection.Factory(wrapper=context.wrap_socket)
+        return irc.connection.Factory()
 
     def setPortFromConfig(self):
         self.port = config.Settings.get('chat/port', type=int)
-        if self.port == 6697:
-            self.use_ssl = True
-            self.factory = irc.connection.Factory(wrapper=ssl.wrap_socket)
-        else:
-            self.use_ssl = False
-            self.factory = irc.connection.Factory()
+        self.factory = self.create_connection_factory(self.port_uses_ssl(self.port))
 
     def setHostFromConfig(self):
         self.host = config.Settings.get('chat/host', type=str)
@@ -147,11 +150,7 @@ class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
         self.connect_(self._nick, self._username, f"token:{token}")
 
     def connect_(self, nick: str, username: str, password: str) -> bool:
-        logger.info(
-            "Connecting to IRC at: {}:{}. TLS: {}".format(
-                self.host, self.port, self.use_ssl,
-            ),
-        )
+        logger.info(f"Connecting to IRC at: {self.host}:{self.port}")
 
         self._nick = nick
         self._username = username
