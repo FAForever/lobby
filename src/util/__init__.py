@@ -259,13 +259,13 @@ def clearDirectory(directory, confirm=True):
                     "Are you sure you wish to clear the following directory:"
                     "<br/><b>&nbsp;&nbsp;{}</b>".format(directory)
                 ),
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.No,
             )
         else:
-            result = QtWidgets.QMessageBox.Yes
+            result = QtWidgets.QMessageBox.StandardButton.Yes
 
-        if result == QtWidgets.QMessageBox.Yes:
+        if result == QtWidgets.QMessageBox.StandardButton.Yes:
             shutil.rmtree(directory)
             return True
         else:

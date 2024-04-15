@@ -215,10 +215,10 @@ class ReplayServer(QtNetwork.QTcpServer):
                         "likely)</li><li>another program is listening on port "
                         "{}</li></ul>".format(self.serverPort())
                     ),
-                    QtWidgets.QMessageBox.Retry,
-                    QtWidgets.QMessageBox.Abort,
+                    QtWidgets.QMessageBox.StandardButton.Retry,
+                    QtWidgets.QMessageBox.StandardButton.Abort,
                 )
-                if answer == QtWidgets.QMessageBox.Abort:
+                if answer == QtWidgets.QMessageBox.StandardButton.Abort:
                     return False
         return True
 

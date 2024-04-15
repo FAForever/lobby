@@ -438,10 +438,10 @@ def downloadMod(item):
                 "already exists and contains <b>{}</b>. Do you want to "
                 "overwrite this mod?"
             ).format(modpath, oldmod.totalname),
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes,
+            QtWidgets.QMessageBox.StandardButton.No,
         )
-        if result == QtWidgets.QMessageBox.No:
+        if result == QtWidgets.QMessageBox.StandardButton.No:
             return False
         removeMod(oldmod)
         return True

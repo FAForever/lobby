@@ -367,9 +367,9 @@ class GamesWidget(FormClass, BaseClass):
         result = QtWidgets.QMessageBox.question(
             self, "Kick Player: {}".format(login),
             "Are you sure you want to kick {} from party?".format(login),
-            QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No,
         )
-        if result == QtWidgets.QMessageBox.Yes:
+        if result == QtWidgets.QMessageBox.StandardButton.Yes:
             self.stopSearch()
             msg = {
                 'command': 'kick_player_from_party',
@@ -380,9 +380,9 @@ class GamesWidget(FormClass, BaseClass):
     def leave_party(self):
         result = QtWidgets.QMessageBox.question(
             self, "Leaving Party", "Are you sure you want to leave party?",
-            QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No,
         )
-        if result == QtWidgets.QMessageBox.Yes:
+        if result == QtWidgets.QMessageBox.StandardButton.Yes:
             msg = {
                 'command': 'leave_party',
             }

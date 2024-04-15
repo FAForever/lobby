@@ -71,10 +71,10 @@ class MapWidget(FormClass, BaseClass):
                 self.parent.client,
                 "Delete Map",
                 "Are you sure you want to delete this map?",
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.No,
             )
-            if show == QtWidgets.QMessageBox.Yes:
+            if show == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.parent.removeMap(self._map.folderName)
                 self.done(1)
 

@@ -36,14 +36,14 @@ def checkMods(mods):  # mods is a dictionary of uid-name pairs
             "downloaded automatically in the future",
         )
         msgbox.setStandardButtons(
-            QtWidgets.QMessageBox.Yes
-            | QtWidgets.QMessageBox.YesToAll
-            | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes
+            | QtWidgets.QMessageBox.StandardButton.YesToAll
+            | QtWidgets.QMessageBox.StandardButton.No,
         )
         result = msgbox.exec()
-        if result == QtWidgets.QMessageBox.No:
+        if result == QtWidgets.QMessageBox.StandardButton.No:
             return False
-        elif result == QtWidgets.QMessageBox.YesToAll:
+        elif result == QtWidgets.QMessageBox.StandardButton.YesToAll:
             config.Settings.set('mods/autodownload', True)
 
     for uid in to_download:

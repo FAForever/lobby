@@ -90,10 +90,10 @@ class ModWidget(FormClass, BaseClass):
                 self.parent.client,
                 "Delete Mod",
                 "Are you sure you want to delete this mod?",
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.No,
             )
-            if show == QtWidgets.QMessageBox.Yes:
+            if show == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.parent.removeMod(self.mod)
                 self.done(1)
 

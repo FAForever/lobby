@@ -1005,10 +1005,10 @@ class ClientWindow(FormClass, BaseClass):
                     "Seems like you still have Forged Alliance running!"
                     "<br/><b>Close anyway?</b>"
                 ),
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.No,
             )
-            if result == QtWidgets.QMessageBox.No:
+            if result == QtWidgets.QMessageBox.StandardButton.No:
                 event.ignore()
                 return
 
@@ -1280,10 +1280,10 @@ class ClientWindow(FormClass, BaseClass):
             "Clear Settings",
             "Are you sure you wish to clear all settings, "
             "login info, etc. used by this program?",
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes,
+            QtWidgets.QMessageBox.StandardButton.No,
         )
-        if result == QtWidgets.QMessageBox.Yes:
+        if result == QtWidgets.QMessageBox.StandardButton.Yes:
             util.settings.clear()
             util.settings.sync()
             QtWidgets.QMessageBox.information(

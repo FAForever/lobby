@@ -162,12 +162,12 @@ class MapVault(Vault):
                                 "{}\nDo you want to upload the map?"
                                 .format(scenariolua.errorMsg)
                             ),
-                            QtWidgets.QMessageBox.Yes,
-                            QtWidgets.QMessageBox.No,
+                            QtWidgets.QMessageBox.StandardButton.Yes,
+                            QtWidgets.QMessageBox.StandardButton.No,
                         )
                     else:
-                        uploadmap = QtWidgets.QMessageBox.Yes
-                    if uploadmap == QtWidgets.QMessageBox.Yes:
+                        uploadmap = QtWidgets.QMessageBox.StandardButton.Yes
+                    if uploadmap == QtWidgets.QMessageBox.StandardButton.Yes:
                         savelua = luaparser.luaParser(
                             os.path.join(mapDir, maps.getSaveFile(mapDir)),
                         )
@@ -241,10 +241,10 @@ class MapVault(Vault):
                     "Seems like you already have that map!<br/><b>Would you "
                     "like to see it?</b>"
                 ),
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.No,
             )
-            if show == QtWidgets.QMessageBox.Yes:
+            if show == QtWidgets.QMessageBox.StandardButton.Yes:
                 util.showDirInFileBrowser(maps.folderForMap(avail_name))
 
     @QtCore.pyqtSlot(str)

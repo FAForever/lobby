@@ -964,9 +964,9 @@ class ReplayVaultWidgetHandler(object):
                         client.instance,
                         "Live Game ended",
                         "Would you like to watch the replay from the vault?",
-                        QtWidgets.QMessageBox.Yes,
-                        QtWidgets.QMessageBox.No,
-                    ) == QtWidgets.QMessageBox.Yes:
+                        QtWidgets.QMessageBox.StandardButton.Yes,
+                        QtWidgets.QMessageBox.StandardButton.No,
+                    ) == QtWidgets.QMessageBox.StandardButton.Yes:
                         req = QNetworkRequest(QtCore.QUrl(item.url))
                         self.replayDownload.get(req)
 

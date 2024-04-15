@@ -264,17 +264,17 @@ class ThemeSet(QtCore.QObject):
             )
             b_yes = box.addButton(
                 "Apply this once",
-                QtWidgets.QMessageBox.YesRole,
+                QtWidgets.QMessageBox.ButtonRole.YesRole,
             )
             b_always = box.addButton(
                 "Always apply for this FA version",
-                QtWidgets.QMessageBox.YesRole,
+                QtWidgets.QMessageBox.ButtonRole.YesRole,
             )
             b_default = box.addButton(
                 "Use default theme",
-                QtWidgets.QMessageBox.NoRole,
+                QtWidgets.QMessageBox.ButtonRole.NoRole,
             )
-            b_no = box.addButton("Abort", QtWidgets.QMessageBox.NoRole)
+            b_no = box.addButton("Abort", QtWidgets.QMessageBox.ButtonRole.NoRole)
             box.exec()
             result = box.clickedButton()
 

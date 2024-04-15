@@ -154,12 +154,12 @@ class ModVault(Vault):
                                 modinfofile.errorMsg
                                 + "\nDo you want to upload the mod?"
                             ),
-                            QtWidgets.QMessageBox.Yes,
-                            QtWidgets.QMessageBox.No,
+                            QtWidgets.QMessageBox.StandardButton.Yes,
+                            QtWidgets.QMessageBox.StandardButton.No,
                         )
                     else:
-                        uploadmod = QtWidgets.QMessageBox.Yes
-                    if uploadmod == QtWidgets.QMessageBox.Yes:
+                        uploadmod = QtWidgets.QMessageBox.StandardButton.Yes
+                    if uploadmod == QtWidgets.QMessageBox.StandardButton.Yes:
                         modinfo = utils.ModInfo(**modinfo)
                         modinfo.setFolder(os.path.split(modDir)[1])
                         modinfo.update()

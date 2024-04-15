@@ -64,9 +64,9 @@ class TournamentsWidget(FormClass, BaseClass):
                 self.client,
                 "Register",
                 "Do you want to register to this tournament ?",
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
             )
-            if reply == QtWidgets.QMessageBox.Yes:
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.tourneyServer.send(
                     dict(
                         command="add_participant",
@@ -80,9 +80,9 @@ class TournamentsWidget(FormClass, BaseClass):
                 self.client,
                 "Register",
                 "Do you want to leave this tournament ?",
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
             )
-            if reply == QtWidgets.QMessageBox.Yes:
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.tourneyServer.send(
                     dict(
                         command="remove_participant",
