@@ -50,28 +50,18 @@ default_values = {
     'replay_server/port': 15000,
     'relay_server/host': 'lobby.{host}',
     'relay_server/port': 8000,
+    'vault/map_preview_url': 'https://content.{host}/maps/previews/{size}/{name}.png',
     'FORUMS_URL': 'https://forums.faforever.com/',
     'WEBSITE_URL': 'https://www.{host}',
     # FIXME - temporary address below
     # The base64 settings string disables expensive loading of all previews
-    'UNITDB_URL': (
-        'https://unitdb.faforever.com?'
-        'settings64=eyJwcmV2aWV3Q29ybmVyIjoiTm9uZSJ9'
-    ),
+    'UNITDB_URL': 'https://unitdb.faforever.com?settings64=eyJwcmV2aWV3Q29ybmVyIjoiTm9uZSJ9',
     'UNITDB_SPOOKY_URL': 'https://spooky.github.io/unitdb/',
-    'MAPPOOL_URL': (
-        'https://forum.faforever.com/topic/148/matchmaker-pools-thread'
-    ),
+    'MAPPOOL_URL': 'https://forum.faforever.com/topic/148/matchmaker-pools-thread',
     'GITHUB_URL': 'https://www.github.com/FAForever',
     'WIKI_URL': 'https://wiki.faforever.com',
-    'SUPPORT_URL': (
-        'https://forum.faforever.com/category/9/'
-        'faf-support-client-and-account-issues'
-    ),
-    'TICKET_URL': (
-        'https://forum.faforever.com/category/9/'
-        'faf-support-client-and-account-issues'
-    ),
+    'SUPPORT_URL': 'https://forum.faforever.com/category/9/faf-support-client-and-account-issues',
+    'TICKET_URL': 'https://forum.faforever.com/category/9/faf-support-client-and-account-issues',
     'CREATE_ACCOUNT_URL': 'https://faforever.com/account/register',
     'STEAMLINK_URL': 'https://faforever.com/account/link',
     'PASSWORD_RECOVERY_URL': 'https://faforever.com/account/password/reset',

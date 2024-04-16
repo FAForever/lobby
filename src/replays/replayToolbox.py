@@ -7,6 +7,7 @@ from PyQt6 import QtWidgets
 
 from config import Settings
 from downloadManager import DownloadRequest
+from downloadManager import MapLargePreviewDownloader
 from util import MAP_PREVIEW_LARGE_DIR
 
 logger = logging.getLogger(__name__)
@@ -112,6 +113,7 @@ class ReplayToolboxHandler(object):
         self._playerset = playerset
         self.widgetHandler = wigetHandler
 
+        self._map_preview_dler = MapLargePreviewDownloader(MAP_PREVIEW_LARGE_DIR)
         self._map_dl_request = DownloadRequest()
         self._map_dl_request.done.connect(self._on_map_preview_downloaded)
 
@@ -356,11 +358,9 @@ class ReplayToolboxHandler(object):
                     preview.setPixmap(pix)
                     preview.currentMap = selectedReplay.mapname
                 else:
-                    self.client.map_downloader.download_preview(
+                    self._map_preview_dler.download_preview(
                         selectedReplay.mapname,
                         self._map_dl_request,
-                        url=selectedReplay.previewUrlLarge,
-                        large=True,
                     )
 
     def _on_map_preview_downloaded(self, mapname, result):

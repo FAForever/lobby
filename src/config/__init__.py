@@ -216,10 +216,18 @@ def is_beta():
 if _settings.contains('client/force_environment'):
     environment = _settings.value('client/force_environment', 'development')
 
+
+class FormatDefault(dict):
+    def __missing__(self, key: str) -> str:
+        # if key wasn't formatted leave it to format later
+        # "{foo}{bar}".format_map(FormatDefault(foo="FOO")) -> "FOO{bar}"
+        return f"{{{key}}}"
+
+
 for defaults in [production_defaults, develop_defaults, testing_defaults]:
     for key, value in defaults.items():
         if isinstance(value, str):
-            defaults[key] = value.format(host=Settings.get('host'))
+            defaults[key] = value.format_map(FormatDefault(host=Settings.get("host")))
 
 if environment == 'production':
     defaults = production_defaults

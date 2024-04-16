@@ -229,7 +229,7 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
         if not self.icon:
             self.icon = util.THEME.icon("games/unknown_map.png")
             if self.mapname != "unknown":
-                self.client.map_downloader.download_preview(
+                self.client.map_preview_downloader.download_preview(
                     self.mapname, self._map_dl_request,
                 )
 

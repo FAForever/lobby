@@ -19,6 +19,7 @@ class ModItem(VaultItem):
         self.thumbstr = ""
         self.isuidmod = False
         self.uploadedbyuser = False
+        self._preview_dler.set_target_dir(util.MOD_PREVIEW_DIR)
 
     def shouldBeVisible(self):
         p = self.parent
@@ -56,9 +57,7 @@ class ModItem(VaultItem):
             if img:
                 self.setItemIcon(img, False)
             else:
-                self.parent.client.mod_downloader.download_preview(
-                    name[:-4], self._item_dl_request, self.thumbstr,
-                )
+                self._preview_dler.download(name, self._item_dl_request, self.thumbstr)
 
         VaultItem.update(self)
 

@@ -44,9 +44,8 @@ from client.user import UserRelations
 from client.user import UserRelationTrackers
 from connectivity.ConnectivityDialog import ConnectivityDialog
 from coop import CoopWidget
-from downloadManager import MAP_PREVIEW_ROOT
 from downloadManager import AvatarDownloader
-from downloadManager import PreviewDownloader
+from downloadManager import MapSmallPreviewDownloader
 from fa.factions import Factions
 from fa.game_runner import GameRunner
 from fa.game_session import GameSession
@@ -236,21 +235,14 @@ class ClientWindow(FormClass, BaseClass):
         )
         self.me.relations = self.user_relations
 
-        self.map_downloader = PreviewDownloader(
-            util.MAP_PREVIEW_SMALL_DIR,
-            util.MAP_PREVIEW_LARGE_DIR,
-            MAP_PREVIEW_ROOT,
-        )
-        self.mod_downloader = PreviewDownloader(
-            util.MOD_PREVIEW_DIR, None, None,
-        )
+        self.map_preview_downloader = MapSmallPreviewDownloader(util.MAP_PREVIEW_SMALL_DIR)
         self.avatar_downloader = AvatarDownloader()
 
         # Map generator
         self.map_generator = MapGeneratorManager()
 
         # Qt model for displaying active games.
-        self.game_model = GameModel(self.me, self.map_downloader, self.gameset)
+        self.game_model = GameModel(self.me, self.map_preview_downloader, self.gameset)
 
         self.gameset.added.connect(self.fill_in_session_info)
 
@@ -706,7 +698,7 @@ class ClientWindow(FormClass, BaseClass):
         self.game_launcher = build_launcher(
             self.players, self.me,
             self, self.gameview_builder,
-            self.map_downloader,
+            self.map_preview_downloader,
         )
         self._avatar_widget_builder = AvatarWidget.builder(
             parent_widget=self,
@@ -743,7 +735,7 @@ class ClientWindow(FormClass, BaseClass):
             me=self.me,
             user_relations=self.user_relations,
             power_tools=self.power_tools,
-            map_preview_dler=self.map_downloader,
+            map_preview_dler=self.map_preview_downloader,
             avatar_dler=self.avatar_downloader,
             avatar_widget_builder=self._avatar_widget_builder,
             alias_viewer=self._alias_viewer,
@@ -1560,7 +1552,6 @@ class ClientWindow(FormClass, BaseClass):
         self._chatMVC.connection.setPortFromConfig()
         if api_changed:
             self.ladder.refreshLeaderboards()
-            self.map_downloader.update_url_prefix()
             self.news.updateNews()
             self.games.refreshMods()
 

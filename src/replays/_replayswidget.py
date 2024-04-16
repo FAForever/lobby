@@ -92,7 +92,7 @@ class LiveReplayItem(QtWidgets.QTreeWidgetItem):
         else:
             icon = fa.maps.preview(game.mapname)
             if not icon:
-                dler = client.instance.map_downloader
+                dler = client.instance.map_preview_downloader
                 dler.download_preview(game.mapname, self._map_dl_request)
                 icon = util.THEME.icon("games/unknown_map.png")
         self.setIcon(0, icon)
@@ -408,7 +408,7 @@ class LocalReplayItem(QtWidgets.QTreeWidgetItem):
         if icon:
             self.setIcon(0, icon)
         else:
-            dler = client.instance.map_downloader
+            dler = client.instance.map_preview_downloader
             dler.download_preview(data['mapname'], self._map_dl_request)
             self.setIcon(0, util.THEME.icon("games/unknown_map.png"))
 

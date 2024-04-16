@@ -4,6 +4,7 @@ from PyQt6 import QtWidgets
 
 import util
 from downloadManager import DownloadRequest
+from downloadManager import GeneralDownloader
 
 
 class VaultItem(QtWidgets.QListWidgetItem):
@@ -29,6 +30,7 @@ class VaultItem(QtWidgets.QListWidgetItem):
         self.link = ""
         self.setHidden(True)
 
+        self._preview_dler = GeneralDownloader(util.CACHE_DIR)
         self._item_dl_request = DownloadRequest()
         self._item_dl_request.done.connect(self._on_item_downloaded)
 

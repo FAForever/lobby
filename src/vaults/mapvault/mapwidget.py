@@ -5,8 +5,9 @@ from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
-import downloadManager
 import util
+from downloadManager import DownloadRequest
+from downloadManager import MapLargePreviewDownloader
 from fa import maps
 from mapGenerator import mapgenUtils
 
@@ -37,11 +38,8 @@ class MapWidget(FormClass, BaseClass):
         self.Info.setText("{} Uploaded {}".format(maptext, str(_map.date)))
         self.Players.setText("Maximum players: {}".format(_map.maxPlayers))
         self.Size.setText("Size: {} x {} km".format(_map.width, _map.height))
-        self.map_downloader = downloadManager.PreviewDownloader(
-            util.MAP_PREVIEW_SMALL_DIR, util.MAP_PREVIEW_LARGE_DIR,
-            downloadManager.MAP_PREVIEW_ROOT,
-        )
-        self._map_dl_request = downloadManager.DownloadRequest()
+        self._preview_dler = MapLargePreviewDownloader(util.MAP_PREVIEW_LARGE_DIR)
+        self._map_dl_request = DownloadRequest()
         self._map_dl_request.done.connect(self._on_preview_downloaded)
 
         # Ensure that pixmap is set
@@ -90,12 +88,7 @@ class MapWidget(FormClass, BaseClass):
                 util.THEME.pixmap("games/generated_map.png"),
             )
         else:
-            self.map_downloader.download_preview(
-                self._map.folderName,
-                self._map_dl_request,
-                url=self._map.thumbnailLarge,
-                large=True,
-            )
+            self._preview_dler.download_preview(self._map.folderName, self._map_dl_request)
 
     def _on_preview_downloaded(self, mapname, result):
         filename, themed = result

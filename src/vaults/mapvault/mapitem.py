@@ -20,6 +20,7 @@ class MapItem(VaultItem):
         self.folderName = folderName
         self.thumbstrSmall = ""
         self.thumbnailLarge = ""
+        self._preview_dler.set_target_dir(util.MAP_PREVIEW_SMALL_DIR)
 
     def update(self, item_dict):
         self.name = maps.getDisplayName(item_dict["folderName"])
@@ -49,8 +50,10 @@ class MapItem(VaultItem):
                 else:
                     self.setItemIcon("games/unknown_map.png")
             else:
-                self.parent.client.map_downloader.download_preview(
-                    self.folderName, self._item_dl_request, self.thumbstrSmall,
+                self._preview_dler.download(
+                    f"{self.folderName}.png",
+                    self._item_dl_request,
+                    self.thumbstrSmall,
                 )
         VaultItem.update(self)
 
