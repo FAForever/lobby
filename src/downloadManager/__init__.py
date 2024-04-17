@@ -160,8 +160,10 @@ class FileDownload(BaseDownload):
             addr: str,
             request_params: dict | None = None,
     ) -> None:
-        self._target_path = f"{target_path}.part"
-        self._output = QFile(target_path)
+        self._target_path = target_path
+        self._cache_path = f"{target_path}.part"
+
+        self._output = QFile(self._cache_path)
         self._output.open(QIODevice.OpenModeFlag.WriteOnly)
         super().__init__(nam, addr, self._output, request_params=request_params)
 
@@ -172,11 +174,11 @@ class FileDownload(BaseDownload):
     def cleanup(self) -> None:
         self._output.close()
         if self.failed():
-            logger.debug(f"Download failed for: {self.name}")
-            os.unlink(self._target_path)
+            logger.debug(f"Download failed for: {self._target_path}")
+            os.unlink(self._cache_path)
         else:
             logger.debug(f"Finished download from {self.addr}")
-            self._output.rename(self._target_path.removesuffix(".part"))
+            self._output.rename(self._target_path)
 
 
 class ZipDownloadExtract(BaseDownload):
@@ -225,7 +227,7 @@ class ZipDownloadExtract(BaseDownload):
         self._output.close()
 
 
-class GeneralDownload(QObject):
+class DownloadWrapper(QObject):
     done = pyqtSignal(object, object)
 
     def __init__(
@@ -255,18 +257,12 @@ class GeneralDownload(QObject):
         self._dl = self._prepare_dl()
         self._dl.run()
 
-    def _prepare_dl(self) -> BaseDownload:
-        file_obj = self._get_cachefile(self.name + ".part")
-        dl = BaseDownload(self._nam, self._url, file_obj)
+    def _prepare_dl(self) -> FileDownload:
+        filepath = os.path.join(self._target_dir, self.name)
+        dl = FileDownload(filepath, self._nam, self._url)
         dl.finished.connect(self._finished)
         dl.blocksize = None
         return dl
-
-    def _get_cachefile(self, name: str) -> QFile:
-        filepath = os.path.join(self._target_dir, name)
-        file_obj = QFile(filepath)
-        file_obj.open(QIODevice.OpenModeFlag.WriteOnly)
-        return file_obj
 
     def remove_request(self, req: DownloadRequest) -> None:
         self.requests.remove(req)
@@ -274,15 +270,7 @@ class GeneralDownload(QObject):
     def add_request(self, req: DownloadRequest) -> None:
         self.requests.add(req)
 
-    def _finished(self, dl: BaseDownload) -> None:
-        dl.dest.close()
-        destpath = dl.dest.fileName()
-        if self.failed():
-            logger.debug(f"Download failed for: {self.name}")
-            os.unlink(destpath)
-        else:
-            logger.debug("Finished download from " + dl.addr)
-            dl.dest.rename(destpath.removesuffix(".part"))
+    def _finished(self, dl: FileDownload) -> None:
         self.done.emit(self, dl.dest.fileName())
 
     def failed(self):
@@ -312,7 +300,7 @@ class DownloadRequest(QObject):
         self.done.emit(name, result)
 
 
-class GeneralDownloader(QObject):
+class Downloader(QObject):
     """
     Class for downloading. Clients ask to download by giving download
     requests, which are stored by name. After download is complete, all
@@ -328,7 +316,7 @@ class GeneralDownloader(QObject):
         super().__init__()
         self._nam = QNetworkAccessManager(self)
         self._target_dir = target_dir
-        self._downloads: dict[str, GeneralDownload] = {}
+        self._downloads: dict[str, DownloadWrapper] = {}
         self._timeouts = DownloadTimeouts(self.REDOWNLOAD_TIMEOUT, self.DOWNLOAD_FAILS_TO_TIMEOUT)
 
     def set_target_dir(self, target_dir: str) -> None:
@@ -348,11 +336,11 @@ class GeneralDownloader(QObject):
             delay = self._timeouts.timer
         else:
             delay = None
-        dl = GeneralDownload(self._nam, name, url, self._target_dir, delay)
+        dl = DownloadWrapper(self._nam, name, url, self._target_dir, delay)
         dl.done.connect(self._finished_download)
         self._downloads[name] = dl
 
-    def _finished_download(self, download: GeneralDownload, download_path: str) -> None:
+    def _finished_download(self, download: DownloadWrapper, download_path: str) -> None:
         self._timeouts.update_fail_count(download.name, download.failed())
         requests = set(download.requests)  # Don't change it during iteration
         for req in requests:
@@ -362,7 +350,7 @@ class GeneralDownloader(QObject):
             req.finished(download.name, (download_path, download.failed()))
 
 
-class MapPreviewDownloader(GeneralDownloader):
+class MapPreviewDownloader(Downloader):
     def __init__(self, target_dir: str, size: str) -> None:
         super().__init__(target_dir)
         self.size = size
