@@ -420,14 +420,10 @@ def generateThumbnail(sourcename, destname):
         return False
 
 
-def downloadMod(item):
-    if isinstance(item, str):
-        link = item
-    else:
-        link = item.link
-    logger.debug("Getting mod from: {}".format(link))
+def downloadMod(link: str, name: str) -> bool:
+    logger.debug(f"Getting mod from: {link}")
 
-    def handle_exist(path, modname):
+    def handle_exist(path: str, modname: str) -> bool:
         modpath = os.path.join(path, modname)
         oldmod = getModInfoFromFolder(modpath)
         result = QtWidgets.QMessageBox.question(
@@ -446,9 +442,7 @@ def downloadMod(item):
         removeMod(oldmod)
         return True
 
-    return downloadVaultAsset(
-        link, MODFOLDER, handle_exist, link, "mod", False,
-    )
+    return downloadVaultAsset(link, MODFOLDER, handle_exist, name, "mod", silent=False)
 
 
 def removeMod(mod):

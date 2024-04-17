@@ -167,9 +167,7 @@ class Game(ModelItem):
         else:
             gtype = GameUrlType.LIVE_REPLAY
 
-        return GameUrl(
-            gtype, self.mapname, self.featured_mod, self.uid, player_id,
-        )
+        return GameUrl(gtype, self.mapname, self.featured_mod, self.uid, player_id, self.sim_mods)
 
     # Utility functions start here.
 

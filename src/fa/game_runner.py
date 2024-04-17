@@ -1,9 +1,9 @@
-import json
 import logging
 
 import fa
 from fa.replay import replay
 from model.game import GameState
+from util.gameurl import GameUrl
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +29,10 @@ class GameRunner:
         elif game.state == GameState.PLAYING:
             replay(gurl)
 
-    def _join_game_from_url(self, gurl):
+    def _join_game_from_url(self, gurl: GameUrl) -> None:
         logger.debug("Joining game from URL: " + gurl.to_url().toString())
         if fa.instance.available():
-            if gurl.mods is None:
-                add_mods = []
-            else:
-                try:
-                    add_mods = json.loads(gurl.mods)  # should be a list
-                except (json.JSONDecodeError, TypeError):
-                    logger.info("Failed to decode game mods!")
+            add_mods = gurl.mods or {}
             if fa.check.game(self):
                 if fa.check.check(gurl.mod, gurl.map, sim_mods=add_mods):
                     self._client_window.join_game(gurl.uid)

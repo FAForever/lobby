@@ -51,6 +51,7 @@ default_values = {
     'relay_server/host': 'lobby.{host}',
     'relay_server/port': 8000,
     'vault/map_preview_url': 'https://content.{host}/maps/previews/{size}/{name}.png',
+    'vault/map_download_url': "https://content.{host}/maps/{name}.zip",
     'FORUMS_URL': 'https://forums.faforever.com/',
     'WEBSITE_URL': 'https://www.{host}',
     # FIXME - temporary address below

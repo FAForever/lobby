@@ -172,8 +172,8 @@ class ModVault(Vault):
                     "This folder doesn't contain a mod_info.lua file",
                 )
 
-    def downloadMod(self, mod):
-        if utils.downloadMod(mod):
+    def downloadMod(self, link: str, name: str) -> bool:
+        if utils.downloadMod(link, name):
             self.uids = [mod.uid for mod in utils.getInstalledMods()]
             self.updateVisibilities()
             return True

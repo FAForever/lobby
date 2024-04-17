@@ -23,7 +23,7 @@ from api.featured_mod_updater import FeaturedModFiles
 from api.featured_mod_updater import FeaturedModId
 from api.sim_mod_updater import SimModFiles
 from config import Settings
-from vaults.dialogs import downloadFile
+from vaults.dialogs import download_file
 from vaults.modvault import utils
 
 logger = logging.getLogger(__name__)
@@ -111,11 +111,11 @@ class Updater(QtCore.QObject):
 
     def __init__(
         self,
-        featured_mod,
-        version=None,
-        modversions=None,
-        sim=False,
-        silent=False,
+        featured_mod: str,
+        version: int | None = None,
+        modversions: dict | None = None,
+        sim_mod: tuple[str, str] | None = None,
+        silent: bool = False,
         *args,
         **kwargs,
     ):
@@ -133,7 +133,7 @@ class Updater(QtCore.QObject):
         self.version = version
         self.modversions = modversions
 
-        self.sim = sim
+        self.sim_mod = sim_mod
         self.modpath = None
 
         self.result = self.RESULT_NONE
@@ -199,25 +199,24 @@ class Updater(QtCore.QObject):
     def getFeaturedModIdByName(self, technicalName):
         return FeaturedModId().requestAndGetFeaturedModIdByName(technicalName)
 
-    def requestSimUrlByUid(self, uid):
-        return SimModFiles().requestAndGetSimModUrlByUid(uid)
+    def request_sim_url_by_uid(self, uid: str) -> str:
+        return SimModFiles().request_and_get_sim_mod_url_by_id(uid)
 
-    def fetchFile(self, _file: dict, filegroup: str) -> None:
-        name = _file['name']
-        targetDir = os.path.join(util.APPDATA_DIR, filegroup, name)
+    def fetch_file(self, file_info: dict, filegroup: str) -> None:
+        name = file_info["name"]
+        url = file_info["cacheableUrl"]
+        target_dir = os.path.join(util.APPDATA_DIR, filegroup)
 
-        logger.info('Updater: Downloading {}'.format(_file['cacheableUrl']))
+        logger.info(f"Updater: Downloading {url}")
 
-        downloaded = downloadFile(
-            url=_file['cacheableUrl'],
-            target_dir=targetDir,
-            name=(
-                'Downloading FA file : <a href="{url}">{url}</a><p> '
-                .format(url=_file['cacheableUrl'])
-            ),
-            category='Update',
+        downloaded = download_file(
+            url=url,
+            target_dir=target_dir,
+            name=name,
+            category="Update",
             silent=False,
-            request_params={_file["hmacParameter"]: _file["hmacToken"]},
+            request_params={file_info["hmacParameter"]: file_info["hmacToken"]},
+            label=f"Downloading FA file : <a href='{url}'>{url}</a><p> ",
         )
 
         if not downloaded:
@@ -294,7 +293,7 @@ class Updater(QtCore.QObject):
                 if self.keep_cache or self.in_session_cache:
                     files_to_check.append(_file)
                 else:
-                    self.fetchFile(_file, filegroup)
+                    self.fetch_file(_file, filegroup)
                     self.filesToUpdate.remove(_file)
                     self.updatedFiles.append(_file['name'])
 
@@ -305,7 +304,7 @@ class Updater(QtCore.QObject):
             self.replaceFromCache(replaceable_files, filegroup)
             for _file in need_to_download:
                 self.moveToCache([_file], filegroup)
-                self.fetchFile(_file, filegroup)
+                self.fetch_file(_file, filegroup)
                 self.filesToUpdate.remove(_file)
                 self.updatedFiles.append(_file['name'])
 
@@ -375,13 +374,12 @@ class Updater(QtCore.QObject):
                 # need to patch them
                 os.chmod(dst_file, st.st_mode | stat.S_IWRITE)
 
-    def doUpdate(self):
+    def doUpdate(self) -> None:
         """ The core function that does most of the actual update work."""
         try:
-            if self.sim:
-                if utils.downloadMod(
-                    self.requestSimUrlByUid(self.featured_mod),
-                ):
+            if self.sim_mod:
+                uid, name = self.sim_mod
+                if utils.downloadMod(self.request_sim_url_by_uid(uid), name):
                     self.result = self.RESULT_SUCCESS
                 else:
                     self.result = self.RESULT_FAILURE

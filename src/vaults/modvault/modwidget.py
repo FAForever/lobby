@@ -81,9 +81,9 @@ class ModWidget(FormClass, BaseClass):
         self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
 
     @QtCore.pyqtSlot()
-    def download(self):
+    def download(self) -> None:
         if self.mod.uid not in self.parent.uids:
-            self.parent.downloadMod(self.mod)
+            self.parent.downloadMod(self.mod.link, self.mod.name)
             self.done(1)
         else:
             show = QtWidgets.QMessageBox.question(

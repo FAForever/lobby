@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import zipfile
 from io import BytesIO
 
 from PyQt6 import QtGui
@@ -14,6 +15,7 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtCore import QUrl
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtNetwork import QNetworkAccessManager
+from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
 from config import Settings
@@ -21,7 +23,7 @@ from config import Settings
 logger = logging.getLogger(__name__)
 
 
-class FileDownload(QObject):
+class BaseDownload(QObject):
     """
     A simple async one-shot file downloader.
     """
@@ -51,7 +53,7 @@ class FileDownload(QObject):
         self.bytes_total = 0
         self.bytes_progress = 0
 
-        self._dfile = None
+        self._dfile: QNetworkReply | None = None
 
         self._reading = False
         self._running = False
@@ -61,6 +63,7 @@ class FileDownload(QObject):
         ran = self._running
         self._running = False
         if ran:
+            self._about_to_finish()
             self._finish()
 
     def _error(self):
@@ -71,12 +74,17 @@ class FileDownload(QObject):
         self.canceled = True
         self._stop()
 
-    def _finish(self):
+    def _handle_status(self) -> None:
         # check status code
         statusCode = self._dfile.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
         if statusCode != 200:
             logger.debug(f"Download failed: {self.addr} -> {statusCode}")
             self.error = True
+
+    def _about_to_finish(self) -> None:
+        self._handle_status()
+
+    def _finish(self) -> None:
         self.finished.emit(self)
 
     def prepare_request(self) -> QNetworkRequest:
@@ -135,10 +143,86 @@ class FileDownload(QObject):
     def succeeded(self):
         return not self.error and not self.canceled
 
+    def failed(self) -> bool:
+        return not self.succeeded()
+
     def waitForCompletion(self):
         waitFlag = QEventLoop.ProcessEventsFlag.WaitForMoreEvents
         while self._running:
             QtWidgets.QApplication.processEvents(waitFlag)
+
+
+class FileDownload(BaseDownload):
+    def __init__(
+            self,
+            target_path: str,
+            nam: QNetworkAccessManager,
+            addr: str,
+            request_params: dict | None = None,
+    ) -> None:
+        self._target_path = f"{target_path}.part"
+        self._output = QFile(target_path)
+        self._output.open(QIODevice.OpenModeFlag.WriteOnly)
+        super().__init__(nam, addr, self._output, request_params=request_params)
+
+    def _about_to_finish(self) -> None:
+        super()._about_to_finish()
+        self.cleanup()
+
+    def cleanup(self) -> None:
+        self._output.close()
+        if self.failed():
+            logger.debug(f"Download failed for: {self.name}")
+            os.unlink(self._target_path)
+        else:
+            logger.debug(f"Finished download from {self.addr}")
+            self._output.rename(self._target_path.removesuffix(".part"))
+
+
+class ZipDownloadExtract(BaseDownload):
+    """
+    Download a zip archive in-memory and extract it into target_dir
+    """
+
+    def __init__(
+            self,
+            target_dir: str,
+            nam: QNetworkAccessManager,
+            addr: str,
+            request_params: dict | None = None,
+            exist_ok: bool = False,
+    ) -> None:
+        self._target_dir = target_dir
+        self._output = BytesIO()
+        self._exist_ok = exist_ok
+        super().__init__(nam, addr, self._output, request_params=request_params)
+
+    def _about_to_finish(self) -> None:
+        super()._about_to_finish()
+        if self.succeeded():
+            self.extract_archive()
+        self.cleanup()
+
+    def extract_archive(self) -> None:
+        with zipfile.ZipFile(self._output) as zfile:
+            dirname = os.path.dirname(zfile.namelist()[0])
+            destpath = os.path.join(self._target_dir, dirname)
+            if os.path.exists(destpath):
+                if not self._exist_ok:
+                    logger.warning(f"Cannot extract: {destpath!r} already exists")
+                    self.error = True
+                    return
+            try:
+                zfile.extractall(self._target_dir)
+                logger.debug(
+                    f"Successfully downloaded and extracted to {destpath!r} from: {self.addr!r}",
+                )
+            except Exception as e:
+                logger.error(f"Extract error: {e}")
+                self.error = True
+
+    def cleanup(self) -> None:
+        self._output.close()
 
 
 class GeneralDownload(QObject):
@@ -171,9 +255,9 @@ class GeneralDownload(QObject):
         self._dl = self._prepare_dl()
         self._dl.run()
 
-    def _prepare_dl(self) -> FileDownload:
+    def _prepare_dl(self) -> BaseDownload:
         file_obj = self._get_cachefile(self.name + ".part")
-        dl = FileDownload(self._nam, self._url, file_obj)
+        dl = BaseDownload(self._nam, self._url, file_obj)
         dl.finished.connect(self._finished)
         dl.blocksize = None
         return dl
@@ -190,7 +274,7 @@ class GeneralDownload(QObject):
     def add_request(self, req: DownloadRequest) -> None:
         self.requests.add(req)
 
-    def _finished(self, dl: FileDownload) -> None:
+    def _finished(self, dl: BaseDownload) -> None:
         dl.dest.close()
         destpath = dl.dest.fileName()
         if self.failed():

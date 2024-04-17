@@ -13,7 +13,7 @@ from config import Settings
 from fa.maps import getUserMapsFolder
 from mapGenerator.mapgenProcess import MapGeneratorProcess
 from mapGenerator.mapgenUtils import generatedMapPattern
-from vaults.dialogs import downloadFile
+from vaults.dialogs import download_file
 
 logger = logging.getLogger(__name__)
 
@@ -132,21 +132,21 @@ class MapGeneratorManager(object):
 
         return self.generateMap(mapName)
 
-    def versionController(self, version):
+    def versionController(self, version: str) -> str:
         name = GENERATOR_JAR_NAME.format(version)
-        filePath = os.path.join(util.MAPGEN_DIR, name)
+        file_path = os.path.join(util.MAPGEN_DIR, name)
 
         # Check if required version is already in folder
         if os.path.isdir(util.MAPGEN_DIR):
             for infile in os.listdir(util.MAPGEN_DIR):
                 if infile.lower() == name.lower():
-                    return filePath
+                    return file_path
 
         # Download from github if not
         url = RELEASE_URL + RELEASE_VERSION_PATH.format(version=version)
-        return downloadFile(
-            url, filePath, name, "map generator", silent=False,
-        )
+        if download_file(url, util.MAPGEN_DIR, name, "map generator", silent=False):
+            return file_path
+        return ""
 
     def checkUpdates(self):
         '''

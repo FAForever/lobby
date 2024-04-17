@@ -7,10 +7,8 @@ import string
 import struct
 import sys
 import tempfile
-import urllib.error
-import urllib.parse
-import urllib.request
 import zipfile
+from typing import Callable
 
 from PyQt6 import QtCore
 from PyQt6 import QtGui
@@ -26,9 +24,6 @@ from vaults.dialogs import downloadVaultAssetNoMsg
 logger = logging.getLogger(__name__)
 
 route = Settings.get('content/host')
-VAULT_PREVIEW_ROOT = "{}/faf/vault/map_previews/small/".format(route)
-VAULT_DOWNLOAD_ROOT = "{}/maps/"
-VAULT_COUNTER_ROOT = "{}/faf/vault/map_vault/inc_downloads.php".format(route)
 
 __exist_maps = None
 
@@ -63,12 +58,12 @@ def getDisplayName(filename):
         return pretty
 
 
-def name2link(name):
+def name2link(name: str) -> str:
     """
     Returns a quoted link for use with the VAULT_xxxx Urls
     TODO: This could be cleaned up a little later.
     """
-    return urllib.parse.quote(name + ".zip")
+    return Settings.get("vault/map_download_url").format(name=name)
 
 
 def link2name(link):
@@ -462,11 +457,15 @@ def downloadMap(name, silent=False):
     return True
 
 
-def _doDownloadMap(name, link, silent):
-    url = VAULT_DOWNLOAD_ROOT.format(Settings.get('content/host')) + link
-    logger.debug("Getting map from: " + url)
+def _doDownloadMap(name: str, link: str, silent: bool) -> tuple[bool, Callable[[], None]]:
+    logger.debug(f"Getting map from: {link}")
     return downloadVaultAssetNoMsg(
-        url, getUserMapsFolder(), lambda m, d: True, name, "map", silent,
+        url=link,
+        target_dir=getUserMapsFolder(),
+        exist_handler=lambda m, d: True,
+        name=name,
+        category="map",
+        silent=silent,
     )
 
 
