@@ -1,18 +1,18 @@
 import logging
+import os.path
 
 from PyQt6 import QtWidgets
-from PyQt6.QtCore import QByteArray
 from PyQt6.QtCore import QPoint
 from PyQt6.QtCore import QSize
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QImage
 from PyQt6.QtGui import QTextDocument
 from PyQt6.QtNetwork import QNetworkAccessManager
-from PyQt6.QtNetwork import QNetworkReply
-from PyQt6.QtNetwork import QNetworkRequest
 
 import util
 from config import Settings
+from downloadManager import Downloader
+from downloadManager import DownloadRequest
 
 from .newsitem import NewsItem
 from .newsitem import NewsItemDelegate
@@ -35,11 +35,12 @@ class NewsWidget(FormClass, BaseClass):
         self.setupUi(self)
 
         self.nam = QNetworkAccessManager()
-        self.reply: QNetworkReply | None = None
+        self._downloader = Downloader(util.NEWS_CACHE_DIR)
+        self._images_dl_request = DownloadRequest()
+        self._images_dl_request.done.connect(self.item_image_downloaded)
 
         self.newsManager = NewsManager(self)
         self.newsItems = []
-        self.images = {}
 
         # open all links in external browser
         self.newsTextBrowser.setOpenExternalLinks(True)
@@ -65,37 +66,36 @@ class NewsWidget(FormClass, BaseClass):
         self.newsList.clear()
         self.newsManager.WpApi.download()
 
-    def download_image(self, img_url: QUrl) -> None:
-        request = QNetworkRequest(img_url)
-        self.reply = self.nam.get(request)
-        self.reply.finished.connect(self.item_image_downloaded)
+    def download_image(self, img_url: str) -> None:
+        name = os.path.basename(img_url)
+        self._downloader.download(name, self._images_dl_request, img_url)
 
-    def add_image_resource(self, img_url: QUrl, image_data: QByteArray) -> None:
-        img = QImage()
-        img.loadFromData(image_data)
-        scaled = img.scaled(QSize(900, 500))
-
-        self.images[img_url] = scaled
-        self.newsTextBrowser.document().addResource(
-            QTextDocument.ResourceType.ImageResource,
-            img_url,
-            scaled,
-        )
-
-    def item_image_downloaded(self) -> None:
-        if self.reply.error() is not self.reply.NetworkError.NoError:
+    def add_image_resource(self, image_name: str, image_path: str) -> None:
+        doc = self.newsTextBrowser.document()
+        if doc.resource(QTextDocument.ResourceType.ImageResource, QUrl(image_name)):
             return
-        self.add_image_resource(self.reply.request().url(), self.reply.readAll())
+        img = QImage(image_path)
+        scaled = img.scaled(QSize(900, 500))
+        doc.addResource(QTextDocument.ResourceType.ImageResource, QUrl(image_name), scaled)
+
+    def item_image_downloaded(self, image_name: str, result: tuple[str, bool]) -> None:
+        image_path, download_failed = result
+        if not download_failed:
+            self.add_image_resource(image_name, image_path)
         self.show_newspage()
 
     def itemChanged(self, current: NewsItem | None, previous: NewsItem | None) -> None:
         if current is None:
             return
-        url = QUrl(current.newsPost["img_url"])
-        if url in self.images:
+
+        url = current.newsPost["img_url"]
+        image_name = os.path.basename(url)
+        image_path = os.path.join(util.NEWS_CACHE_DIR, image_name)
+        if os.path.isfile(image_path):
+            self.add_image_resource(image_name, image_path)
             self.show_newspage()
         else:
-            self.download_image(url)
+            self._downloader.download(image_name, self._images_dl_request, url)
 
     def show_newspage(self) -> None:
         current = self.newsList.currentItem()
@@ -105,12 +105,13 @@ class NewsWidget(FormClass, BaseClass):
         else:
             external_link = current.newsPost['external_link']
 
+        image_name = os.path.basename(current.newsPost["img_url"])
         content = current.newsPost["excerpt"].strip().removeprefix("<p>").removesuffix("</p>")
         html = self.HTML.format(
             style=self.CSS,
             title=current.newsPost['title'],
             content=content,
-            img_source=current.newsPost["img_url"],
+            img_source=image_name,
             external_link=external_link,
         )
         self.newsTextBrowser.setHtml(html)
