@@ -439,25 +439,22 @@ def preview(mapname, pixmap=False):
         logger.debug("Map Preview Exception", exc_info=sys.exc_info())
 
 
-def downloadMap(name, silent=False):
+def downloadMap(name: str, silent: bool = False) -> bool:
     """
     Download a map from the vault with the given name
     """
     link = name2link(name)
     ret, msg = _doDownloadMap(name, link, silent)
-    if not ret:
-        if msg is None:
-            name = name.replace(" ", "_")
-            link = name2link(name)
-            ret, msg = _doDownloadMap(name, link, silent)
-        if not ret:
-            msg()
-            return ret
-
-    return True
+    if not ret and msg is None:
+        name = name.replace(" ", "_")
+        link = name2link(name)
+        ret, msg = _doDownloadMap(name, link, silent)
+    if not ret and msg is not None:
+        msg()
+    return ret
 
 
-def _doDownloadMap(name: str, link: str, silent: bool) -> tuple[bool, Callable[[], None]]:
+def _doDownloadMap(name: str, link: str, silent: bool) -> tuple[bool, Callable[[], None] | None]:
     logger.debug(f"Getting map from: {link}")
     return downloadVaultAssetNoMsg(
         url=link,
