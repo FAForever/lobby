@@ -501,3 +501,10 @@ def strtodate(s):
 
 def datetostr(d):
     return d.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def capitalize(string: str) -> str:
+    """
+    Capitalize the first letter only, leave the rest as it is
+    """
+    return f"{string[0].upper()}{string[1:]}"
