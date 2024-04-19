@@ -2,6 +2,7 @@ cx_Freeze
 ipaddress
 pathlib
 pyqt6
+pyqt6-networkauth
 pytest
 pytest-cov
 pytest-mock
