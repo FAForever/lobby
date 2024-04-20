@@ -174,7 +174,6 @@ class FileDownload(BaseDownload):
     def cleanup(self) -> None:
         self._output.close()
         if self.failed():
-            logger.debug(f"Download failed for: {self._target_path}")
             os.unlink(self._cache_path)
         else:
             logger.debug(f"Finished download from {self.addr}")
