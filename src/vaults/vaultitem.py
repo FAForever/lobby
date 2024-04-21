@@ -1,102 +1,116 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from PyQt6 import QtCore
 from PyQt6 import QtGui
-from PyQt6 import QtWidgets
+from PyQt6.QtWidgets import QListWidgetItem
+from PyQt6.QtWidgets import QStyle
+from PyQt6.QtWidgets import QStyledItemDelegate
 
 import util
+from api.models.Map import Map
+from api.models.Mod import Mod
 from downloadManager import Downloader
 from downloadManager import DownloadRequest
 
+if TYPE_CHECKING:
+    from vaults.vault import Vault
 
-class VaultItem(QtWidgets.QListWidgetItem):
+
+class VaultListItem(QListWidgetItem):
     TEXTWIDTH = 230
     ICONSIZE = 100
     PADDING = 10
 
-    def __init__(self, parent, *args, **kwargs):
-        QtWidgets.QListWidgetItem.__init__(self, *args, **kwargs)
+    def __init__(self, parent: Vault, item_info: Mod | Map, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.parent = parent
-
-        self.name = ""
-        self.description = ""
-        self.trimmedDescription = ""
-        self.version = 0
-        self.rating = 0
-        self.reviews = 0
-        self.date = None
-
-        self.itemType_ = ""
-        self.color = "white"
-
-        self.link = ""
         self.setHidden(True)
+
+        self.item_info = item_info
+        self.item_version = item_info.version
 
         self._preview_dler = Downloader(util.CACHE_DIR)
         self._item_dl_request = DownloadRequest()
         self._item_dl_request.done.connect(self._on_item_downloaded)
 
     def update(self):
-        self.ensureIcon()
-        self.updateVisibility()
+        self.ensure_icon()
+        self.update_visibility()
 
-    def setItemIcon(self, filename, themed=True):
+    def set_item_icon(self, filename: str, themed: bool = True) -> None:
         icon = util.THEME.icon(filename)
         if not themed:
             pixmap = QtGui.QPixmap(filename)
             if not pixmap.isNull():
-                icon.addPixmap(
-                    pixmap.scaled(
-                        QtCore.QSize(self.ICONSIZE, self.ICONSIZE),
-                    ),
-                )
+                scaled_pixmap = pixmap.scaled(QtCore.QSize(self.ICONSIZE, self.ICONSIZE))
+                icon.addPixmap(scaled_pixmap)
         self.setIcon(icon)
 
-    def ensureIcon(self):
+    def ensure_icon(self):
         if self.icon() is None or self.icon().isNull():
-            self.setItemIcon("games/unknown_map.png")
+            self.set_item_icon("games/unknown_map.png")
 
-    def _on_item_downloaded(self, mapname, result):
+    def _on_item_downloaded(self, mapname: str, result: tuple[str, bool]) -> None:
         filename, themed = result
-        self.setItemIcon(filename, themed)
-        self.ensureIcon()
+        self.set_item_icon(filename, themed)
+        self.ensure_icon()
 
-    def updateVisibility(self):
-        self.setHidden(not self.shouldBeVisible())
-        if len(self.description) < 200:
-            self.trimmedDescription = self.description
+    def should_be_hidden(self) -> bool:
+        return not self.should_be_visible()
+
+    def should_be_visible(self) -> bool:
+        return True
+
+    def update_visibility(self) -> None:
+        self.setHidden(self.should_be_hidden())
+        if len(self.item_version.description) < 200:
+            trimmed_description = self.item_version.description
         else:
-            self.trimmedDescription = self.description[:197] + "..."
+            trimmed_description = f"{self.item_version.description[:197]}..."
+        self.setToolTip('<p width="230">{}</p>'.format(trimmed_description))
 
-        self.setToolTip('<p width="230">{}</p>'.format(self.description))
-
-    def __ge__(self, other):
+    def __ge__(self, other: VaultListItem) -> bool:
         return not self.__lt__(self, other)
 
-    def __lt__(self, other):
+    def __lt__(self, other: VaultListItem) -> bool:
         if self.parent.sortType == "alphabetical":
-            return self.name.lower() > other.name.lower()
+            return self._lt_alphabetical(other)
         elif self.parent.sortType == "rating":
-            if self.rating == other.rating:
-                if self.reviews == other.reviews:
-                    return self.name.lower() > other.name.lower()
-                return self.reviews < other.reviews
-            return self.rating < other.rating
-        elif self.parent.sortType == "size":
-            if self.height * self.width == other.height * other.width:
-                return self.name.lower() > other.name.lower()
-            return self.height * self.width < other.height * other.width
+            return self._lt_rating(other)
         elif self.parent.sortType == "date":
-            if self.date is None:
-                return other.date is not None
-            if self.date == other.date:
-                return self.name.lower() > other.name.lower()
-            return self.date < other.date
+            return self._lt_date(other)
+        return True
+
+    def _lt_date(self, other: VaultListItem) -> bool:
+        if self.item_version.create_time == other.item_version.create_time:
+            if self.item_version.update_time == other.item_version.update_time:
+                return self._lt_alphabetical(other)
+            return self.item_version.update_time < other.item_version.update_time
+        return self.item_version.create_time < other.item_version.create_time
+
+    def _lt_alphabetical(self, other: VaultListItem) -> bool:
+        return self.item_info.display_name.lower() > other.item_info.display_name.lower()
+
+    def _lt_rating(self, other: VaultListItem) -> bool:
+        review = self.item_info.reviews_summary
+        other_review = other.item_info.reviews_summary
+
+        if review is None:
+            return other_review is not None
+        if other_review is None:
+            return review is None
+
+        if review.average_score == other_review.average_score:
+            if review.num_reviews == other_review.num_reviews:
+                return self._lt_alphabetical(other)
+            return review.num_reviews < other_review.num_reviews
+
+        return review.average_score < other_review.average_score
 
 
-class VaultItemDelegate(QtWidgets.QStyledItemDelegate):
-
-    def __init__(self, *args, **kwargs):
-        QtWidgets.QStyledItemDelegate.__init__(self, *args, **kwargs)
-
+class VaultItemDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index, *args, **kwargs):
         self.initStyleOption(option, index)
 
@@ -106,15 +120,14 @@ class VaultItemDelegate(QtWidgets.QStyledItemDelegate):
         html.setHtml(option.text)
 
         icon = QtGui.QIcon(option.icon)
-        iconsize = QtCore.QSize(VaultItem.ICONSIZE, VaultItem.ICONSIZE)
+        iconsize = QtCore.QSize(VaultListItem.ICONSIZE, VaultListItem.ICONSIZE)
 
         # clear icon and text before letting the control draw itself because
         # we're rendering these parts ourselves
         option.icon = QtGui.QIcon()
         option.text = ""
-        option.widget.style().drawControl(
-            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
-        )
+        control_element = QStyle.ControlElement.CE_ItemViewItem
+        option.widget.style().drawControl(control_element, option, painter, option.widget)
 
         # Shadow
         painter.fillRect(
@@ -158,12 +171,12 @@ class VaultItemDelegate(QtWidgets.QStyledItemDelegate):
 
         html = QtGui.QTextDocument()
         html.setHtml(option.text)
-        html.setTextWidth(VaultItem.TEXTWIDTH)
+        html.setTextWidth(VaultListItem.TEXTWIDTH)
         return QtCore.QSize(
             (
-                VaultItem.ICONSIZE
-                + VaultItem.TEXTWIDTH
-                + VaultItem.PADDING
+                VaultListItem.ICONSIZE
+                + VaultListItem.TEXTWIDTH
+                + VaultListItem.PADDING
             ),
-            VaultItem.ICONSIZE + VaultItem.PADDING,
+            VaultListItem.ICONSIZE + VaultListItem.PADDING,
         )

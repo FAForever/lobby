@@ -1,6 +1,9 @@
 import logging
 
 from api.ApiAccessors import DataApiAccessor
+from api.parsers.MapParser import MapParser
+from api.parsers.MapPoolAssignmentParser import MapPoolAssignmentParser
+from api.parsers.ModParser import ModParser
 from client.connection import Dispatcher
 
 logger = logging.getLogger(__name__)
@@ -13,82 +16,61 @@ class ModApiConnector(DataApiAccessor):
 
     def requestData(self, params: dict | None = None) -> None:
         params = params or {}
-        self.get_by_query(params, self.handleData)
+        self._add_default_include(params)
+        self._extend_filters(params)
+        self.get_by_query(params, self.handle_data)
 
-    def handleData(self, message: dict) -> None:
-        preparedData = dict(
-            command='modvault_info',
-            values=[],
-            meta=message['meta'],
-        )
-        for mod in message['data']:
-            preparedMod = dict(
-                name=mod['displayName'],
-                uid=mod['latestVersion']['uid'],
-                link=mod['latestVersion']['downloadUrl'],
-                description=mod['latestVersion']['description'],
-                author=mod['author'],
-                version=mod['latestVersion']['version'],
-                ui=mod['latestVersion']['type'] == 'UI',
-                thumbnail=mod['latestVersion']['thumbnailUrl'],
-                date=mod['latestVersion']['updateTime'],
-                rating=0,
-                reviews=0,
-            )
-            if len(mod['reviewsSummary']) > 0:
-                score = mod['reviewsSummary']['score']
-                reviews = mod['reviewsSummary']['reviews']
-                if reviews > 0:
-                    preparedMod['rating'] = float(
-                        '{:1.2f}'.format(score / reviews),
-                    )
-                    preparedMod['reviews'] = reviews
-            preparedData["values"].append(preparedMod)
-        self.dispatch.dispatch(preparedData)
+    def _add_default_include(self, params: dict) -> dict:
+        params["include"] = ",".join(("latestVersion", "reviewsSummary", "uploader"))
+        return params
+
+    def _extend_filters(self, params: dict) -> dict:
+        additional_filter = "latestVersion.hidden=='false'"
+        if cur_filters := params.get("filter", ""):
+            params["filter"] = f"{cur_filters};{additional_filter}"
+        else:
+            params["filter"] = additional_filter
+        return params
+
+    def handle_data(self, message: dict) -> None:
+        parsed_data = {
+            "command": "modvault_info",
+            "values":  ModParser.parse_many(message["data"]),
+            "meta": message["meta"],
+        }
+        self.dispatch.dispatch(parsed_data)
 
 
 class MapApiConnector(DataApiAccessor):
     def __init__(self, dispatch: Dispatcher) -> None:
-        super().__init__('/data/map')
+        super().__init__("/data/map")
         self.dispatch = dispatch
 
     def requestData(self, params: dict | None = None) -> None:
         params = params or {}
-        self.get_by_query(params, self.handleData)
+        self._add_default_include(params)
+        self._extend_filters(params)
+        self.get_by_query(params, self.parse_data)
 
-    def handleData(self, message: dict) -> None:
-        preparedData = dict(
-            command='mapvault_info',
-            values=[],
-            meta=message['meta'],
-        )
-        for _map in message['data']:
-            preparedMap = dict(
-                name=_map['displayName'],
-                folderName=_map['latestVersion']['folderName'],
-                link=_map['latestVersion']['downloadUrl'],
-                description=_map['latestVersion']['description'],
-                maxPlayers=_map['latestVersion']['maxPlayers'],
-                version=_map['latestVersion']['version'],
-                ranked=_map['latestVersion']['ranked'],
-                thumbnailSmall=_map['latestVersion']['thumbnailUrlSmall'],
-                thumbnailLarge=_map['latestVersion']['thumbnailUrlLarge'],
-                date=_map['latestVersion']['updateTime'],
-                height=_map['latestVersion']['height'],
-                width=_map['latestVersion']['width'],
-                rating=0,
-                reviews=0,
-            )
-            if len(_map['reviewsSummary']) > 0:
-                score = _map['reviewsSummary']['score']
-                reviews = _map['reviewsSummary']['reviews']
-                if reviews > 0:
-                    preparedMap['rating'] = float(
-                        '{:1.2f}'.format(score / reviews),
-                    )
-                    preparedMap['reviews'] = reviews
-            preparedData['values'].append(preparedMap)
-        self.dispatch.dispatch(preparedData)
+    def _extend_filters(self, params: dict) -> dict:
+        additional_filter = "latestVersion.hidden=='false'"
+        if cur_filters := params.get("filter", ""):
+            params["filter"] = f"{cur_filters};{additional_filter}"
+        else:
+            params["filter"] = additional_filter
+        return params
+
+    def _add_default_include(self, params: dict) -> dict:
+        params["include"] = ",".join(("latestVersion", "reviewsSummary", "author"))
+        return params
+
+    def parse_data(self, message: dict) -> None:
+        prepared_data = {
+            "command": "mapvault_info",
+            "values": MapParser.parse_many(message["data"]),
+            "meta": message["meta"],
+        }
+        self.dispatch.dispatch(prepared_data)
 
 
 class MapPoolApiConnector(DataApiAccessor):
@@ -98,64 +80,21 @@ class MapPoolApiConnector(DataApiAccessor):
 
     def requestData(self, params: dict | None) -> None:
         params = params or {}
-        self.get_by_query(params, self.handleData)
+        self.get_by_query(self._add_default_include(params), self.parse_data)
 
-    def handleData(self, message: dict) -> None:
-        preparedData = dict(
-            command='mapvault_info',
-            values=[],
-            meta=message['meta'],
-        )
-        for data in message['data']:
-            if len(data['mapVersion']) > 0:
-                _map = data['mapVersion']
-                preparedMap = dict(
-                    name=_map['map']['displayName'],
-                    folderName=_map['folderName'],
-                    link=_map['downloadUrl'],
-                    description=_map['description'],
-                    maxPlayers=_map['maxPlayers'],
-                    version=_map['version'],
-                    ranked=_map['ranked'],
-                    thumbnailSmall=_map['thumbnailUrlSmall'],
-                    thumbnailLarge=_map['thumbnailUrlLarge'],
-                    date=_map['updateTime'],
-                    height=_map['height'],
-                    width=_map['width'],
-                    rating=0,
-                    reviews=0,
-                )
-                if len(_map['reviewsSummary']) > 0:
-                    score = _map['reviewsSummary']['score']
-                    reviews = _map['reviewsSummary']['reviews']
-                    if reviews > 0:
-                        preparedMap['rating'] = float(
-                            '{:1.2f}'.format(score / reviews),
-                        )
-                        preparedMap['reviews'] = reviews
-            elif data['mapParams'] is not None:
-                _map = data['mapParams']
-                preparedMap = dict(
-                    name="Neroxis Map Generator",
-                    folderName=(
-                        'neroxis_map_generator_{}_size={}km_spawns={}'.format(
-                            _map['version'],
-                            int(_map['size'] / 51.2),
-                            _map['spawns'],
-                        )
-                    ),
-                    link='',
-                    description='Randomly generated map',
-                    maxPlayers=_map['spawns'],
-                    version='1',
-                    ranked=True,
-                    thumbnailSmall='',
-                    thumbnailLarge='',
-                    date='',
-                    height=_map['size'],
-                    width=_map['size'],
-                    rating=0,
-                    reviews=0,
-                )
-            preparedData['values'].append(preparedMap)
-        self.dispatch.dispatch(preparedData)
+    def _add_default_include(self, params: dict) -> dict:
+        params["include"] = ",".join((
+            "mapVersion",
+            "mapVersion.map",
+            "mapVersion.map.author",
+            "mapVersion.map.reviewsSummary",
+        ))
+        return params
+
+    def parse_data(self, message: dict) -> None:
+        prepared_data = {
+            "command": "mapvault_info",
+            "values": MapPoolAssignmentParser.parse_many_to_maps(message["data"]),
+            "meta": message["meta"],
+        }
+        self.dispatch.dispatch(prepared_data)

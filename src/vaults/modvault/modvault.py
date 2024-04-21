@@ -46,7 +46,8 @@ from PyQt6 import QtWidgets
 
 from api.vaults_api import ModApiConnector
 from vaults.modvault import utils
-from vaults.modvault.moditem import ModItem
+from vaults.modvault.moditem import ModListItem
+from vaults.modvault.utils import ModInfo
 from vaults.vault import Vault
 
 from .modwidget import ModWidget
@@ -78,12 +79,12 @@ class ModVault(Vault):
 
         self.uploadButton.hide()
 
-    def createItem(self, item_key: str) -> ModItem:
-        return ModItem(self, item_key)
+    def create_item(self, item_key: str) -> ModListItem:
+        return ModListItem(self, item_key)
 
     @QtCore.pyqtSlot(dict)
     def modInfo(self, message: dict) -> None:
-        super().itemsInfo(message)
+        super().items_info(message)
 
     @QtCore.pyqtSlot(int)
     def sortChanged(self, index):
@@ -93,7 +94,7 @@ class ModVault(Vault):
             self.sortType = "date"
         elif index == 2:
             self.sortType = "rating"
-        self.updateVisibilities()
+        self.update_visibilities()
 
     @QtCore.pyqtSlot(int)
     def showChanged(self, index):
@@ -107,7 +108,7 @@ class ModVault(Vault):
             self.showType = "yours"
         elif index == 4:
             self.showType = "installed"
-        self.updateVisibilities()
+        self.update_visibilities()
 
     @QtCore.pyqtSlot(QtWidgets.QListWidgetItem)
     def modClicked(self, item):
@@ -175,12 +176,13 @@ class ModVault(Vault):
     def downloadMod(self, link: str, name: str) -> bool:
         if utils.downloadMod(link, name):
             self.uids = [mod.uid for mod in utils.getInstalledMods()]
-            self.updateVisibilities()
+            self.update_visibilities()
             return True
         else:
             return False
 
-    def removeMod(self, mod):
+    def removeMod(self, name: str, uid: str) -> None:
+        mod = ModInfo(name=name, uid=uid)
         if utils.removeMod(mod):
             self.uids = [m.uid for m in utils.installedMods]
-            mod.updateVisibility()
+            self.update_visibilities()

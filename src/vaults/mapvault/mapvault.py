@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import shutil
@@ -5,17 +7,22 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from stat import S_IWRITE
+from typing import TYPE_CHECKING
 
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
 import util
+from api.models.Map import Map
 from api.vaults_api import MapApiConnector
 from api.vaults_api import MapPoolApiConnector
 from fa import maps
 from vaults import luaparser
-from vaults.mapvault.mapitem import MapItem
+from vaults.mapvault.mapitem import MapListItem
 from vaults.vault import Vault
+
+if TYPE_CHECKING:
+    from client._clientwindow import ClientWindow
 
 from .mapwidget import MapWidget
 
@@ -23,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class MapVault(Vault):
-    def __init__(self, client, *args, **kwargs):
+    def __init__(self, client: ClientWindow, *args, **kwargs) -> None:
         QtCore.QObject.__init__(self, *args, **kwargs)
         Vault.__init__(self, client, *args, **kwargs)
 
@@ -52,12 +59,12 @@ class MapVault(Vault):
         self.UIButton.hide()
         self.uploadButton.hide()
 
-    def createItem(self, item_key: str) -> MapItem:
-        return MapItem(self, item_key)
+    def create_item(self, item: Map) -> MapListItem:
+        return MapListItem(self, item)
 
     @QtCore.pyqtSlot(dict)
     def mapInfo(self, message: dict) -> None:
-        super().itemsInfo(message)
+        super().items_info(message)
 
     @QtCore.pyqtSlot(int)
     def sortChanged(self, index):
@@ -69,7 +76,7 @@ class MapVault(Vault):
             self.sortType = "rating"
         elif index == 3:
             self.sortType = "size"
-        self.updateVisibilities()
+        self.update_visibilities()
 
     @QtCore.pyqtSlot(int)
     def showChanged(self, index):
@@ -81,28 +88,24 @@ class MapVault(Vault):
             self.showType = "ranked"
         elif index == 3:
             self.showType = "installed"
-        self.updateVisibilities()
+        self.update_visibilities()
 
     @QtCore.pyqtSlot(QtWidgets.QListWidgetItem)
-    def itemClicked(self, item):
+    def itemClicked(self, item: MapListItem) -> None:
         widget = MapWidget(self, item)
         widget.exec()
 
     def requestMapPool(self, queueName, minRating):
         self.apiConnector = self.mapPoolApiConnector
-        self.searchQuery = dict(
-            include=(
-                'mapVersion,mapVersion.map.latestVersion,'
-                'mapVersion.reviewsSummary'
-            ),
-            filter=(
-                'mapPool.matchmakerQueueMapPool.matchmakerQueue.'
-                'technicalName=="{}";'
-                '(mapPool.matchmakerQueueMapPool.minRating=le="{}",'
-                'mapPool.matchmakerQueueMapPool.minRating=isnull="true")'
-                .format(queueName, minRating)
-            ),
-        )
+        self.searchQuery = {
+            "filter": ";".join((
+                f"mapPool.matchmakerQueueMapPool.matchmakerQueue.technicalName=={queueName}",
+                (
+                    f"(mapPool.matchmakerQueueMapPool.minRating=le={minRating!r},"
+                    "mapPool.matchmakerQueueMapPool.minRating=isnull='true')"
+                ),
+            )),
+        }
         self.goToPage(1)
         self.apiConnector = self.mapApiConnector
 
@@ -232,7 +235,7 @@ class MapVault(Vault):
         if avail_name is None:
             maps.downloadMap(name)
             self.installed_maps.append(name)
-            self.updateVisibilities()
+            self.update_visibilities()
         else:
             show = QtWidgets.QMessageBox.question(
                 self.client,
@@ -253,4 +256,4 @@ class MapVault(Vault):
         if os.path.exists(maps_folder):
             shutil.rmtree(maps_folder)
             self.installed_maps.remove(folder)
-            self.updateVisibilities()
+            self.update_visibilities()

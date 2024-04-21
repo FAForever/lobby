@@ -1,11 +1,17 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from PyQt6 import QtCore
 
 import util
 from ui.busy_widget import BusyWidget
-from vaults.vaultitem import VaultItem
 from vaults.vaultitem import VaultItemDelegate
+from vaults.vaultitem import VaultListItem
+
+if TYPE_CHECKING:
+    from client._clientwindow import ClientWindow
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +20,7 @@ FormClass, BaseClass = util.THEME.loadUiType("vaults/vault.ui")
 
 
 class Vault(FormClass, BaseClass, BusyWidget):
-    def __init__(self, client, *args, **kwargs):
+    def __init__(self, client: ClientWindow, *args, **kwargs) -> None:
         QtCore.QObject.__init__(self, *args, **kwargs)
         self.setupUi(self)
         self.client = client
@@ -31,7 +37,7 @@ class Vault(FormClass, BaseClass, BusyWidget):
         self.sortType = "alphabetical"
         self.showType = "all"
         self.searchString = ""
-        self.searchQuery = dict(include='latestVersion,reviewsSummary')
+        self.searchQuery = {}
         self.apiConnector = None
 
         self.pageSize = self.quantityBox.value()
@@ -87,22 +93,21 @@ class Vault(FormClass, BaseClass, BusyWidget):
         self.pageNumber = self.pageBox.value()
         self.updateQuery(self.pageNumber)
         self.apiConnector.requestData(self.searchQuery)
-        self.updateVisibilities()
+        self.update_visibilities()
 
-    def createItem(self, item_key: str) -> VaultItem:
-        return VaultItem(self, item_key)
+    def create_item(self, item_key: str) -> VaultListItem:
+        return VaultListItem(self, item_key)
 
     @QtCore.pyqtSlot(dict)
-    def itemsInfo(self, message: dict) -> None:
+    def items_info(self, message: dict) -> None:
         for value in message["values"]:
-            item_key = value[self.items_uid]
+            item_key = value.uid
             if item_key in self._items:
                 item = self._items[item_key]
             else:
-                item = self.createItem(item_key)
+                item = self.create_item(value)
                 self._items[item_key] = item
                 self.itemList.addItem(item)
-            item.update(value)
         self.itemList.sortItems(QtCore.Qt.SortOrder.DescendingOrder)
         self.processMeta(message["meta"])
 
@@ -117,7 +122,7 @@ class Vault(FormClass, BaseClass, BusyWidget):
     def resetSearch(self):
         self.searchString = ''
         self.searchInput.clear()
-        self.searchQuery = dict(include='latestVersion,reviewsSummary')
+        self.searchQuery.clear()
         self.goToPage(1)
 
     def search(self):
@@ -126,10 +131,7 @@ class Vault(FormClass, BaseClass, BusyWidget):
             self.resetSearch()
         else:
             self.searchString = self.searchString.strip()
-            self.searchQuery = dict(
-                include='latestVersion,reviewsSummary',
-                filter='displayName=="*{}*"'.format(self.searchString),
-            )
+            self.searchQuery = {"filter": f"displayName=='*{self.searchString}*'"}
             self.goToPage(1)
 
     @QtCore.pyqtSlot()
@@ -137,11 +139,10 @@ class Vault(FormClass, BaseClass, BusyWidget):
         if not self._items:
             self.goToPage(self.pageNumber)
 
-    def updateVisibilities(self):
+    def update_visibilities(self) -> None:
         logger.debug(
-            "Updating visibilities with sort '{}' and visibility '{}'"
-            .format(self.sortType, self.showType),
+            f"Updating visibilities with sort {self.sortType!r} and visibility {self.showType!r}",
         )
-        for _item in self._items:
-            self._items[_item].updateVisibility()
+        for item in self._items.values():
+            item.update_visibility()
         self.itemList.sortItems(QtCore.Qt.SortOrder.DescendingOrder)
