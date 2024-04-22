@@ -174,7 +174,10 @@ class FileDownload(BaseDownload):
     def cleanup(self) -> None:
         self._output.close()
         if self.failed():
-            os.unlink(self._cache_path)
+            try:
+                os.unlink(self._cache_path)
+            except OSError as e:
+                logger.warning(f"Couldn't remove {self._cache_path}: {e}")
         else:
             logger.debug(f"Finished download from {self.addr}")
             self._output.rename(self._target_path)
