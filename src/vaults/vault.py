@@ -92,7 +92,7 @@ class Vault(FormClass, BaseClass, BusyWidget):
         self.pageBox.setValue(page)
         self.pageNumber = self.pageBox.value()
         self.updateQuery(self.pageNumber)
-        self.apiConnector.requestData(self.searchQuery)
+        self.apiConnector.request_data(self.searchQuery)
         self.update_visibilities()
 
     def create_item(self, item_key: str) -> VaultListItem:

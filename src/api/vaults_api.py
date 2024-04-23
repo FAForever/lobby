@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Sequence
 
 from api.ApiAccessors import DataApiAccessor
 from api.parsers.MapParser import MapParser
@@ -9,30 +10,55 @@ from client.connection import Dispatcher
 logger = logging.getLogger(__name__)
 
 
-class ModApiConnector(DataApiAccessor):
+class VaultsApiConnector(DataApiAccessor):
+    def __init__(self, route: str) -> None:
+        super().__init__(route)
+        self._includes = ("latestVersion", "reviewsSummary")
+
+    def _extend_query_options(self, query_options: dict) -> dict:
+        self._add_default_includes(query_options)
+        self._apply_default_filters(query_options)
+        return query_options
+
+    def _copy_query_options(self, query_options: dict | None) -> dict:
+        query_options = query_options or {}
+        return query_options.copy()
+
+    def request_data(self, query_options: dict | None = None) -> None:
+        query = self._copy_query_options(query_options)
+        self._extend_query_options(query)
+        self.get_by_query(query, self.parse_data)
+
+    def _add_default_includes(self, query_options: dict) -> dict:
+        return self._extend_includes(query_options, self._includes)
+
+    def _extend_includes(self, query_options: dict, to_include: Sequence[str]) -> dict:
+        cur_includes = query_options.get("include", "")
+        to_include_str = ",".join((cur_includes, *to_include)).removeprefix(",")
+        query_options["include"] = to_include_str
+        return query_options
+
+    def _apply_default_filters(self, query_options: dict) -> dict:
+        cur_filters = query_options.get("filter", "")
+        additional_filter = "latestVersion.hidden=='false'"
+        query_options["filter"] = ";".join((cur_filters, additional_filter)).removeprefix(";")
+        return query_options
+
+    def parse_data(self, message: dict) -> None:
+        raise NotImplementedError
+
+
+class ModApiConnector(VaultsApiConnector):
     def __init__(self, dispatch: Dispatcher) -> None:
-        super().__init__('/data/mod')
+        super().__init__("/data/mod")
         self.dispatch = dispatch
 
-    def requestData(self, params: dict | None = None) -> None:
-        params = params or {}
-        self._add_default_include(params)
-        self._extend_filters(params)
-        self.get_by_query(params, self.handle_data)
+    def _extend_query_options(self, query_options: dict) -> dict:
+        super()._extend_query_options(query_options)
+        self._extend_includes(query_options, ["uploader"])
+        return query_options
 
-    def _add_default_include(self, params: dict) -> dict:
-        params["include"] = ",".join(("latestVersion", "reviewsSummary", "uploader"))
-        return params
-
-    def _extend_filters(self, params: dict) -> dict:
-        additional_filter = "latestVersion.hidden=='false'"
-        if cur_filters := params.get("filter", ""):
-            params["filter"] = f"{cur_filters};{additional_filter}"
-        else:
-            params["filter"] = additional_filter
-        return params
-
-    def handle_data(self, message: dict) -> None:
+    def parse_data(self, message: dict) -> None:
         parsed_data = {
             "command": "modvault_info",
             "values":  ModParser.parse_many(message["data"]),
@@ -41,28 +67,14 @@ class ModApiConnector(DataApiAccessor):
         self.dispatch.dispatch(parsed_data)
 
 
-class MapApiConnector(DataApiAccessor):
+class MapApiConnector(VaultsApiConnector):
     def __init__(self, dispatch: Dispatcher) -> None:
         super().__init__("/data/map")
         self.dispatch = dispatch
 
-    def requestData(self, params: dict | None = None) -> None:
-        params = params or {}
-        self._add_default_include(params)
-        self._extend_filters(params)
-        self.get_by_query(params, self.parse_data)
-
-    def _extend_filters(self, params: dict) -> dict:
-        additional_filter = "latestVersion.hidden=='false'"
-        if cur_filters := params.get("filter", ""):
-            params["filter"] = f"{cur_filters};{additional_filter}"
-        else:
-            params["filter"] = additional_filter
-        return params
-
-    def _add_default_include(self, params: dict) -> dict:
-        params["include"] = ",".join(("latestVersion", "reviewsSummary", "author"))
-        return params
+    def _extend_query_options(self, query_options: dict) -> dict:
+        super()._extend_query_options(query_options)
+        self._extend_includes(query_options, ["author"])
 
     def parse_data(self, message: dict) -> None:
         prepared_data = {
@@ -73,23 +85,20 @@ class MapApiConnector(DataApiAccessor):
         self.dispatch.dispatch(prepared_data)
 
 
-class MapPoolApiConnector(DataApiAccessor):
+class MapPoolApiConnector(VaultsApiConnector):
     def __init__(self, dispatch: Dispatcher) -> None:
-        super().__init__('/data/mapPoolAssignment')
+        super().__init__("/data/mapPoolAssignment")
         self.dispatch = dispatch
-
-    def requestData(self, params: dict | None) -> None:
-        params = params or {}
-        self.get_by_query(self._add_default_include(params), self.parse_data)
-
-    def _add_default_include(self, params: dict) -> dict:
-        params["include"] = ",".join((
+        self._includes = (
             "mapVersion",
             "mapVersion.map",
             "mapVersion.map.author",
             "mapVersion.map.reviewsSummary",
-        ))
-        return params
+        )
+
+    def _extend_query_options(self, query_options: dict) -> dict:
+        self._add_default_includes(query_options)
+        return query_options
 
     def parse_data(self, message: dict) -> None:
         prepared_data = {
