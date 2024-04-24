@@ -392,13 +392,11 @@ class LobbyInfo(QtCore.QObject):
     coopInfo = QtCore.pyqtSignal(dict)
     tutorialsInfo = QtCore.pyqtSignal(dict)
     modInfo = QtCore.pyqtSignal(dict)
-    modVaultInfo = QtCore.pyqtSignal(dict)
     replayVault = QtCore.pyqtSignal(dict)
     coopLeaderBoard = QtCore.pyqtSignal(dict)
     avatarList = QtCore.pyqtSignal(list)
     social = QtCore.pyqtSignal(dict)
     serverSession = QtCore.pyqtSignal(dict)
-    mapVaultInfo = QtCore.pyqtSignal(dict)
     aliasInfo = QtCore.pyqtSignal(dict)
     matchmakerQueueInfo = QtCore.pyqtSignal(dict)
 
@@ -418,24 +416,10 @@ class LobbyInfo(QtCore.QObject):
         self._dispatcher["session"] = self._simple_emit(self.serverSession)
         self._dispatcher["alias_info"] = self._simple_emit(self.aliasInfo)
         self._dispatcher["modvault_list_info"] = self.handle_modvault_list_info
-        self._dispatcher["modvault_info"] = self._simple_emit(
-            self.modVaultInfo,
-        )
-        self._dispatcher["mapvault_info"] = self._simple_emit(
-            self.mapVaultInfo,
-        )
-        self._dispatcher["updated_achievements"] = (
-            self.handle_updated_achievements
-        )
-        self._dispatcher["coop_leaderboard"] = self._simple_emit(
-            self.coopLeaderBoard,
-        )
-        self._dispatcher["tutorials_info"] = self._simple_emit(
-            self.tutorialsInfo,
-        )
-        self._dispatcher["matchmaker_queue_info"] = self._simple_emit(
-            self.matchmakerQueueInfo,
-        )
+        self._dispatcher["updated_achievements"] = (self.handle_updated_achievements)
+        self._dispatcher["coop_leaderboard"] = self._simple_emit(self.coopLeaderBoard)
+        self._dispatcher["tutorials_info"] = self._simple_emit(self.tutorialsInfo)
+        self._dispatcher["matchmaker_queue_info"] = self._simple_emit(self.matchmakerQueueInfo)
 
         self._gameset = gameset
         self._playerset = playerset

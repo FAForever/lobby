@@ -37,7 +37,6 @@ class MapVault(Vault):
         logger.debug("Map Vault tab instantiating")
 
         self.itemList.itemDoubleClicked.connect(self.itemClicked)
-        self.client.lobby_info.mapVaultInfo.connect(self.mapInfo)
         self.client.authorized.connect(self.busy_entered)
 
         self.installed_maps = maps.getUserMaps()
@@ -47,10 +46,11 @@ class MapVault(Vault):
         for type_ in ["Unranked Only", "Ranked Only", "Installed"]:
             self.ShowTypeList.addItem(type_)
 
-        self.mapApiConnector = MapApiConnector(self.client.lobby_dispatch)
-        self.mapPoolApiConnector = MapPoolApiConnector(
-            self.client.lobby_dispatch,
-        )
+        self.mapApiConnector = MapApiConnector()
+        self.mapPoolApiConnector = MapPoolApiConnector()
+        self.mapApiConnector.data_ready.connect(self.mapInfo)
+        self.mapPoolApiConnector.data_ready.connect(self.mapInfo)
+
         self.apiConnector = self.mapApiConnector
 
         self.items_uid = "folderName"

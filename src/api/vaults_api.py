@@ -1,16 +1,19 @@
 import logging
 from collections.abc import Sequence
 
+from PyQt6.QtCore import pyqtSignal
+
 from api.ApiAccessors import DataApiAccessor
 from api.parsers.MapParser import MapParser
 from api.parsers.MapPoolAssignmentParser import MapPoolAssignmentParser
 from api.parsers.ModParser import ModParser
-from client.connection import Dispatcher
 
 logger = logging.getLogger(__name__)
 
 
 class VaultsApiConnector(DataApiAccessor):
+    data_ready = pyqtSignal(dict)
+
     def __init__(self, route: str) -> None:
         super().__init__(route)
         self._includes = ("latestVersion", "reviewsSummary")
@@ -27,7 +30,7 @@ class VaultsApiConnector(DataApiAccessor):
     def request_data(self, query_options: dict | None = None) -> None:
         query = self._copy_query_options(query_options)
         self._extend_query_options(query)
-        self.get_by_query(query, self.parse_data)
+        self.get_by_query(query, self.handle_response)
 
     def _add_default_includes(self, query_options: dict) -> dict:
         return self._extend_includes(query_options, self._includes)
@@ -44,51 +47,47 @@ class VaultsApiConnector(DataApiAccessor):
         query_options["filter"] = ";".join((cur_filters, additional_filter)).removeprefix(";")
         return query_options
 
-    def parse_data(self, message: dict) -> None:
-        raise NotImplementedError
+    def parse_data(self, message: dict) -> dict:
+        return message
+
+    def handle_response(self, message: dict) -> None:
+        self.data_ready.emit(self.parse_data(message))
 
 
 class ModApiConnector(VaultsApiConnector):
-    def __init__(self, dispatch: Dispatcher) -> None:
+    def __init__(self) -> None:
         super().__init__("/data/mod")
-        self.dispatch = dispatch
 
     def _extend_query_options(self, query_options: dict) -> dict:
         super()._extend_query_options(query_options)
         self._extend_includes(query_options, ["uploader"])
         return query_options
 
-    def parse_data(self, message: dict) -> None:
-        parsed_data = {
-            "command": "modvault_info",
+    def parse_data(self, message: dict) -> dict:
+        return {
             "values":  ModParser.parse_many(message["data"]),
             "meta": message["meta"],
         }
-        self.dispatch.dispatch(parsed_data)
 
 
 class MapApiConnector(VaultsApiConnector):
-    def __init__(self, dispatch: Dispatcher) -> None:
+    def __init__(self) -> None:
         super().__init__("/data/map")
-        self.dispatch = dispatch
 
     def _extend_query_options(self, query_options: dict) -> dict:
         super()._extend_query_options(query_options)
         self._extend_includes(query_options, ["author"])
 
     def parse_data(self, message: dict) -> None:
-        prepared_data = {
-            "command": "mapvault_info",
+        return {
             "values": MapParser.parse_many(message["data"]),
             "meta": message["meta"],
         }
-        self.dispatch.dispatch(prepared_data)
 
 
 class MapPoolApiConnector(VaultsApiConnector):
-    def __init__(self, dispatch: Dispatcher) -> None:
+    def __init__(self) -> None:
         super().__init__("/data/mapPoolAssignment")
-        self.dispatch = dispatch
         self._includes = (
             "mapVersion",
             "mapVersion.map",
@@ -101,9 +100,7 @@ class MapPoolApiConnector(VaultsApiConnector):
         return query_options
 
     def parse_data(self, message: dict) -> None:
-        prepared_data = {
-            "command": "mapvault_info",
+        return {
             "values": MapPoolAssignmentParser.parse_many_to_maps(message["data"]),
             "meta": message["meta"],
         }
-        self.dispatch.dispatch(prepared_data)

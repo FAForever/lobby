@@ -66,14 +66,14 @@ class ModVault(Vault):
 
         self.itemList.itemDoubleClicked.connect(self.modClicked)
         self.UIButton.clicked.connect(self.openUIModForm)
-        self.client.lobby_info.modVaultInfo.connect(self.modInfo)
 
         self.uids = [mod.uid for mod in utils.getInstalledMods()]
 
         for type_ in ["UI Only", "Sim Only", "Uploaded by You", "Installed"]:
             self.ShowTypeList.addItem(type_)
 
-        self.apiConnector = ModApiConnector(self.client.lobby_dispatch)
+        self.apiConnector = ModApiConnector()
+        self.apiConnector.data_ready.connect(self.modInfo)
 
         self.items_uid = "uid"
 
