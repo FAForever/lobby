@@ -9,14 +9,14 @@ class LeaderboardTableModel(QAbstractTableModel):
         QAbstractTableModel.__init__(self)
         self.load_data(data)
 
-    def load_data(self, data):
-        self.values = data["values"]
+    def load_data(self, data: dict) -> None:
+        self.values = data["data"]
         self.meta = data["meta"]
         self.logins = []
         for value in self.values:
             self.logins.append(value["player"]["login"])
         self.column_count = 9
-        self.row_count = len(data["values"])
+        self.row_count = len(data["data"])
 
     def rowCount(self, parent=QModelIndex()):
         return self.row_count

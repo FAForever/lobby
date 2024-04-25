@@ -683,8 +683,8 @@ class ReplayVaultWidgetHandler(object):
 
         self.onlineReplays = {}
         self.selectedReplay = None
-        self.apiConnector = ReplaysApiConnector(self._dispatcher)
-        self.client.lobby_info.replayVault.connect(self.replayVault)
+        self.apiConnector = ReplaysApiConnector()
+        self.apiConnector.data_ready.connect(self.process_replays_data)
         self.replayDownload = QNetworkAccessManager()
         self.replayDownload.finished.connect(self.onDownloadFinished)
         self.toolboxHandler = ReplayToolboxHandler(
@@ -1038,27 +1038,25 @@ class ReplayVaultWidgetHandler(object):
             faf_replay.close()
             replay(os.path.join(util.CACHE_DIR, "temp.fafreplay"))
 
-    def replayVault(self, message):
-        action = message["action"]
+    def process_replays_data(self, message: dict) -> None:
         self.stopSearchVault()
         self._w.replayInfos.clear()
-        if action == "search_result":
-            self.onlineReplays = {}
-            replays = message["replays"]
-            for replay_item in replays:
-                uid = int(replay_item["id"])
-                if uid not in self.onlineReplays:
-                    self.onlineReplays[uid] = ReplayItem(uid, self._w)
-                self.onlineReplays[uid].update(replay_item, self.client)
-            self.updateOnlineTree()
+        self.onlineReplays = {}
+        replays = message["data"]
+        for replay_item in replays:
+            uid = int(replay_item["id"])
+            if uid not in self.onlineReplays:
+                self.onlineReplays[uid] = ReplayItem(uid, self._w)
+            self.onlineReplays[uid].update(replay_item, self.client)
+        self.updateOnlineTree()
 
-            if len(message["replays"]) == 0:
-                self._w.searchInfoLabel.setText(
-                    "<font color='gold'><b>No replays found</b></font>",
-                )
-                self._w.advSearchInfoLabel.setText(
-                    "<font color='gold'><b>No replays found</b></font>",
-                )
+        if len(message["data"]) == 0:
+            self._w.searchInfoLabel.setText(
+                "<font color='gold'><b>No replays found</b></font>",
+            )
+            self._w.advSearchInfoLabel.setText(
+                "<font color='gold'><b>No replays found</b></font>",
+            )
 
     def updateOnlineTree(self):
         self.selectedReplay = None  # clear, it won't be part of the new tree

@@ -14,8 +14,8 @@ class AliasViewer:
     def __init__(self, client, alias_formatter):
         self.client = client
         self.formatter = alias_formatter
-        self.api_connector = PlayerApiConnector(self.client.lobby_dispatch)
-        self.client.lobby_info.aliasInfo.connect(self.process_alias_info)
+        self.api_connector = PlayerApiConnector()
+        self.api_connector.alias_info.connect(self.process_alias_info)
         self.name_to_find = ""
         self.searching = False
         self.timer = QTimer()
@@ -37,7 +37,7 @@ class AliasViewer:
         self.stop_alias_search()
 
         player_aliases, other_users = [], []
-        for player in message["values"]:
+        for player in message["data"]:
             if player["login"].lower() == self.name_to_find.lower():
                 player_aliases.append({
                     "name": player["login"],

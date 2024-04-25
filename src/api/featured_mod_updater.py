@@ -10,10 +10,7 @@ class FeaturedModFiles(DataApiAccessor):
         super().__init__('/featuredMods/{}/files/{}'.format(mod_id, version))
         self.featuredModFiles = []
 
-    def requestData(self) -> None:
-        self.get_by_query({}, self.handleData)
-
-    def handleData(self, message):
+    def handle_response(self, message):
         self.featuredModFiles = message["data"]
 
     def getFiles(self):
@@ -26,10 +23,6 @@ class FeaturedModId(DataApiAccessor):
     def __init__(self) -> None:
         super().__init__('/data/featuredMod')
         self.featuredModId = 0
-
-    def requestData(self, queryDict: dict | None = None) -> None:
-        queryDict = queryDict or {}
-        self.get_by_query(queryDict, self.handleData)
 
     def handleFeaturedModId(self, message):
         self.featuredModId = message['data'][0]['id']

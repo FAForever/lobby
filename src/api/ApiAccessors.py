@@ -1,5 +1,7 @@
 import logging
 
+from PyQt6.QtCore import pyqtSignal
+
 from api.ApiBase import ApiBase
 
 logger = logging.getLogger(__name__)
@@ -18,6 +20,8 @@ class UserApiAccessor(ApiBase):
 
 
 class DataApiAccessor(ApiAccessor):
+    data_ready = pyqtSignal(dict)
+
     def parse_message(self, message: dict) -> dict:
         included = self.parseIncluded(message)
         result = {}
@@ -87,3 +91,13 @@ class DataApiAccessor(ApiAccessor):
         if "meta" in message:
             return message["meta"]
         return {}
+
+    def requestData(self, query_dict: dict | None = None) -> None:
+        query_dict = query_dict or {}
+        self.get_by_query(query_dict, self.handle_response)
+
+    def prepare_data(self, message: dict) -> dict:
+        return message
+
+    def handle_response(self, message: dict) -> None:
+        self.data_ready.emit(self.prepare_data(message))

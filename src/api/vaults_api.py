@@ -1,8 +1,6 @@
 import logging
 from collections.abc import Sequence
 
-from PyQt6.QtCore import pyqtSignal
-
 from api.ApiAccessors import DataApiAccessor
 from api.parsers.MapParser import MapParser
 from api.parsers.MapPoolAssignmentParser import MapPoolAssignmentParser
@@ -12,8 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class VaultsApiConnector(DataApiAccessor):
-    data_ready = pyqtSignal(dict)
-
     def __init__(self, route: str) -> None:
         super().__init__(route)
         self._includes = ("latestVersion", "reviewsSummary")
@@ -47,12 +43,6 @@ class VaultsApiConnector(DataApiAccessor):
         query_options["filter"] = ";".join((cur_filters, additional_filter)).removeprefix(";")
         return query_options
 
-    def parse_data(self, message: dict) -> dict:
-        return message
-
-    def handle_response(self, message: dict) -> None:
-        self.data_ready.emit(self.parse_data(message))
-
 
 class ModApiConnector(VaultsApiConnector):
     def __init__(self) -> None:
@@ -63,9 +53,9 @@ class ModApiConnector(VaultsApiConnector):
         self._extend_includes(query_options, ["uploader"])
         return query_options
 
-    def parse_data(self, message: dict) -> dict:
+    def prepare_data(self, message: dict) -> dict:
         return {
-            "values":  ModParser.parse_many(message["data"]),
+            "values": ModParser.parse_many(message["data"]),
             "meta": message["meta"],
         }
 
@@ -78,7 +68,7 @@ class MapApiConnector(VaultsApiConnector):
         super()._extend_query_options(query_options)
         self._extend_includes(query_options, ["author"])
 
-    def parse_data(self, message: dict) -> None:
+    def prepare_data(self, message: dict) -> None:
         return {
             "values": MapParser.parse_many(message["data"]),
             "meta": message["meta"],
@@ -99,7 +89,7 @@ class MapPoolApiConnector(VaultsApiConnector):
         self._add_default_includes(query_options)
         return query_options
 
-    def parse_data(self, message: dict) -> None:
+    def prepare_data(self, message: dict) -> None:
         return {
             "values": MapPoolAssignmentParser.parse_many_to_maps(message["data"]),
             "meta": message["meta"],

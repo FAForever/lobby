@@ -391,14 +391,11 @@ class LobbyInfo(QtCore.QObject):
     statsInfo = QtCore.pyqtSignal(dict)
     coopInfo = QtCore.pyqtSignal(dict)
     tutorialsInfo = QtCore.pyqtSignal(dict)
-    modInfo = QtCore.pyqtSignal(dict)
     replayVault = QtCore.pyqtSignal(dict)
     coopLeaderBoard = QtCore.pyqtSignal(dict)
     avatarList = QtCore.pyqtSignal(list)
     social = QtCore.pyqtSignal(dict)
     serverSession = QtCore.pyqtSignal(dict)
-    aliasInfo = QtCore.pyqtSignal(dict)
-    matchmakerQueueInfo = QtCore.pyqtSignal(dict)
 
     def __init__(self, dispatcher, gameset, playerset):
         QtCore.QObject.__init__(self)
@@ -406,20 +403,15 @@ class LobbyInfo(QtCore.QObject):
         self._dispatcher = dispatcher
         self._dispatcher["stats"] = self._simple_emit(self.statsInfo)
         self._dispatcher["coop_info"] = self._simple_emit(self.coopInfo)
-        self._dispatcher["mod_info_api"] = self._simple_emit(self.modInfo)
-        self._dispatcher["mod_info"] = lambda _: None
         self._dispatcher["game_info"] = self.handle_game_info
         self._dispatcher["replay_vault"] = self._simple_emit(self.replayVault)
         self._dispatcher["avatar"] = self.handle_avatar
         self._dispatcher["admin"] = self.handle_admin
         self._dispatcher["social"] = self._simple_emit(self.social)
         self._dispatcher["session"] = self._simple_emit(self.serverSession)
-        self._dispatcher["alias_info"] = self._simple_emit(self.aliasInfo)
-        self._dispatcher["modvault_list_info"] = self.handle_modvault_list_info
         self._dispatcher["updated_achievements"] = (self.handle_updated_achievements)
         self._dispatcher["coop_leaderboard"] = self._simple_emit(self.coopLeaderBoard)
         self._dispatcher["tutorials_info"] = self._simple_emit(self.tutorialsInfo)
-        self._dispatcher["matchmaker_queue_info"] = self._simple_emit(self.matchmakerQueueInfo)
 
         self._gameset = gameset
         self._playerset = playerset
@@ -453,11 +445,6 @@ class LobbyInfo(QtCore.QObject):
                 pass
         else:
             self._gameset[uid].update(**m)
-
-    def handle_modvault_list_info(self, message):
-        modList = message["modList"]
-        for mod in modList:
-            self.modVaultInfo.emit(mod)
 
     def handle_avatar(self, message):
         if "avatarlist" in message:

@@ -41,12 +41,9 @@ class LeaderboardWidget(BaseClass, FormClass):
         self.client = client
         self.parent = parent
         self.leaderboardName = leaderboardName
-        self.apiConnector = LeaderboardRatingApiConnector(
-            self.client.lobby_dispatch, self.leaderboardName,
-        )
-        self.playerApiConnector = PlayerApiConnector(
-            self.client.lobby_dispatch,
-        )
+        self.apiConnector = LeaderboardRatingApiConnector(self.leaderboardName)
+        self.apiConnector.data_ready.connect(self.process_rating_info)
+        self.playerApiConnector = PlayerApiConnector()
         self.onlyActive = True
         self.pageNumber = 1
         self.totalPages = 1
@@ -77,7 +74,6 @@ class LeaderboardWidget(BaseClass, FormClass):
         self.pageBox.valueChanged.connect(self.checkTotalPages)
         self.refreshButton.clicked.connect(self.refreshLeaderboard)
 
-        self.client.lobby_info.statsInfo.connect(self.processStatsInfos)
         self.findInPageLine.textChanged.connect(self.findEntry)
         self.findInPageLine.returnPressed.connect(
             lambda: self.findEntry(self.findInPageLine.text()),
@@ -169,16 +165,12 @@ class LeaderboardWidget(BaseClass, FormClass):
 
             self.showColumnCheckBoxes[index].blockSignals(False)
 
-    def processStatsInfos(self, message):
-        if message["type"] == "leaderboardRating":
-            if message["leaderboardName"] == self.leaderboardName:
-                self.createLeaderboard(message)
-                self.processMeta(message["meta"])
-                self.resetLoading()
-                self.timer.stop()
-        elif message["type"] == "player":
-            if message["leaderboardName"] == self.leaderboardName:
-                self.createPlayerCompleter(message)
+    def process_rating_info(self, message: dict) -> None:
+        if message["leaderboard"] == self.leaderboardName:
+            self.createLeaderboard(message)
+            self.processMeta(message["meta"])
+            self.resetLoading()
+            self.timer.stop()
 
     def createLeaderboard(self, data):
         self.model = LeaderboardTableModel(data)
@@ -220,20 +212,15 @@ class LeaderboardWidget(BaseClass, FormClass):
                     self.tableView.selectRow(self.model.logins.index(row))
                     break
 
-    def searchPlayer(self):
+    def searchPlayer(self) -> None:
         query = {
             "filter": 'login=="{}*"'.format(self.searchPlayerLine.text()),
             "page[size]": 10,
         }
-        self.playerApiConnector.requestDataForLeaderboard(
-            self.leaderboardName, query,
-        )
+        self.playerApiConnector.get_by_query(query, self.createPlayerCompleter)
 
-    def createPlayerCompleter(self, message):
-        logins = []
-        for value in message["values"]:
-            logins.append(value["login"])
-
+    def createPlayerCompleter(self, message: dict) -> None:
+        logins = [player["login"] for player in message["data"]]
         self.searchPlayerLine.set_completion_list(logins)
         completer = QtWidgets.QCompleter(
             sorted(logins, key=lambda login: login.lower()),

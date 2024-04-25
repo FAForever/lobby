@@ -10,9 +10,6 @@ class SimModFiles(DataApiAccessor):
         super().__init__('/data/modVersion')
         self.mod_url = ""
 
-    def requestData(self, queryDict: dict) -> None:
-        self.get_by_query(queryDict, self.handleData)
-
     def get_url_from_message(self, message: dict) -> str:
         self.mod_url = message["data"][0]["downloadUrl"]
 

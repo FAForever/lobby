@@ -1,22 +1,16 @@
 import logging
 
 from api.ApiAccessors import DataApiAccessor
-from client.connection import Dispatcher
 
 logger = logging.getLogger(__name__)
 
 
-class matchmakerQueueApiConnector(DataApiAccessor):
-    def __init__(self, dispatch: Dispatcher) -> None:
+class MatchmakerQueueApiConnector(DataApiAccessor):
+    def __init__(self) -> None:
         super().__init__('/data/matchmakerQueue')
-        self.dispatch = dispatch
 
-    def requestData(self, queryDict: dict | None = None) -> None:
-        queryDict = queryDict or {}
-        self.get_by_query(queryDict, self.handleData)
-
-    def handleData(self, message: dict) -> None:
-        preparedData = {
+    def prepare_data(self, message: dict) -> None:
+        prepared_data = {
             "command": "matchmaker_queue_info",
             "values": [],
             "meta": message["meta"],
@@ -28,5 +22,5 @@ class matchmakerQueueApiConnector(DataApiAccessor):
                 "id": queue["id"],
                 "leaderboardId": queue["leaderboard"]["id"],
             }
-            preparedData["values"].append(preparedQueue)
-        self.dispatch.dispatch(preparedData)
+            prepared_data["values"].append(preparedQueue)
+        return prepared_data

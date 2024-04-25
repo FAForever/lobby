@@ -10,7 +10,7 @@ from PyQt6 import QtWidgets
 
 import fa
 import util
-from api.matchmaker_queue_api import matchmakerQueueApiConnector
+from api.matchmaker_queue_api import MatchmakerQueueApiConnector
 from config import Settings
 from fa.factions import Factions
 
@@ -89,13 +89,9 @@ class MatchmakerQueue(FormClass, BaseClass):
         self.secondsToAutomatch = 0
 
         self.ratingType = ""
-        self.client.lobby_info.matchmakerQueueInfo.connect(
-            self.handleApiQueueInfo,
-        )
-        self.apiConnector = matchmakerQueueApiConnector(
-            self.client.lobby_dispatch,
-        )
-        self.apiConnector.requestData(queryDict=dict(include="leaderboard"))
+        self.apiConnector = MatchmakerQueueApiConnector()
+        self.apiConnector.data_ready.connect(self.handleApiQueueInfo)
+        self.apiConnector.requestData({"include": "leaderboard"})
 
         title = self.queueName.replace("_", " ").capitalize()
         self.automatchTitle.setText(title)

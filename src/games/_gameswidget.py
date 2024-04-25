@@ -97,7 +97,8 @@ class GamesWidget(FormClass, BaseClass):
         self._game_model = CustomGameFilterModel(self._me, game_model)
         self._game_launcher = game_launcher
 
-        self.apiConnector = FeaturedModApiConnector(self.client.lobby_dispatch)
+        self.apiConnector = FeaturedModApiConnector()
+        self.apiConnector.data_ready.connect(self.processModInfo)
 
         self.gameview = gameview_builder(self._game_model, self.gameList)
         self.gameview.game_double_clicked.connect(self.gameDoubleClicked)
@@ -105,8 +106,6 @@ class GamesWidget(FormClass, BaseClass):
         self.matchFoundQueueName = ""
         self.ispassworded = False
         self.party = None
-
-        self.client.lobby_info.modInfo.connect(self.processModInfo)
 
         self.client.matchmaker_info.connect(self.handleMatchmakerInfo)
         self.client.game_enter.connect(self.stopSearch)

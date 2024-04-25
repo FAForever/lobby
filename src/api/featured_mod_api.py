@@ -1,27 +1,18 @@
 import logging
 
 from api.ApiAccessors import DataApiAccessor
-from client.connection import Dispatcher
 
 logger = logging.getLogger(__name__)
 
 
 class FeaturedModApiConnector(DataApiAccessor):
-    def __init__(self, dispatch: Dispatcher) -> None:
+    def __init__(self) -> None:
         super().__init__('/data/featuredMod')
-        self.dispatch = dispatch
 
-    def requestData(self) -> None:
-        self.get_by_query({}, self.handleData)
-
-    def handleData(self, message: dict) -> None:
-        preparedData = {
-            "command": "mod_info_api",
-            "values": [],
-        }
+    def prepare_data(self, message: dict) -> None:
+        values = []
         for mod in message["data"]:
-            preparedMod = {
-                "command": "mod_info_api",
+            prepared_mod = {
                 "name": mod["technicalName"],
                 "fullname": mod["displayName"],
                 "publish": mod.get("visible", False),
@@ -31,5 +22,5 @@ class FeaturedModApiConnector(DataApiAccessor):
                     "<i>No description provided</i>",
                 ),
             }
-            preparedData["values"].append(preparedMod)
-        self.dispatch.dispatch(preparedData)
+            values.append(prepared_mod)
+        return {"values": values}
