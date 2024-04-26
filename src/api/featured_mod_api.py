@@ -1,6 +1,7 @@
 import logging
 
 from api.ApiAccessors import DataApiAccessor
+from api.parsers.FeaturedModParser import FeaturedModParser
 
 logger = logging.getLogger(__name__)
 
@@ -10,17 +11,4 @@ class FeaturedModApiConnector(DataApiAccessor):
         super().__init__('/data/featuredMod')
 
     def prepare_data(self, message: dict) -> None:
-        values = []
-        for mod in message["data"]:
-            prepared_mod = {
-                "name": mod["technicalName"],
-                "fullname": mod["displayName"],
-                "publish": mod.get("visible", False),
-                "order": mod.get("order", 0),
-                "desc": mod.get(
-                    "description",
-                    "<i>No description provided</i>",
-                ),
-            }
-            values.append(prepared_mod)
-        return {"values": values}
+        return {"values": FeaturedModParser.parse_many(message["data"])}

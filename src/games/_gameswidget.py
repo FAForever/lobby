@@ -98,7 +98,7 @@ class GamesWidget(FormClass, BaseClass):
         self._game_launcher = game_launcher
 
         self.apiConnector = FeaturedModApiConnector()
-        self.apiConnector.data_ready.connect(self.processModInfo)
+        self.apiConnector.data_ready.connect(self.process_mod_info)
 
         self.gameview = gameview_builder(self._game_model, self.gameList)
         self.gameview.game_double_clicked.connect(self.gameDoubleClicked)
@@ -172,14 +172,14 @@ class GamesWidget(FormClass, BaseClass):
         self.matchmakerFramesInitialized = False
 
     @pyqtSlot(dict)
-    def processModInfo(self, message):
+    def process_mod_info(self, message: dict) -> None:
         """
         Slot that interprets and propagates mod_info messages into the mod list
         """
-        for value in message["values"]:
-            mod = value['name']
+        for featured_mod in message["values"]:
+            mod = featured_mod.name
             old_mod = self.mods.get(mod, None)
-            self.mods[mod] = ModItem(value)
+            self.mods[mod] = ModItem(featured_mod)
 
             if old_mod:
                 if mod in mod_invisible:
@@ -191,12 +191,12 @@ class GamesWidget(FormClass, BaseClass):
                     if self.client.replays.modList.itemText(i) == old_mod.mod:
                         self.client.replays.modList.removeItem(i)
 
-            if value["publish"]:
+            if featured_mod.visible:
                 self.modList.addItem(self.mods[mod])
             else:
                 mod_invisible[mod] = self.mods[mod]
 
-            self.client.replays.modList.addItem(value["name"])
+            self.client.replays.modList.addItem(mod)
 
     @pyqtSlot(int)
     def togglePrivateGames(self, state):
