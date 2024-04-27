@@ -150,12 +150,12 @@ def checkMovies(files):
 
 
 def check(
-    featured_mod,
-    mapname=None,
-    version=None,
-    modVersions=None,
-    sim_mods=None,
-    silent=False,
+        featured_mod: str,
+        mapname: str | None = None,
+        version: int | None = None,
+        modVersions: dict | None = None,
+        sim_mods: dict[str, str] | None = None,
+        silent: bool = False,
 ):
     """
     This checks whether the mods are properly updated and player has the
@@ -182,7 +182,7 @@ def check(
     )
     result = game_updater.run()
 
-    if result != fa.updater.Updater.RESULT_SUCCESS:
+    if result != fa.updater.UpdaterResult.SUCCESS:
         return False
 
     try:

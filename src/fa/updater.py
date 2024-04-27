@@ -13,11 +13,11 @@ import os
 import shutil
 import stat
 import time
+from enum import Enum
 
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
-import config
 import util
 from api.featured_mod_updater import FeaturedModFiles
 from api.featured_mod_updater import FeaturedModId
@@ -93,21 +93,20 @@ class UpdaterTimeout(Exception):
     pass
 
 
+class UpdaterResult(Enum):
+    SUCCESS = 0  # Update successful
+    NONE = -1  # Update operation is still ongoing
+    FAILURE = 1  # An error occured during updating
+    CANCEL = 2  # User cancelled the download process
+    ILLEGAL = 3  # User has the wrong version of FA
+    BUSY = 4  # Server is currently busy
+    PASS = 5  # User refuses to update by canceling the wizard
+
+
 class Updater(QtCore.QObject):
     """
     This is the class that does the actual installation work.
     """
-    # Network configuration
-    TIMEOUT = 20  # seconds
-
-    # Return codes to expect from run()
-    RESULT_SUCCESS = 0  # Update successful
-    RESULT_NONE = -1  # Update operation is still ongoing
-    RESULT_FAILURE = 1  # An error occured during updating
-    RESULT_CANCEL = 2  # User cancelled the download process
-    RESULT_ILLEGAL = 3  # User has the wrong version of FA
-    RESULT_BUSY = 4  # Server is currently busy
-    RESULT_PASS = 5  # User refuses to update by canceling the wizard
 
     def __init__(
         self,
@@ -124,19 +123,13 @@ class Updater(QtCore.QObject):
         """
         QtCore.QObject.__init__(self, *args, **kwargs)
 
-        self.filesToUpdate = []
-        self.updatedFiles = []
-
-        self.lastData = time.time()
-
         self.featured_mod = featured_mod
         self.version = version
         self.modversions = modversions
-
         self.sim_mod = sim_mod
-        self.modpath = None
+        self.silent = silent
 
-        self.result = self.RESULT_NONE
+        self.result = UpdaterResult.NONE
 
         self.keep_cache = not Settings.get(
             'cache/do_not_keep', type=bool, default=True,
@@ -144,12 +137,7 @@ class Updater(QtCore.QObject):
         self.in_session_cache = Settings.get(
             'cache/in_session', type=bool, default=False,
         )
-        self.fmod_cache_dir = os.path.join(util.CACHE_DIR, 'featured_mod')
-        if self.keep_cache or self.in_session_cache:
-            if not os.path.exists(self.fmod_cache_dir):
-                os.mkdir(self.fmod_cache_dir)
 
-        self.silent = silent
         self.progress = QtWidgets.QProgressDialog()
         if self.silent:
             self.progress.setCancelButton(None)
@@ -161,11 +149,7 @@ class Updater(QtCore.QObject):
         self.progress.setAutoClose(False)
         self.progress.setAutoReset(False)
         self.progress.setModal(1)
-        self.progress.setWindowTitle(
-            "Updating {}".format(self.featured_mod.upper()),
-        )
-
-        self.bytesToSend = 0
+        self.progress.setWindowTitle(f"Updating {self.featured_mod.upper()}")
 
     def run(self, *args, **kwargs):
         clearLog()
@@ -181,29 +165,41 @@ class Updater(QtCore.QObject):
         if not self.progress.wasCanceled():
             log("Connected to update server at {}".format(timestamp()))
 
-            self.doUpdate()
+            self.do_update()
 
             self.progress.setLabelText("Cleaning up.")
 
             self.progress.close()
         else:
             log("Cancelled connecting to server.")
-            self.result = self.RESULT_CANCEL
+            self.result = UpdaterResult.CANCEL
 
         log("Update finished at {}".format(timestamp()))
         return self.result
 
-    def getFilesToUpdate(self, id_, version):
-        return FeaturedModFiles(id_, version).getFiles()
+    def get_files_to_update(self, mod_id: int, version: str) -> list[dict]:
+        return FeaturedModFiles(mod_id, version).getFiles()
 
-    def getFeaturedModIdByName(self, technicalName):
-        return FeaturedModId().requestAndGetFeaturedModIdByName(technicalName)
+    def get_featured_mod_id_by_name(self, technical_name: str) -> int:
+        return FeaturedModId().requestAndGetFeaturedModIdByName(technical_name)
 
     def request_sim_url_by_uid(self, uid: str) -> str:
         return SimModFiles().request_and_get_sim_mod_url_by_id(uid)
 
-    def fetch_file(self, file_info: dict, filegroup: str) -> None:
+    @staticmethod
+    def _file_needs_update(file_info: dict) -> bool:
+        filegroup = file_info["group"]
+        filename = file_info["name"]
+        filepath = os.path.join(util.APPDATA_DIR, filegroup, filename)
+        return filename != Settings.get("game/exe-name") and util.md5(filepath) != file_info["md5"]
+
+    def fetch_files(self, files: list[dict]) -> None:
+        for file in files:
+            self.fetch_single_file(file)
+
+    def fetch_single_file(self, file_info: dict) -> None:
         name = file_info["name"]
+        filegroup = file_info["group"]
         url = file_info["cacheableUrl"]
         target_dir = os.path.join(util.APPDATA_DIR, filegroup)
 
@@ -226,122 +222,84 @@ class Updater(QtCore.QObject):
                 "Operation aborted while waiting for data.",
             )
 
-    def moveFromCache(self, files, filegroup):
-        src_dir = os.path.join(util.APPDATA_DIR, filegroup)
-        cache_dir = os.path.join(self.fmod_cache_dir, filegroup)
-        for _file in files:
-            if os.path.exists(os.path.join(cache_dir, _file['md5'])):
-                shutil.move(
-                    os.path.join(cache_dir, _file['md5']),
-                    os.path.join(src_dir, _file['name']),
-                )
+    def move_many_from_cache(self, files: list[dict]) -> None:
+        for file in files:
+            self.move_from_cache(file)
 
-    def moveToCache(self, files, filegroup):
-        src_dir = os.path.join(util.APPDATA_DIR, filegroup)
-        cache_dir = os.path.join(self.fmod_cache_dir, filegroup)
-        for _file in files:
-            if os.path.exists(os.path.join(src_dir, _file['name'])):
-                md5 = util.md5(os.path.join(src_dir, _file['name']))
-                shutil.move(
-                    os.path.join(src_dir, _file['name']),
-                    os.path.join(cache_dir, md5),
-                )
-                util.setAccessTime(os.path.join(cache_dir, md5))
+    def move_from_cache(self, file_info: dict) -> None:
+        src_dir = os.path.join(util.APPDATA_DIR, file_info["group"])
+        cache_dir = os.path.join(util.GAME_CACHE_DIR, file_info["group"])
+        if os.path.exists(os.path.join(cache_dir, file_info["md5"])):
+            shutil.move(
+                os.path.join(cache_dir, file_info["md5"]),
+                os.path.join(src_dir, file_info["name"]),
+            )
 
-    def replaceFromCache(self, files, filegroup):
-        self.moveToCache(files, filegroup)
-        self.moveFromCache(files, filegroup)
+    def move_many_to_cache(self, files: list[dict]) -> None:
+        for file in files:
+            self.move_to_cache(file)
 
-    def checkCache(self, filegroup, files_to_check):
-        cache_dir = os.path.join(self.fmod_cache_dir, filegroup)
-        if not os.path.exists(cache_dir):
-            os.mkdir(cache_dir)
-        for src_dir, _, _files in os.walk(cache_dir):
-            files_in_cache = _files
+    def move_to_cache(self, file_info: dict) -> None:
+        src_dir = os.path.join(util.APPDATA_DIR, file_info["group"])
+        cache_dir = os.path.join(util.GAME_CACHE_DIR, file_info["group"])
+        if os.path.exists(os.path.join(src_dir, file_info["name"])):
+            md5 = util.md5(os.path.join(src_dir, file_info["name"]))
+            shutil.move(
+                os.path.join(src_dir, file_info["name"]),
+                os.path.join(cache_dir, md5),
+            )
+            util.setAccessTime(os.path.join(cache_dir, md5))
+
+    def replace_from_cache(self, file: dict) -> None:
+        self.move_to_cache(file)
+        self.move_from_cache(file)
+
+    def replace_many_from_cache(self, files: list[dict]) -> None:
+        for file in files:
+            self.replace_from_cache(file)
+
+    def check_cache(self, files_to_check: list[dict]) -> None:
         replaceable_files, need_to_download = [], []
-        for _file in files_to_check:
-            if _file['md5'] in files_in_cache:
-                replaceable_files.append(_file)
-                self.filesToUpdate.remove(_file)
+        for file in files_to_check:
+            cache_dir = os.path.join(util.GAME_CACHE_DIR, file["group"])
+            os.makedirs(cache_dir, exist_ok=True)
+            if self._is_cached(file):
+                replaceable_files.append(file)
             else:
-                need_to_download.append(_file)
+                need_to_download.append(file)
         return replaceable_files, need_to_download
 
-    def updateFiles(self, filegroup, files):
+    @staticmethod
+    def _is_cached(file_info: dict) -> bool:
+        cached_file = os.path.join(util.GAME_CACHE_DIR, file_info["group"], file_info["name"])
+        return os.path.isfile(cached_file)
+
+    def create_cache_subdirs(self, files: list[dict]) -> None:
+        for file in files:
+            target = os.path.join(util.GAME_CACHE_DIR, file["group"])
+            os.makedirs(target, exist_ok=True)
+
+    def update_files(self, files: list[dict]) -> None:
         """
-        Updates the files in a given file group, in the destination
+        Updates the files in the destination
         subdirectory of the Forged Alliance path.
         """
-        QtWidgets.QApplication.processEvents()
+        self.create_cache_subdirs(files)
+        self.patch_fa_exe_if_needed(files)
 
-        self.progress.setLabelText("Updating files: " + filegroup)
+        to_update = list(filter(self._file_needs_update, files))
+        replacable_files, need_to_download = self.check_cache(to_update)
 
-        targetdir = os.path.join(util.APPDATA_DIR, filegroup)
-        if not os.path.exists(targetdir):
-            os.makedirs(targetdir)
+        if self.keep_cache or self.in_session_cache:
+            self.replace_many_from_cache(replacable_files)
+            self.move_many_to_cache(need_to_download)
+        else:
+            self.move_many_from_cache(replacable_files)
 
-        files_to_check = []
-
-        for _file in files:
-            md5File = util.md5(
-                os.path.join(util.APPDATA_DIR, filegroup, _file['name']),
-            )
-            md5NewFile = _file['md5']
-            if md5File == md5NewFile:
-                self.filesToUpdate.remove(_file)
-            else:
-                if self.keep_cache or self.in_session_cache:
-                    files_to_check.append(_file)
-                else:
-                    self.fetch_file(_file, filegroup)
-                    self.filesToUpdate.remove(_file)
-                    self.updatedFiles.append(_file['name'])
-
-        if len(files_to_check) > 0:
-            replaceable_files, need_to_download = (
-                self.checkCache(filegroup, files_to_check)
-            )
-            self.replaceFromCache(replaceable_files, filegroup)
-            for _file in need_to_download:
-                self.moveToCache([_file], filegroup)
-                self.fetch_file(_file, filegroup)
-                self.filesToUpdate.remove(_file)
-                self.updatedFiles.append(_file['name'])
-
-        self.waitUntilFilesAreUpdated()
-
-    def waitUntilFilesAreUpdated(self):
-        """
-        A simple loop that updates the progress bar while the server sends
-        actual file data
-        """
-        self.lastData = time.time()
-
-        self.progress.setValue(0)
-        self.progress.setMinimum(0)
-        self.progress.setMaximum(0)
-
-        while len(self.filesToUpdate) > 0:
-            if self.progress.wasCanceled():
-                raise UpdaterCancellation(
-                    "Operation aborted while waiting for  data.",
-                )
-
-            if self.result != self.RESULT_NONE:
-                raise UpdaterFailure(
-                    "Operation failed while waiting for data.",
-                )
-
-            if time.time() - self.lastData > self.TIMEOUT:
-                raise UpdaterTimeout(
-                    "Connection timed out while waiting for data.",
-                )
-
-            QtWidgets.QApplication.processEvents()
-
+        self.fetch_files(need_to_download)
         log("Updates applied successfully.")
 
-    def prepareBinFAF(self):
+    def prepare_bin_FAF(self) -> None:
         """
         Creates all necessary files in the binFAF folder, which contains
         a modified copy of all that is in the standard bin folder of
@@ -350,9 +308,7 @@ class Updater(QtCore.QObject):
         self.progress.setLabelText("Preparing binFAF...")
 
         # now we check if we've got a binFAF folder
-        FABindir = os.path.join(
-            config.Settings.get("ForgedAlliance/app/path"), 'bin',
-        )
+        FABindir = os.path.join(Settings.get("ForgedAlliance/app/path"), "bin")
         FAFdir = util.BIN_DIR
 
         # Try to copy without overwriting, but fill in any missing files,
@@ -374,170 +330,100 @@ class Updater(QtCore.QObject):
                 # need to patch them
                 os.chmod(dst_file, st.st_mode | stat.S_IWRITE)
 
-    def doUpdate(self) -> None:
+        self.download_fa_executable()
+
+    def download_fa_executable(self) -> bool:
+        fa_exe_name = Settings.get("game/exe-name")
+        fa_exe = os.path.join(util.BIN_DIR, fa_exe_name)
+
+        if os.path.isfile(fa_exe):
+            return True
+
+        url = Settings.get("game/exe-url")
+        return download_file(
+            url=url,
+            target_dir=util.BIN_DIR,
+            name=fa_exe_name,
+            category="Update",
+            silent=False,
+            label=f"Downloading FA file : <a href='{url}'>{url}</a><p>",
+        )
+
+    def patch_fa_executable(self, version: int) -> None:
+        exe_path = os.path.join(util.BIN_DIR, "ForgedAlliance.exe")
+        version_addresses = (0xd3d40, 0x47612d, 0x476666)
+        with open(exe_path, "rb+") as file:
+            for address in version_addresses:
+                file.seek(address)
+                file.write(version.to_bytes(4, "little"))
+
+    def patch_fa_exe_if_needed(self, files: list[dict]) -> None:
+        for file in files:
+            if file["name"] == Settings.get("game/exe-name"):
+                version = int(self._resolve_base_version(file))
+                self.patch_fa_executable(version)
+                return
+
+    def update_featured_mod(self, modname: str, modversion: str) -> list[dict]:
+        fmod_id = self.get_featured_mod_id_by_name(modname)
+        files = self.get_files_to_update(fmod_id, modversion)
+        self.update_files(files)
+        return files
+
+    def _resolve_modversion(self) -> str:
+        if self.modversions:
+            return str(max(self.modversions.values()))
+        return "latest"
+
+    def _resolve_base_version(self, base_info: dict | None) -> str:
+        if self.version:
+            return str(self.version)
+        if base_info:
+            return str(base_info["version"])
+        return "latest"
+
+    def do_update(self) -> None:
         """ The core function that does most of the actual update work."""
         try:
             if self.sim_mod:
                 uid, name = self.sim_mod
                 if utils.downloadMod(self.request_sim_url_by_uid(uid), name):
-                    self.result = self.RESULT_SUCCESS
+                    self.result = UpdaterResult.SUCCESS
                 else:
-                    self.result = self.RESULT_FAILURE
+                    self.result = UpdaterResult.FAILURE
             else:
                 # Prepare FAF directory & all necessary files
-                self.prepareBinFAF()
-
-                toUpdate = []
-                filesToUpdateInBin = []
-                filesToUpdateInGamedata = []
-
+                self.prepare_bin_FAF()
                 # Update the mod if it's requested
-                if (
-                    self.featured_mod == "faf"
-                    # HACK - ladder1v1 "is" FAF. :-)
-                    or self.featured_mod == "ladder1v1"
-                ):
-                    if self.version:
-                        # id for faf (or ladder1v1) is 0
-                        toUpdate = self.getFilesToUpdate('0', self.version)
-                    else:
-                        toUpdate = self.getFilesToUpdate('0', 'latest')
-
-                    for _file in toUpdate:
-                        if _file['group'] == 'bin':
-                            filesToUpdateInBin.append(_file)
-                        else:
-                            filesToUpdateInGamedata.append(_file)
-
-                    self.filesToUpdate = filesToUpdateInBin.copy()
-                    self.updateFiles("bin", filesToUpdateInBin)
-                    self.filesToUpdate = filesToUpdateInGamedata.copy()
-                    self.updateFiles("gamedata", filesToUpdateInGamedata)
-
-                elif (
-                    self.featured_mod == 'fafbeta'
-                    or self.featured_mod == 'fafdevelop'
-                ):
-                    # no need to update faf first for these mods
-                    id_ = self.getFeaturedModIdByName(self.featured_mod)
-                    if self.modversions:
-                        modversion = sorted(
-                            self.modversions.items(),
-                            key=lambda item: item[1],
-                            reverse=True,
-                        )[0][1]
-                    else:
-                        modversion = 'latest'
-
-                    toUpdate = self.getFilesToUpdate(id_, modversion)
-                    toUpdate.sort(
-                        key=lambda item: item['version'],
-                        reverse=True,
-                    )
-
-                    # file lists for fafbeta and fafdevelop contain wrong
-                    # version of ForgedAlliance.exe
-                    if self.version:
-                        faf_version = self.version
-                    else:
-                        faf_version = toUpdate[0]['version']
-
-                    for _file in toUpdate:
-                        if _file['group'] == 'bin':
-                            if _file['name'] != 'ForgedAlliance.exe':
-                                filesToUpdateInBin.append(_file)
-                        else:
-                            filesToUpdateInGamedata.append(_file)
-
-                    self.filesToUpdate = filesToUpdateInBin.copy()
-                    self.updateFiles('bin', filesToUpdateInBin)
-                    self.filesToUpdate = filesToUpdateInGamedata.copy()
-                    self.updateFiles('gamedata', filesToUpdateInGamedata)
-
-                    filesToUpdateInBin.clear()
-                    filesToUpdateInGamedata.clear()
-
-                    # update proper version of bin
-                    toUpdate = self.getFilesToUpdate('0', faf_version)
-
-                    for _file in toUpdate:
-                        if _file['group'] == 'bin':
-                            filesToUpdateInBin.append(_file)
-
-                    self.filesToUpdate = filesToUpdateInBin.copy()
-                    self.updateFiles('bin', filesToUpdateInBin)
-
+                if self.featured_mod in ("faf", "fafbeta", "fafdevelop", "ladder1v1"):
+                    self.update_featured_mod(self.featured_mod, self._resolve_base_version())
                 else:
                     # update faf first
-                    # id for faf (or ladder1v1) is 0
-                    if self.version:
-                        toUpdate = self.getFilesToUpdate('0', self.version)
-                    else:
-                        toUpdate = self.getFilesToUpdate('0', 'latest')
-
-                    for _file in toUpdate:
-                        if _file['group'] == 'bin':
-                            filesToUpdateInBin.append(_file)
-                        else:
-                            filesToUpdateInGamedata.append(_file)
-
-                    self.filesToUpdate = filesToUpdateInBin.copy()
-                    self.updateFiles("bin", filesToUpdateInBin)
-                    self.filesToUpdate = filesToUpdateInGamedata.copy()
-                    self.updateFiles("gamedata", filesToUpdateInGamedata)
-
-                    filesToUpdateInBin.clear()
-                    filesToUpdateInGamedata.clear()
-
-                    # update featuredMod then
-                    id_ = self.getFeaturedModIdByName(self.featured_mod)
-                    if self.modversions:
-                        modversion = sorted(
-                            self.modversions.items(),
-                            key=lambda item: item[1],
-                            reverse=True,
-                        )[0][1]
-                    else:
-                        modversion = 'latest'
-
-                    toUpdate = self.getFilesToUpdate(id_, modversion)
-
-                    for _file in toUpdate:
-                        if _file['group'] == 'bin':
-                            filesToUpdateInBin.append(_file)
-                        else:
-                            filesToUpdateInGamedata.append(_file)
-
-                    self.filesToUpdate = filesToUpdateInBin.copy()
-                    self.updateFiles("bin", filesToUpdateInBin)
-                    self.filesToUpdate = filesToUpdateInGamedata.copy()
-                    self.updateFiles("gamedata", filesToUpdateInGamedata)
-
-        except UpdaterTimeout as e:
-            log("TIMEOUT: {}".format(e))
-            self.result = self.RESULT_FAILURE
+                    self.update_featured_mod("faf", self._resolve_base_version())
+                    # update featured mod then
+                    self.update_featured_mod(self.featured_mod, self._resolve_modversion())
         except UpdaterCancellation as e:
             log("CANCELLED: {}".format(e))
-            self.result = self.RESULT_CANCEL
+            self.result = UpdaterResult.CANCEL
         except BaseException as e:
             log("EXCEPTION: {}".format(e))
-            self.result = self.RESULT_FAILURE
+            self.result = UpdaterResult.FAILURE
         else:
-            self.result = self.RESULT_SUCCESS
+            self.result = UpdaterResult.SUCCESS
 
         # Hide progress dialog if it's still showing.
         self.progress.close()
 
         # Integrated handlers for the various things that could go wrong
-        if self.result == self.RESULT_CANCEL:
+        if self.result == UpdaterResult.CANCEL:
             pass  # The user knows damn well what happened here.
-        elif self.result == self.RESULT_PASS:
+        elif self.result == UpdaterResult.PASS:
             QtWidgets.QMessageBox.information(
                 QtWidgets.QApplication.activeWindow(),
                 "Installation Required",
                 "You can't play without a legal version of Forged Alliance.",
             )
-        elif self.result == self.RESULT_BUSY:
+        elif self.result == UpdaterResult.BUSY:
             QtWidgets.QMessageBox.information(
                 QtWidgets.QApplication.activeWindow(),
                 "Server Busy",
@@ -546,7 +432,7 @@ class Updater(QtCore.QObject):
                     "again later."
                 ),
             )
-        elif self.result == self.RESULT_FAILURE:
+        elif self.result == UpdaterResult.FAILURE:
             failureDialog()
 
         # If nothing terribly bad happened until now,

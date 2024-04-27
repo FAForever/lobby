@@ -28,6 +28,8 @@ default_values = {
     'game/logs/path': join(APPDATA_DIR, 'logs'),
     'game/mods/path': join(join(APPDATA_DIR, 'repo'), 'mods'),
     'game/maps/path': join(join(APPDATA_DIR, 'repo'), 'maps'),
+    'game/exe-url': 'https://content.{host}/faf/updaterNew/updates_faf_files/ForgedAlliance.exe',
+    'game/exe-name': "ForgedAlliance.exe",
     'host': 'faforever.com',
     'proxy/host': 'proxy.{host}',
     'proxy/port': 9124,

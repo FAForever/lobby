@@ -35,7 +35,7 @@ class replayParser:
         if not supcomVersion.startswith("Supreme Commander v1"):
             return None
         else:
-            return supcomVersion.split(".")[-1]
+            return int(supcomVersion.split(".")[-1])
 
     def getMapName(self):
         with open(self.file, 'rb') as f:

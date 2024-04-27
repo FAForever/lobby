@@ -48,7 +48,7 @@ def checkMods(mods: dict[str, str]) -> bool:  # mods is a dictionary of uid-name
         # Spawn an update for the required mod
         updater = fa.updater.Updater("sim", sim_mod=item)
         result = updater.run()
-        if result != fa.updater.Updater.RESULT_SUCCESS:
+        if result != fa.updater.UpdaterResult.SUCCESS:
             logger.warning(f"Failure getting {item}")
             return False
 
