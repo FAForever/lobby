@@ -15,8 +15,13 @@ import stat
 import time
 from enum import Enum
 
-from PyQt6 import QtCore
-from PyQt6 import QtWidgets
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QProgressDialog
 
 import util
 from api.featured_mod_updater import FeaturedModFiles
@@ -43,22 +48,22 @@ class UpdaterProgressDialog(FormClass, BaseClass):
         self.adjustSize()
         self.watches = []
 
-    @QtCore.pyqtSlot(str)
+    @pyqtSlot(str)
     def appendLog(self, text):
         self.logPlainTextEdit.appendPlainText(text)
 
-    @QtCore.pyqtSlot(QtCore.QObject)
+    @pyqtSlot(QObject)
     def addWatch(self, watch):
         self.watches.append(watch)
         watch.finished.connect(self.watchFinished)
 
-    @QtCore.pyqtSlot()
+    @pyqtSlot()
     def watchFinished(self) -> None:
         for watch in self.watches:
             if not watch.isFinished():
                 return
         # equivalent to self.accept(), but clearer
-        self.done(QtWidgets.QDialog.DialogCode.Accepted)
+        self.done(QDialog.DialogCode.Accepted)
 
 
 def clearLog():
@@ -103,7 +108,7 @@ class UpdaterResult(Enum):
     PASS = 5  # User refuses to update by canceling the wizard
 
 
-class Updater(QtCore.QObject):
+class Updater(QObject):
     """
     This is the class that does the actual installation work.
     """
@@ -121,7 +126,7 @@ class Updater(QtCore.QObject):
         """
         Constructor
         """
-        QtCore.QObject.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.featured_mod = featured_mod
         self.version = version
@@ -138,13 +143,13 @@ class Updater(QtCore.QObject):
             'cache/in_session', type=bool, default=False,
         )
 
-        self.progress = QtWidgets.QProgressDialog()
+        self.progress = QProgressDialog()
         if self.silent:
             self.progress.setCancelButton(None)
         else:
             self.progress.setCancelButtonText("Cancel")
         self.progress.setWindowFlags(
-            QtCore.Qt.WindowType.CustomizeWindowHint | QtCore.Qt.WindowType.WindowTitleHint,
+            Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint,
         )
         self.progress.setAutoClose(False)
         self.progress.setAutoReset(False)
@@ -157,7 +162,7 @@ class Updater(QtCore.QObject):
         log("Using appdata: " + util.APPDATA_DIR)
 
         self.progress.show()
-        QtWidgets.QApplication.processEvents()
+        QApplication.processEvents()
 
         # Actual network code adapted from previous version
         self.progress.setLabelText("Connecting to update server...")
@@ -418,14 +423,14 @@ class Updater(QtCore.QObject):
         if self.result == UpdaterResult.CANCEL:
             pass  # The user knows damn well what happened here.
         elif self.result == UpdaterResult.PASS:
-            QtWidgets.QMessageBox.information(
-                QtWidgets.QApplication.activeWindow(),
+            QMessageBox.information(
+                QApplication.activeWindow(),
                 "Installation Required",
                 "You can't play without a legal version of Forged Alliance.",
             )
         elif self.result == UpdaterResult.BUSY:
-            QtWidgets.QMessageBox.information(
-                QtWidgets.QApplication.activeWindow(),
+            QMessageBox.information(
+                QApplication.activeWindow(),
                 "Server Busy",
                 (
                     "The Server is busy preparing new patch files.<br/>Try "
