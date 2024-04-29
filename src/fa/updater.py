@@ -380,7 +380,7 @@ class Updater(QObject):
             return str(max(self.modversions.values()))
         return "latest"
 
-    def _resolve_base_version(self, base_info: dict | None) -> str:
+    def _resolve_base_version(self, base_info: dict | None = None) -> str:
         if self.version:
             return str(self.version)
         if base_info:
