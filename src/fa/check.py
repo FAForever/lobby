@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import binascii
 import logging
-import os
-import zipfile
 from typing import TYPE_CHECKING
 
 from PyQt6 import QtWidgets
@@ -102,53 +99,6 @@ def game(parent):
     return True
 
 
-def crc32(fname):
-    try:
-        with open(fname) as stream:
-            return binascii.crc32(stream.read())
-    except BaseException:
-        logger.exception('CRC check fail!')
-        return None
-
-
-def checkMovies(files):
-    """
-    Unpacks movies (based on path in zipfile) to the movies folder.
-    Movies must be unpacked for FA to be able to play them.
-    This is a hack needed because the game updater can only handle bin and
-    gamedata.
-    """
-
-    logger.info('checking updated files: {}'.format(files))
-
-    # construct dirs
-    gd = os.path.join(util.APPDATA_DIR, 'gamedata')
-
-    for fname in files:
-        origpath = os.path.join(gd, fname)
-
-        if os.path.exists(origpath) and zipfile.is_zipfile(origpath):
-            try:
-                zf = zipfile.ZipFile(origpath)
-            except BaseException:
-                logger.exception(
-                    'Failed to open Game File {}'.format(origpath),
-                )
-                continue
-
-            for zi in zf.infolist():
-                if zi.filename.startswith('movies'):
-                    tgtpath = os.path.join(util.APPDATA_DIR, zi.filename)
-                    # copy only if file is different - check first if file
-                    # exists, then if size is changed, then crc
-                    if (
-                        not os.path.exists(tgtpath)
-                        or os.stat(tgtpath).st_size != zi.file_size
-                        or crc32(tgtpath) != zi.CRC
-                    ):
-                        zf.extract(zi, util.APPDATA_DIR)
-
-
 def check(
         featured_mod: str,
         mapname: str | None = None,
@@ -183,13 +133,6 @@ def check(
     result = game_updater.run()
 
     if result != fa.updater.UpdaterResult.SUCCESS:
-        return False
-
-    try:
-        if len(game_updater.updatedFiles) > 0:
-            checkMovies(game_updater.updatedFiles)
-    except BaseException:
-        logger.exception('Error checking game files for movies')
         return False
 
     # Now it's down to having the right map
