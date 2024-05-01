@@ -164,19 +164,19 @@ class SecondaryServer(QtCore.QObject):
         Simple error handler that flags the whole operation as failed, not
         very graceful but what can you do...
         """
-        if socketError == QtNetwork.QAbstractSocket.RemoteHostClosedError:
+        if socketError == QtNetwork.QAbstractSocket.SocketError.RemoteHostClosedError:
             log(
                 "FA Server down: The server is down for maintenance, please "
                 "try later.",
             )
 
-        elif socketError == QtNetwork.QAbstractSocket.HostNotFoundError:
+        elif socketError == QtNetwork.QAbstractSocket.SocketError.HostNotFoundError:
             log(
                 "Connection to Host lost. Please check the host name and port "
                 "settings.",
             )
 
-        elif socketError == QtNetwork.QAbstractSocket.ConnectionRefusedError:
+        elif socketError == QtNetwork.QAbstractSocket.SocketError.ConnectionRefusedError:
             log("The connection was refused by the peer.")
         else:
             log(
