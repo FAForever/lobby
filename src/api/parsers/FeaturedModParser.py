@@ -6,6 +6,7 @@ class FeaturedModParser:
     @staticmethod
     def parse(data: dict) -> FeaturedMod:
         return FeaturedMod(
+            uid=data["id"],
             name=data["technicalName"],
             fullname=data["displayName"],
             visible=data.get("visible", False),

@@ -24,8 +24,9 @@ from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtWidgets import QProgressDialog
 
 import util
-from api.featured_mod_updater import FeaturedModFiles
-from api.featured_mod_updater import FeaturedModId
+from api.featured_mod_api import FeaturedModApiConnector
+from api.featured_mod_api import FeaturedModFiles
+from api.models.FeaturedMod import FeaturedMod
 from api.sim_mod_updater import SimModFiles
 from config import Settings
 from fa.utils import unpack_movies
@@ -183,11 +184,11 @@ class Updater(QObject):
         log("Update finished at {}".format(timestamp()))
         return self.result
 
-    def get_files_to_update(self, mod_id: int, version: str) -> list[dict]:
-        return FeaturedModFiles(mod_id, version).getFiles()
+    def get_files_to_update(self, mod_id: str, version: str) -> list[dict]:
+        return FeaturedModFiles(mod_id, version).get_files()
 
-    def get_featured_mod_id_by_name(self, technical_name: str) -> int:
-        return FeaturedModId().requestAndGetFeaturedModIdByName(technical_name)
+    def get_featured_mod_by_name(self, technical_name: str) -> FeaturedMod:
+        return FeaturedModApiConnector().request_and_get_fmod_by_name(technical_name)
 
     def request_sim_url_by_uid(self, uid: str) -> str:
         return SimModFiles().request_and_get_sim_mod_url_by_id(uid)
@@ -373,8 +374,8 @@ class Updater(QObject):
                 return
 
     def update_featured_mod(self, modname: str, modversion: str) -> list[dict]:
-        fmod_id = self.get_featured_mod_id_by_name(modname)
-        files = self.get_files_to_update(fmod_id, modversion)
+        fmod = self.get_featured_mod_by_name(modname)
+        files = self.get_files_to_update(fmod.uid, modversion)
         self.update_files(files)
         return files
 
