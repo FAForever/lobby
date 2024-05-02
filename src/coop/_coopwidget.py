@@ -13,6 +13,7 @@ from coop.coopmapitem import CoopMapItem
 from coop.coopmapitem import CoopMapItemDelegate
 from coop.coopmodel import CoopGameFilterModel
 from fa.replay import replay
+from model.game import Game
 from ui.busy_widget import BusyWidget
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
         self.coopList.setItemDelegate(CoopMapItemDelegate(self))
 
         self.gameview = self._gameview_builder(self._game_model, self.gameList)
-        self.gameview.game_double_clicked.connect(self.gameDoubleClicked)
+        self.gameview.game_double_clicked.connect(self.game_double_clicked)
 
         self.coopList.itemDoubleClicked.connect(self.coopListDoubleClicked)
         self.coopList.itemClicked.connect(self.coopListClicked)
@@ -278,16 +279,14 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
 
             self.coop[uid] = itemCoop
 
-    def gameDoubleClicked(self, game):
+    def game_double_clicked(self, game: Game) -> None:
         """
         Slot that attempts to join a game.
         """
         if not fa.instance.available():
             return
 
-        if not fa.check.check(
-            game.featured_mod, game.mapname, None, game.sim_mods,
-        ):
+        if not fa.check.check(game.featured_mod, game.mapname, sim_mods=game.sim_mods):
             return
 
         if game.password_protected:
