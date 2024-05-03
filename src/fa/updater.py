@@ -29,7 +29,7 @@ from api.featured_mod_api import FeaturedModFiles
 from api.models.FeaturedMod import FeaturedMod
 from api.sim_mod_updater import SimModFiles
 from config import Settings
-from fa.utils import unpack_movies
+from fa.utils import unpack_movies_and_sounds
 from vaults.dialogs import download_file
 from vaults.modvault import utils
 
@@ -327,7 +327,7 @@ class Updater(QObject):
 
         self.fetch_files(need_to_download)
 
-        unpack_movies(files)
+        unpack_movies_and_sounds(files)
         log("Updates applied successfully.")
 
     def prepare_bin_FAF(self) -> None:

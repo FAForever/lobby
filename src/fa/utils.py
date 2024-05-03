@@ -20,10 +20,10 @@ def crc32(filepath: str) -> int | None:
         return None
 
 
-def unpack_movies_from_file(file_info: dict) -> None:
+def unpack_movies_and_sounds_from_file(file_info: dict) -> None:
     """
-    Unpacks movies (based on path in zipfile) to the movies folder.
-    Movies must be unpacked for FA to be able to play them.
+    Unpacks movies and sounds (based on path in zipfile) to the corresponding
+    folder. Movies must be unpacked for FA to be able to play them.
     This is a hack needed because the game updater can only handle bin and
     gamedata.
     """
@@ -41,7 +41,11 @@ def unpack_movies_from_file(file_info: dict) -> None:
             return
 
         for zi in zf.infolist():
-            if zi.filename.startswith("movies") and not zi.is_dir():
+            movie_or_sound = (
+                zi.filename.startswith("movies")
+                or zi.filename.startswith("sounds")
+            )
+            if movie_or_sound and not zi.is_dir():
                 tgtpath = os.path.join(APPDATA_DIR, zi.filename)
                 # copy only if file is different - check first if file
                 # exists, then if size is changed, then crc
@@ -53,11 +57,11 @@ def unpack_movies_from_file(file_info: dict) -> None:
                     zf.extract(zi, APPDATA_DIR)
 
 
-def unpack_movies(files: list[dict]) -> None:
-    logger.info("Checking files for movies")
+def unpack_movies_and_sounds(files: list[dict]) -> None:
+    logger.info("Checking files for movies and sounds")
 
     progress = QProgressDialog()
-    progress.setWindowTitle("Updating Movies")
+    progress.setWindowTitle("Updating Movies and Sounds")
     progress.setWindowFlags(Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)
     progress.setModal(True)
     progress.setCancelButton(None)
@@ -66,6 +70,6 @@ def unpack_movies(files: list[dict]) -> None:
 
     for index, file in enumerate(files, start=1):
         filename = file["name"]
-        progress.setLabelText(f"Checking for movies in {filename}...")
-        unpack_movies_from_file(file)
+        progress.setLabelText(f"Checking for movies and sounds in {filename}...")
+        unpack_movies_and_sounds_from_file(file)
         progress.setValue(index)
