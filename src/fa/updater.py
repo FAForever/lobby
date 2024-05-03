@@ -195,10 +195,29 @@ class Updater(QObject):
 
     @staticmethod
     def _file_needs_update(file_info: dict) -> bool:
-        filegroup = file_info["group"]
-        filename = file_info["name"]
-        filepath = os.path.join(util.APPDATA_DIR, filegroup, filename)
-        return filename != Settings.get("game/exe-name") and util.md5(filepath) != file_info["md5"]
+        return (
+            file_info["name"] != Settings.get("game/exe-name")
+            and file_info["old_md5"] != file_info["md5"]
+        )
+
+    def _calc_md5s(self, files: list[dict]) -> None:
+        self.progress.setMaximum(len(files))
+
+        for index, file_info in enumerate(files, start=1):
+
+            if self.progress.wasCanceled():
+                raise UpdaterCancellation()
+
+            filegroup = file_info["group"]
+            filename = file_info["name"]
+            filepath = os.path.join(util.APPDATA_DIR, filegroup, filename)
+
+            self.progress.setLabelText(f"Calculating md5 for {filename}...")
+
+            file_info["old_md5"] = util.md5(filepath)
+
+            self.progress.setValue(index)
+        self.progress.setMaximum(0)
 
     def fetch_files(self, files: list[dict]) -> None:
         for file in files:
@@ -293,6 +312,9 @@ class Updater(QObject):
         """
         self.create_cache_subdirs(files)
         self.patch_fa_exe_if_needed(files)
+        self._calc_md5s(files)
+
+        self.progress.setLabelText("Updating files...")
 
         to_update = list(filter(self._file_needs_update, files))
         replacable_files, need_to_download = self.check_cache(to_update)
@@ -305,7 +327,7 @@ class Updater(QObject):
 
         self.fetch_files(need_to_download)
 
-        unpack_movies(to_update)
+        unpack_movies(files)
         log("Updates applied successfully.")
 
     def prepare_bin_FAF(self) -> None:

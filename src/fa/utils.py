@@ -3,6 +3,9 @@ import logging
 import os
 import zipfile
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QProgressDialog
+
 from util import APPDATA_DIR
 
 logger = logging.getLogger(__name__)
@@ -10,45 +13,59 @@ logger = logging.getLogger(__name__)
 
 def crc32(filepath: str) -> int | None:
     try:
-        with open(filepath) as stream:
+        with open(filepath, "rb") as stream:
             return binascii.crc32(stream.read())
     except Exception as e:
-        logger.exception(f"CRC check fail! Details: {e}")
+        logger.exception(f"CRC check for {filepath!r} fail! Details: {e}")
         return None
 
 
-def unpack_movies(files: list[dict]) -> None:
+def unpack_movies_from_file(file_info: dict) -> None:
     """
     Unpacks movies (based on path in zipfile) to the movies folder.
     Movies must be unpacked for FA to be able to play them.
     This is a hack needed because the game updater can only handle bin and
     gamedata.
     """
-
-    logger.info(f"checking updated files: {files}")
-
     # construct dirs
     gd = os.path.join(APPDATA_DIR, "gamedata")
 
-    for file in files:
-        fname = file["name"]
-        origpath = os.path.join(gd, fname)
+    fname = file_info["name"]
+    origpath = os.path.join(gd, fname)
 
-        if os.path.exists(origpath) and zipfile.is_zipfile(origpath):
-            try:
-                zf = zipfile.ZipFile(origpath)
-            except Exception as e:
-                logger.exception(f"Failed to open Game File {origpath!r}: {e}")
-                continue
+    if os.path.exists(origpath) and zipfile.is_zipfile(origpath):
+        try:
+            zf = zipfile.ZipFile(origpath)
+        except Exception as e:
+            logger.exception(f"Failed to open Game File {origpath!r}: {e}")
+            return
 
-            for zi in zf.infolist():
-                if zi.filename.startswith("movies"):
-                    tgtpath = os.path.join(APPDATA_DIR, zi.filename)
-                    # copy only if file is different - check first if file
-                    # exists, then if size is changed, then crc
-                    if (
-                        not os.path.exists(tgtpath)
-                        or os.stat(tgtpath).st_size != zi.file_size
-                        or crc32(tgtpath) != zi.CRC
-                    ):
-                        zf.extract(zi, APPDATA_DIR)
+        for zi in zf.infolist():
+            if zi.filename.startswith("movies") and not zi.is_dir():
+                tgtpath = os.path.join(APPDATA_DIR, zi.filename)
+                # copy only if file is different - check first if file
+                # exists, then if size is changed, then crc
+                if (
+                    not os.path.exists(tgtpath)
+                    or os.stat(tgtpath).st_size != zi.file_size
+                    or crc32(tgtpath) != zi.CRC
+                ):
+                    zf.extract(zi, APPDATA_DIR)
+
+
+def unpack_movies(files: list[dict]) -> None:
+    logger.info("Checking files for movies")
+
+    progress = QProgressDialog()
+    progress.setWindowTitle("Updating Movies")
+    progress.setWindowFlags(Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)
+    progress.setModal(True)
+    progress.setCancelButton(None)
+    progress.setMaximum(len(files))
+    progress.setValue(0)
+
+    for index, file in enumerate(files, start=1):
+        filename = file["name"]
+        progress.setLabelText(f"Checking for movies in {filename}...")
+        unpack_movies_from_file(file)
+        progress.setValue(index)
