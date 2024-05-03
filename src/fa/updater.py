@@ -442,9 +442,6 @@ class Updater(QObject):
         else:
             self.result = UpdaterResult.SUCCESS
 
-        # Hide progress dialog if it's still showing.
-        self.progress.close()
-
         # Integrated handlers for the various things that could go wrong
         if self.result == UpdaterResult.CANCEL:
             pass  # The user knows damn well what happened here.
