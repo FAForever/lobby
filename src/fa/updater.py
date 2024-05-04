@@ -378,7 +378,7 @@ class Updater(QObject):
         )
 
     def patch_fa_executable(self, version: int) -> None:
-        exe_path = os.path.join(util.BIN_DIR, "ForgedAlliance.exe")
+        exe_path = os.path.join(util.BIN_DIR, Settings.get("game/exe-name"))
         version_addresses = (0xd3d40, 0x47612d, 0x476666)
         with open(exe_path, "rb+") as file:
             for address in version_addresses:
