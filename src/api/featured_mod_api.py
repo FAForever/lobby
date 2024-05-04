@@ -2,6 +2,8 @@ import logging
 
 from api.ApiAccessors import DataApiAccessor
 from api.models.FeaturedMod import FeaturedMod
+from api.models.FeaturedModFile import FeaturedModFile
+from api.parsers.FeaturedModFileParser import FeaturedModFileParser
 from api.parsers.FeaturedModParser import FeaturedModParser
 
 logger = logging.getLogger(__name__)
@@ -27,15 +29,15 @@ class FeaturedModApiConnector(DataApiAccessor):
         return self.featured_mod
 
 
-class FeaturedModFiles(DataApiAccessor):
+class FeaturedModFilesApiConnector(DataApiAccessor):
     def __init__(self, mod_id: str, version: str) -> None:
         super().__init__(f"/featuredMods/{mod_id}/files/{version}")
-        self.featuredModFiles = []
+        self.featured_mod_files = []
 
-    def handle_response(self, message):
-        self.featuredModFiles = message["data"]
+    def handle_response(self, message: dict) -> None:
+        self.featured_mod_files = FeaturedModFileParser.parse_many(message["data"])
 
-    def get_files(self):
+    def get_files(self) -> list[FeaturedModFile]:
         self.requestData()
         self.waitForCompletion()
-        return self.featuredModFiles
+        return self.featured_mod_files

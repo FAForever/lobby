@@ -6,6 +6,7 @@ import zipfile
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QProgressDialog
 
+from api.models.FeaturedModFile import FeaturedModFile
 from util import APPDATA_DIR
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ def crc32(filepath: str) -> int | None:
         return None
 
 
-def unpack_movies_and_sounds_from_file(file_info: dict) -> None:
+def unpack_movies_and_sounds_from_file(file: FeaturedModFile) -> None:
     """
     Unpacks movies and sounds (based on path in zipfile) to the corresponding
     folder. Movies must be unpacked for FA to be able to play them.
@@ -30,8 +31,7 @@ def unpack_movies_and_sounds_from_file(file_info: dict) -> None:
     # construct dirs
     gd = os.path.join(APPDATA_DIR, "gamedata")
 
-    fname = file_info["name"]
-    origpath = os.path.join(gd, fname)
+    origpath = os.path.join(gd, file.name)
 
     if os.path.exists(origpath) and zipfile.is_zipfile(origpath):
         try:
@@ -57,7 +57,7 @@ def unpack_movies_and_sounds_from_file(file_info: dict) -> None:
                     zf.extract(zi, APPDATA_DIR)
 
 
-def unpack_movies_and_sounds(files: list[dict]) -> None:
+def unpack_movies_and_sounds(files: list[FeaturedModFile]) -> None:
     logger.info("Checking files for movies and sounds")
 
     progress = QProgressDialog()
@@ -69,7 +69,6 @@ def unpack_movies_and_sounds(files: list[dict]) -> None:
     progress.setValue(0)
 
     for index, file in enumerate(files, start=1):
-        filename = file["name"]
-        progress.setLabelText(f"Checking for movies and sounds in {filename}...")
+        progress.setLabelText(f"Checking for movies and sounds in {file.name}...")
         unpack_movies_and_sounds_from_file(file)
         progress.setValue(index)

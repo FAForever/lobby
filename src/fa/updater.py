@@ -25,8 +25,9 @@ from PyQt6.QtWidgets import QProgressDialog
 
 import util
 from api.featured_mod_api import FeaturedModApiConnector
-from api.featured_mod_api import FeaturedModFiles
+from api.featured_mod_api import FeaturedModFilesApiConnector
 from api.models.FeaturedMod import FeaturedMod
+from api.models.FeaturedModFile import FeaturedModFile
 from api.sim_mod_updater import SimModFiles
 from config import Settings
 from fa.utils import unpack_movies_and_sounds
@@ -185,7 +186,7 @@ class Updater(QObject):
         return self.result
 
     def get_files_to_update(self, mod_id: str, version: str) -> list[dict]:
-        return FeaturedModFiles(mod_id, version).get_files()
+        return FeaturedModFilesApiConnector(mod_id, version).get_files()
 
     def get_featured_mod_by_name(self, technical_name: str) -> FeaturedMod:
         return FeaturedModApiConnector().request_and_get_fmod_by_name(technical_name)
@@ -194,50 +195,46 @@ class Updater(QObject):
         return SimModFiles().request_and_get_sim_mod_url_by_id(uid)
 
     @staticmethod
-    def _file_needs_update(file_info: dict) -> bool:
+    def _file_needs_update(file: FeaturedModFile) -> bool:
         return (
-            file_info["name"] != Settings.get("game/exe-name")
-            and file_info["old_md5"] != file_info["md5"]
+            file.name != Settings.get("game/exe-name")
+            and file.old_md5 != file.md5
         )
 
-    def _calc_md5s(self, files: list[dict]) -> None:
+    def _calc_md5s(self, files: list[FeaturedModFile]) -> None:
         self.progress.setMaximum(len(files))
 
-        for index, file_info in enumerate(files, start=1):
+        for index, file in enumerate(files, start=1):
 
             if self.progress.wasCanceled():
                 raise UpdaterCancellation()
 
-            filegroup = file_info["group"]
-            filename = file_info["name"]
-            filepath = os.path.join(util.APPDATA_DIR, filegroup, filename)
+            filepath = os.path.join(util.APPDATA_DIR, file.group, file.name)
 
-            self.progress.setLabelText(f"Calculating md5 for {filename}...")
+            self.progress.setLabelText(f"Calculating md5 for {file.name}...")
 
-            file_info["old_md5"] = util.md5(filepath)
+            file.old_md5 = util.md5(filepath)
 
             self.progress.setValue(index)
         self.progress.setMaximum(0)
 
-    def fetch_files(self, files: list[dict]) -> None:
+    def fetch_files(self, files: list[FeaturedModFile]) -> None:
         for file in files:
             self.fetch_single_file(file)
 
-    def fetch_single_file(self, file_info: dict) -> None:
-        name = file_info["name"]
-        filegroup = file_info["group"]
-        url = file_info["cacheableUrl"]
-        target_dir = os.path.join(util.APPDATA_DIR, filegroup)
+    def fetch_single_file(self, file: FeaturedModFile) -> None:
+        target_dir = os.path.join(util.APPDATA_DIR, file.group)
 
+        url = file.cacheable_url
         logger.info(f"Updater: Downloading {url}")
 
         downloaded = download_file(
             url=url,
             target_dir=target_dir,
-            name=name,
+            name=file.name,
             category="Update",
             silent=False,
-            request_params={file_info["hmacParameter"]: file_info["hmacToken"]},
+            request_params={file.hmac_parameter: file.hmac_token},
             label=f"Downloading FA file : <a href='{url}'>{url}</a><p> ",
         )
 
@@ -248,46 +245,46 @@ class Updater(QObject):
                 "Operation aborted while waiting for data.",
             )
 
-    def move_many_from_cache(self, files: list[dict]) -> None:
+    def move_many_from_cache(self, files: list[FeaturedModFile]) -> None:
         for file in files:
             self.move_from_cache(file)
 
-    def move_from_cache(self, file_info: dict) -> None:
-        src_dir = os.path.join(util.APPDATA_DIR, file_info["group"])
-        cache_dir = os.path.join(util.GAME_CACHE_DIR, file_info["group"])
-        if os.path.exists(os.path.join(cache_dir, file_info["md5"])):
+    def move_from_cache(self, file: FeaturedModFile) -> None:
+        src_dir = os.path.join(util.APPDATA_DIR, file.group)
+        cache_dir = os.path.join(util.GAME_CACHE_DIR, file.group)
+        if os.path.exists(os.path.join(cache_dir, file.md5)):
             shutil.move(
-                os.path.join(cache_dir, file_info["md5"]),
-                os.path.join(src_dir, file_info["name"]),
+                os.path.join(cache_dir, file.md5),
+                os.path.join(src_dir, file.name),
             )
 
     def move_many_to_cache(self, files: list[dict]) -> None:
         for file in files:
             self.move_to_cache(file)
 
-    def move_to_cache(self, file_info: dict) -> None:
-        src_dir = os.path.join(util.APPDATA_DIR, file_info["group"])
-        cache_dir = os.path.join(util.GAME_CACHE_DIR, file_info["group"])
-        if os.path.exists(os.path.join(src_dir, file_info["name"])):
-            md5 = util.md5(os.path.join(src_dir, file_info["name"]))
+    def move_to_cache(self, file: FeaturedModFile) -> None:
+        src_dir = os.path.join(util.APPDATA_DIR, file.group)
+        cache_dir = os.path.join(util.GAME_CACHE_DIR, file.group)
+        if os.path.exists(os.path.join(src_dir, file.name)):
+            md5 = util.md5(os.path.join(src_dir, file.name))
             shutil.move(
-                os.path.join(src_dir, file_info["name"]),
+                os.path.join(src_dir, file.name),
                 os.path.join(cache_dir, md5),
             )
             util.setAccessTime(os.path.join(cache_dir, md5))
 
-    def replace_from_cache(self, file: dict) -> None:
+    def replace_from_cache(self, file: FeaturedModFile) -> None:
         self.move_to_cache(file)
         self.move_from_cache(file)
 
-    def replace_many_from_cache(self, files: list[dict]) -> None:
+    def replace_many_from_cache(self, files: list[FeaturedModFile]) -> None:
         for file in files:
             self.replace_from_cache(file)
 
-    def check_cache(self, files_to_check: list[dict]) -> None:
+    def check_cache(self, files_to_check: list[FeaturedModFile]) -> None:
         replaceable_files, need_to_download = [], []
         for file in files_to_check:
-            cache_dir = os.path.join(util.GAME_CACHE_DIR, file["group"])
+            cache_dir = os.path.join(util.GAME_CACHE_DIR, file.group)
             os.makedirs(cache_dir, exist_ok=True)
             if self._is_cached(file):
                 replaceable_files.append(file)
@@ -296,16 +293,16 @@ class Updater(QObject):
         return replaceable_files, need_to_download
 
     @staticmethod
-    def _is_cached(file_info: dict) -> bool:
-        cached_file = os.path.join(util.GAME_CACHE_DIR, file_info["group"], file_info["name"])
+    def _is_cached(file: FeaturedModFile) -> bool:
+        cached_file = os.path.join(util.GAME_CACHE_DIR, file.group, file.name)
         return os.path.isfile(cached_file)
 
-    def create_cache_subdirs(self, files: list[dict]) -> None:
+    def create_cache_subdirs(self, files: list[FeaturedModFile]) -> None:
         for file in files:
-            target = os.path.join(util.GAME_CACHE_DIR, file["group"])
+            target = os.path.join(util.GAME_CACHE_DIR, file.group)
             os.makedirs(target, exist_ok=True)
 
-    def update_files(self, files: list[dict]) -> None:
+    def update_files(self, files: list[FeaturedModFile]) -> None:
         """
         Updates the files in the destination
         subdirectory of the Forged Alliance path.
@@ -388,14 +385,14 @@ class Updater(QObject):
                 file.seek(address)
                 file.write(version.to_bytes(4, "little"))
 
-    def patch_fa_exe_if_needed(self, files: list[dict]) -> None:
+    def patch_fa_exe_if_needed(self, files: list[FeaturedModFile]) -> None:
         for file in files:
-            if file["name"] == Settings.get("game/exe-name"):
+            if file.name == Settings.get("game/exe-name"):
                 version = int(self._resolve_base_version(file))
                 self.patch_fa_executable(version)
                 return
 
-    def update_featured_mod(self, modname: str, modversion: str) -> list[dict]:
+    def update_featured_mod(self, modname: str, modversion: str) -> list[FeaturedModFile]:
         fmod = self.get_featured_mod_by_name(modname)
         files = self.get_files_to_update(fmod.uid, modversion)
         self.update_files(files)
@@ -406,11 +403,11 @@ class Updater(QObject):
             return str(max(self.modversions.values()))
         return "latest"
 
-    def _resolve_base_version(self, base_info: dict | None = None) -> str:
+    def _resolve_base_version(self, exe_info: FeaturedModFile | None = None) -> str:
         if self.version:
             return str(self.version)
-        if base_info:
-            return str(base_info["version"])
+        if exe_info:
+            return str(exe_info.version)
         return "latest"
 
     def do_update(self) -> None:
