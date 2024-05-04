@@ -14,6 +14,7 @@ import shutil
 import stat
 import time
 from enum import Enum
+from functools import partial
 
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import Qt
@@ -195,15 +196,15 @@ class Updater(QObject):
         return SimModFiles().request_and_get_sim_mod_url_by_id(uid)
 
     @staticmethod
-    def _file_needs_update(file: FeaturedModFile) -> bool:
-        return (
-            file.name != Settings.get("game/exe-name")
-            and file.old_md5 != file.md5
-        )
+    def _file_needs_update(file: FeaturedModFile, md5s: dict[str, str]) -> bool:
+        incoming_md5 = file.md5
+        current_md5 = md5s[file.md5]
+        return file.name != Settings.get("game/exe-name") and current_md5 != incoming_md5
 
-    def _calc_md5s(self, files: list[FeaturedModFile]) -> None:
+    def _calc_md5s(self, files: list[FeaturedModFile]) -> dict[str, str]:
         self.progress.setMaximum(len(files))
 
+        result = {}
         for index, file in enumerate(files, start=1):
 
             if self.progress.wasCanceled():
@@ -213,10 +214,11 @@ class Updater(QObject):
 
             self.progress.setLabelText(f"Calculating md5 for {file.name}...")
 
-            file.old_md5 = util.md5(filepath)
+            result[file.md5] = util.md5(filepath)
 
             self.progress.setValue(index)
         self.progress.setMaximum(0)
+        return result
 
     def fetch_files(self, files: list[FeaturedModFile]) -> None:
         for file in files:
@@ -309,11 +311,11 @@ class Updater(QObject):
         """
         self.create_cache_subdirs(files)
         self.patch_fa_exe_if_needed(files)
-        self._calc_md5s(files)
+        md5s = self._calc_md5s(files)
 
         self.progress.setLabelText("Updating files...")
 
-        to_update = list(filter(self._file_needs_update, files))
+        to_update = list(filter(partial(self._file_needs_update, md5s=md5s), files))
         replacable_files, need_to_download = self.check_cache(to_update)
 
         if self.keep_cache or self.in_session_cache:
