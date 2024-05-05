@@ -417,10 +417,8 @@ class Updater(QObject):
         try:
             if self.sim_mod:
                 uid, name = self.sim_mod
-                if utils.downloadMod(self.request_sim_url_by_uid(uid), name):
-                    self.result = UpdaterResult.SUCCESS
-                else:
-                    self.result = UpdaterResult.FAILURE
+                if not utils.downloadMod(self.request_sim_url_by_uid(uid), name):
+                    raise UpdaterFailure("Sim mod wasn't downloaded")
             else:
                 # Prepare FAF directory & all necessary files
                 self.prepare_bin_FAF()
