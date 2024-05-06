@@ -218,7 +218,10 @@ def genPrevFromDDS(sourcename: str, destname: str, small: bool = False) -> None:
         raise
 
 
-def exportPreviewFromMap(mapname, positions=None):
+def export_preview_from_map(
+        mapname: str | None,
+        positions: dict | None = None,
+) -> None | dict[str, None | str | list[str]]:
     """
     This method auto-upgrades the maps to have small and large preview images
     """
@@ -240,10 +243,11 @@ def exportPreviewFromMap(mapname, positions=None):
         return previews
 
     mapname = os.path.basename(mapdir).lower()
+    mapname_no_version, *_ = mapname.partition(".")
     if isGeneratedMap(mapname):
         mapfilename = os.path.join(mapdir, mapname + ".scmap")
     else:
-        mapfilename = os.path.join(mapdir, mapname.split(".")[0] + ".scmap")
+        mapfilename = os.path.join(mapdir, f"{mapname_no_version}.scmap")
 
     mode = os.stat(mapdir)[0]
     if not (mode and stat.S_IWRITE):
@@ -253,9 +257,20 @@ def exportPreviewFromMap(mapname, positions=None):
         if not os.path.isdir(mapdir):
             os.mkdir(mapdir)
 
-    previewsmallname = os.path.join(mapdir, mapname + ".small.png")
-    previewlargename = os.path.join(mapdir, mapname + ".large.png")
-    previewddsname = os.path.join(mapdir, mapname + ".dds")
+    def plausible_mapname_preview_name(suffix: str) -> str:
+        casefold_names = (
+            f"{mapname}{suffix}".casefold(),
+            f"{mapname_no_version}{suffix}".casefold(),
+        )
+        for entry in os.listdir(mapdir):
+            plausible_preview = os.path.join(mapdir, entry)
+            if os.path.isfile(plausible_preview) and entry.casefold() in casefold_names:
+                return plausible_preview
+        return suffix
+
+    previewsmallname = plausible_mapname_preview_name(".small.png")
+    previewlargename = plausible_mapname_preview_name(".large.png")
+    previewddsname = plausible_mapname_preview_name(".dds")
     cachepngname = os.path.join(util.MAP_PREVIEW_SMALL_DIR, mapname + ".png")
 
     logger.debug("Generating preview from user maps for: " + mapname)
@@ -419,7 +434,7 @@ def preview(mapname, pixmap=False):
                 return util.THEME.icon(img, False, pixmap)
 
         # Try to find in local map folder
-        img = exportPreviewFromMap(mapname)
+        img = export_preview_from_map(mapname)
 
         if (
             img
@@ -471,7 +486,7 @@ def processMapFolderForUpload(mapDir, positions):
     Zipping the file and creating thumbnails
     """
     # creating thumbnail
-    files = exportPreviewFromMap(mapDir, positions)["tozip"]
+    files = export_preview_from_map(mapDir, positions)["tozip"]
     # abort zipping if there is insufficient previews
     if len(files) != 3:
         logger.debug("Insufficient previews for making an archive.")
