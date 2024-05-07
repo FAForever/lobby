@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import sys
@@ -27,11 +29,11 @@ class ConnectionState(IntEnum):
 
 
 class ServerReconnecter(QtCore.QObject):
-    def __init__(self, connection):
+    def __init__(self, connection: ServerConnection) -> None:
         QtCore.QObject.__init__(self)
         self._connection = connection
         connection.state_changed.connect(self.on_state_changed)
-        connection.received_pong.connect(self._receive_pong)
+        connection.message_received.connect(self._receive_message)
         self._connection_attempts = 0
 
         self._reconnect_timer = QtCore.QTimer(self)
@@ -44,8 +46,8 @@ class ServerReconnecter(QtCore.QObject):
         self._keepalive = False
         self._keepalive_timer = QtCore.QTimer(self)
         self._keepalive_timer.timeout.connect(self._ping_connection)
-        self.keepalive_interval = 3 * 1000
-        self._waiting_for_pong = False
+        self.keepalive_interval = 60 * 1000
+        self._waiting_for_message = False
 
     @property
     def enabled(self):
@@ -71,7 +73,7 @@ class ServerReconnecter(QtCore.QObject):
 
     def _disable_keepalive(self):
         self._keepalive_timer.stop()
-        self._waiting_for_pong = False
+        self._waiting_for_message = False
 
     def _enable_keepalive(self):
         if not self._keepalive_timer.isActive():
@@ -126,25 +128,27 @@ class ServerReconnecter(QtCore.QObject):
             not self._enabled
             or self._connection.state != ConnectionState.CONNECTED
         ):
-            self._waiting_for_pong = False
+            self._waiting_for_message = False
             return
 
         # Prepare to reconnect immediately
         self._connection_attempts = 0
 
-        if self._waiting_for_pong:
-            self._waiting_for_pong = False
+        if self._waiting_for_message:
+            self._waiting_for_message = False
             # Force disconnect
             # Note that it will force disconnect and reconnect if we
             # reconnected on our own since last ping!
             self._connection.disconnect_()
 
         else:
-            self._waiting_for_pong = True
-            self._connection.send(dict(command="ping"))
+            self._waiting_for_message = True
+            self._connection.send({"command": "ping"})
 
-    def _receive_pong(self):
-        self._waiting_for_pong = False
+    def _receive_message(self):
+        self._waiting_for_message = False
+        if self.keepalive:
+            self._keepalive_timer.start()  # restart
 
 
 class ServerConnection(QtCore.QObject):
@@ -154,13 +158,14 @@ class ServerConnection(QtCore.QObject):
     state_changed = QtCore.pyqtSignal(object)
     connected = QtCore.pyqtSignal()
     disconnected = QtCore.pyqtSignal()
-    received_pong = QtCore.pyqtSignal()
+    message_received = QtCore.pyqtSignal()
     access_url_ready = QtCore.pyqtSignal(QtCore.QUrl)
 
     def __init__(self, host, port, dispatch):
         QtCore.QObject.__init__(self)
         self.socket = QWebSocket()
         self.socket.binaryMessageReceived.connect(self.on_binary_message_received)
+        self.socket.binaryMessageReceived.connect(lambda: self.message_received.emit())
         self.socket.errorOccurred.connect(self.socketError)
         self.socket.stateChanged.connect(self.on_socket_state_change)
 
@@ -267,7 +272,7 @@ class ServerConnection(QtCore.QObject):
             self.socket.localAddress().toString(), port, "UDP",
         )
 
-    def processDataFromServer(self, data):
+    def processDataFromServer(self, data: str) -> None:
         self._data = ""
         for line in data.splitlines():
             action = json.loads(line)
@@ -277,7 +282,6 @@ class ServerConnection(QtCore.QObject):
                 self.send(dict(command="pong"))
             elif command == "pong":
                 logger.debug("Server: PONG")
-                self.received_pong.emit()
             else:
                 try:
                     self._dispatch(action)
