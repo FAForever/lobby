@@ -100,6 +100,7 @@ class ServerReconnecter(QtCore.QObject):
 
     def handle_connected(self):
         self._connection_attempts = 0
+        self._reconnect_timer.stop()
 
     def handle_reconnecting(self):
         self._connection_attempts += 1
@@ -110,7 +111,6 @@ class ServerReconnecter(QtCore.QObject):
 
         if self._connection_attempts < 3:
             logger.info("Reconnecting immediately")
-            self._reconnect_timer.stop()
             self._connection.do_connect()
         elif self._reconnect_timer.isActive():
             return
