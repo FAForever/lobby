@@ -58,6 +58,9 @@ MOD_PREVIEW_DIR = os.path.join(CACHE_DIR, "mod_previews")
 # Cache for news images
 NEWS_CACHE_DIR = os.path.join(CACHE_DIR, "news")
 
+# This contains cached game files
+GAME_CACHE_DIR = os.path.join(CACHE_DIR, "featured_mod")
+
 # This contains cached data downloaded for FA extras
 EXTRA_DIR = os.path.join(APPDATA_DIR, "extra")
 
@@ -163,6 +166,7 @@ for data_dir in [
     APPDATA_DIR, PERSONAL_DIR, LUA_DIR, CACHE_DIR,
     MAP_PREVIEW_SMALL_DIR, MAP_PREVIEW_LARGE_DIR, MOD_PREVIEW_DIR,
     THEME_DIR, REPLAY_DIR, LOG_DIR, EXTRA_DIR, NEWS_CACHE_DIR,
+    GAME_CACHE_DIR,
 ]:
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
