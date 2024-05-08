@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 import json
 import logging
@@ -26,13 +27,17 @@ class ReplayRecorder(QtCore.QObject):
     """
     __logger = logging.getLogger(__name__)
 
-    def __init__(self, parent, local_socket, *args, **kwargs):
+    def __init__(
+            self,
+            parent: ReplayServer,
+            local_socket: QtNetwork.QTcpSocket,
+            *args,
+            **kwargs,
+    ) -> None:
         QtCore.QObject.__init__(self, *args, **kwargs)
         self.parent = parent
         self.inputSocket = local_socket
-        self.inputSocket.setSocketOption(
-            QtNetwork.QTcpSocket.KeepAliveOption, 1,
-        )
+        self.inputSocket.setSocketOption(QtNetwork.QTcpSocket.SocketOption.KeepAliveOption, 1)
         self.inputSocket.readyRead.connect(self.readDatas)
         self.inputSocket.disconnected.connect(self.inputDisconnected)
         self.__logger.info("FA connected locally.")
@@ -168,7 +173,7 @@ class ReplayRecorder(QtCore.QObject):
         )
 
         replay = QtCore.QFile(filename)
-        replay.open(QtCore.QIODevice.OpenModeFlag.WriteOnly | QtCore.QIODevice.Text)
+        replay.open(QtCore.QIODevice.OpenModeFlag.WriteOnly | QtCore.QIODevice.OpenModeFlag.Text)
         replay.write(json.dumps(self.replayInfo).encode('utf-8'))
         replay.write(b'\n')
         replay.write(QtCore.qCompress(self.replayData).toBase64())
