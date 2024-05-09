@@ -36,24 +36,8 @@ import argparse
 cmd_parser = argparse.ArgumentParser(
     description='FAF client commandline arguments.',
 )
-cmd_parser.add_argument(
-    '--qt-angle-workaround',
-    action='store_true',
-    help=(
-        'Use Qt5 ANGLE backend. Enable if some client '
-        'tabs appear frozen. On by default.'
-    ),
-)
-cmd_parser.add_argument(
-    '--no-qt-angle-workaround',
-    action='store_true',
-    help='Do not use Qt5 ANGLE backend.',
-)
 
 args, trailing_args = cmd_parser.parse_known_args()
-if sys.platform == 'win32' and not args.no_qt_angle_workaround:
-    os.environ.setdefault('QT_OPENGL', 'angle')
-    os.environ.setdefault('QT_ANGLE_PLATFORM', 'd3d9')
 
 
 path = os.path.join(os.path.dirname(sys.argv[0]), "PyQt6.uic.widget-plugins")
