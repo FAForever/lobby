@@ -3,7 +3,8 @@ import logging
 from PyQt6 import QtWidgets
 
 import config
-import fa
+from api.sim_mod_updater import SimModFiles
+from vaults.modvault.utils import downloadMod
 from vaults.modvault.utils import getInstalledMods
 from vaults.modvault.utils import setActiveMods
 
@@ -44,12 +45,11 @@ def checkMods(mods: dict[str, str]) -> bool:  # mods is a dictionary of uid-name
         elif result == QtWidgets.QMessageBox.StandardButton.YesToAll:
             config.Settings.set('mods/autodownload', True)
 
-    for item in to_download.items():
-        # Spawn an update for the required mod
-        updater = fa.updater.Updater("sim", sim_mod=item)
-        result = updater.run()
-        if result != fa.updater.UpdaterResult.SUCCESS:
-            logger.warning(f"Failure getting {item}")
+    api_accessor = SimModFiles()
+    for uid, name in to_download.items():
+        url = api_accessor.request_and_get_sim_mod_url_by_id(uid)
+        if not downloadMod(url, name):
+            logger.warning(f"Failure getting {name!r} with uid {uid!r}")
             return False
 
     actual_mods = []
