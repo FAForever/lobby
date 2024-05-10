@@ -6,7 +6,6 @@ import zipfile
 from io import BytesIO
 
 from PyQt6 import QtGui
-from PyQt6 import QtWidgets
 from PyQt6.QtCore import QEventLoop
 from PyQt6.QtCore import QFile
 from PyQt6.QtCore import QIODevice
@@ -113,9 +112,10 @@ class BaseDownload(QObject):
         self._sock_finished = True
         self._kick_read()
 
-    def _atProgress(self, recv, total):
+    def _atProgress(self, recv: int, total: int) -> None:
         self.bytes_progress = recv
         self.bytes_total = total
+        self.progress.emit(self)
 
     def _kick_read(self):    # Don't run the read loop more than once at a time
         if self._reading:
@@ -138,7 +138,6 @@ class BaseDownload(QObject):
         else:
             bs = self.blocksize
         self.dest.write(self._dfile.read(bs))
-        self.progress.emit(self)
 
     def succeeded(self):
         return not self.error and not self.canceled
@@ -146,10 +145,14 @@ class BaseDownload(QObject):
     def failed(self) -> bool:
         return not self.succeeded()
 
-    def waitForCompletion(self):
-        waitFlag = QEventLoop.ProcessEventsFlag.WaitForMoreEvents
-        while self._running:
-            QtWidgets.QApplication.processEvents(waitFlag)
+    def waitForCompletion(self) -> None:
+        if not self._running:
+            return
+
+        wait_flag = QEventLoop.ProcessEventsFlag.WaitForMoreEvents
+        loop = QEventLoop()
+        self.finished.connect(loop.quit)
+        loop.exec(wait_flag)
 
 
 class FileDownload(BaseDownload):
