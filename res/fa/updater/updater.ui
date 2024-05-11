@@ -200,7 +200,7 @@
            <number>100</number>
           </property>
           <property name="value">
-           <number>24</number>
+           <number>0</number>
           </property>
           <property name="alignment">
            <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -215,46 +215,53 @@
            <bool>false</bool>
           </property>
           <property name="format">
-           <string>Game</string>
+           <string>Game (%v/%m)</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QProgressBar" name="md5Progress">
+         <widget class="QLabel" name="currentModLabel">
+          <property name="text">
+           <string>Updating FAF... (1/1)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="hashProgress">
           <property name="value">
-           <number>24</number>
+           <number>0</number>
           </property>
           <property name="alignment">
            <set>Qt::AlignmentFlag::AlignCenter</set>
           </property>
           <property name="format">
-           <string>md5</string>
+           <string>Check hash (%v/%m)</string>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QProgressBar" name="modProgress">
           <property name="value">
-           <number>24</number>
+           <number>0</number>
           </property>
           <property name="alignment">
            <set>Qt::AlignmentFlag::AlignCenter</set>
           </property>
           <property name="format">
-           <string>Featured Mod</string>
+           <string>Update (%v/%m)</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QProgressBar" name="moviesProgress">
+         <widget class="QProgressBar" name="extrasProgress">
           <property name="value">
-           <number>24</number>
+           <number>0</number>
           </property>
           <property name="alignment">
            <set>Qt::AlignmentFlag::AlignCenter</set>
           </property>
           <property name="format">
-           <string>Movies and Sounds</string>
+           <string>Check Movies and Sounds (%v/%m)</string>
           </property>
          </widget>
         </item>

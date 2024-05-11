@@ -27,12 +27,14 @@ from vaults.dialogs import download_file
 logger = logging.getLogger(__name__)
 
 
-class UpdateProcessor(QObject):
+class UpdaterWorker(QObject):
     done = pyqtSignal(UpdaterResult)
-    md5_progress = pyqtSignal(ProgressInfo)
-    movies_progress = pyqtSignal(ProgressInfo)
+
+    current_mod = pyqtSignal(ProgressInfo)
+    hash_progress = pyqtSignal(ProgressInfo)
+    extras_progress = pyqtSignal(ProgressInfo)
     game_progress = pyqtSignal(ProgressInfo)
-    featured_mod_progress = pyqtSignal(ProgressInfo)
+    mod_progress = pyqtSignal(ProgressInfo)
 
     download_started = pyqtSignal(FileDownload)
     download_progress = pyqtSignal(FileDownload)
@@ -80,7 +82,7 @@ class UpdateProcessor(QObject):
         result = {}
         for index, file in enumerate(files, start=1):
             filepath = os.path.join(util.APPDATA_DIR, file.group, file.name)
-            self.md5_progress.emit(ProgressInfo(index, total, file.name))
+            self.hash_progress.emit(ProgressInfo(index, total, file.name))
             result[file.md5] = util.md5(filepath)
         return result
 
@@ -102,10 +104,6 @@ class UpdateProcessor(QObject):
         dler.waitForCompletion()
         if dler.failed():
             raise UpdaterFailure()
-
-    def check_download_failure(self, dler: FileDownload) -> None:
-        if dler.failed():
-            raise UpdaterFailure(f"Failed to download from {dler.addr!r}")
 
     def move_from_cache(self, file: FeaturedModFile) -> None:
         src_dir = os.path.join(util.APPDATA_DIR, file.group)
@@ -142,7 +140,7 @@ class UpdateProcessor(QObject):
             target = os.path.join(util.GAME_CACHE_DIR, file.group)
             os.makedirs(target, exist_ok=True)
 
-    def _update_file(
+    def update_file(
             self,
             file: FeaturedModFile,
             precalculated_md5s: dict[str, str] | None = None,
@@ -166,16 +164,21 @@ class UpdateProcessor(QObject):
         to_update = self._filter_files_to_update(files, md5s)
         total = len(to_update)
 
+        if total == 0:
+            self.mod_progress.emit(ProgressInfo(0, 0, ""))
+
         for index, file in enumerate(to_update, start=1):
-            self.featured_mod_progress.emit(ProgressInfo(index, total, file.name))
-            self._update_file(file, md5s)
+            self.mod_progress.emit(ProgressInfo(index, total, file.name))
+            self.update_file(file, md5s)
+
+        self.unpack_movies_and_sounds(files)
 
     def unpack_movies_and_sounds(self, files: list[FeaturedModFile]) -> None:
         logger.info("Checking files for movies and sounds")
 
         total = len(files)
         for index, file in enumerate(files, start=1):
-            self.movies_progress.emit(ProgressInfo(index, total, file.name))
+            self.extras_progress.emit(ProgressInfo(index, total, file.name))
             unpack_movies_and_sounds(file)
 
     def prepare_bin_FAF(self) -> None:
@@ -267,11 +270,14 @@ class UpdateProcessor(QObject):
             self.prepare_bin_FAF()
             # Update the mod if it's requested
             if self.featured_mod in ("faf", "fafbeta", "fafdevelop", "ladder1v1"):
+                self.current_mod.emit(ProgressInfo(1, 1, self.featured_mod))
                 self.update_featured_mod(self.featured_mod, self._resolve_base_version())
             else:
                 # update faf first
+                self.current_mod.emit(ProgressInfo(1, 2, "FAF"))
                 self.update_featured_mod("faf", self._resolve_base_version())
                 # update featured mod then
+                self.current_mod.emit(ProgressInfo(2, 2, self.featured_mod))
                 self.update_featured_mod(self.featured_mod, self._resolve_modversion())
         except UpdaterCancellation as e:
             log("CANCELLED: {}".format(e), logger)

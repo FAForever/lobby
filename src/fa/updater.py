@@ -28,7 +28,7 @@ from fa.updater_misc import clear_log
 from fa.updater_misc import failure_dialog
 from fa.updater_misc import log
 from fa.updater_misc import timestamp
-from src.fa.update_processor import UpdateProcessor
+from src.fa.update_processor import UpdaterWorker
 
 logger = logging.getLogger(__name__)
 
@@ -111,43 +111,56 @@ class Updater(QObject):
         super().__init__(*args, **kwargs)
 
         self.worker_thread = QThread()
-        self.update_processor = UpdateProcessor(featured_mod, version, modversions, silent)
-        self.update_processor.moveToThread(self.worker_thread)
+        self.worker = UpdaterWorker(featured_mod, version, modversions, silent)
+        self.worker.moveToThread(self.worker_thread)
 
-        self.update_processor.done.connect(self.on_update_done)
-        self.update_processor.md5_progress.connect(self.on_md5_progress)
-        self.update_processor.movies_progress.connect(self.on_movies_progress)
-        self.update_processor.game_progress.connect(self.on_game_progress)
-        self.update_processor.featured_mod_progress.connect(self.on_feat_mod_progress)
-        self.update_processor.download_progress.connect(self.on_download_progress)
-        self.update_processor.download_finished.connect(self.on_download_finished)
-        self.update_processor.download_started.connect(self.on_download_started)
-        self.worker_thread.started.connect(self.update_processor.do_update)
+        self.worker.done.connect(self.on_update_done)
+        self.worker.current_mod.connect(self.on_processed_mod_changed)
+        self.worker.hash_progress.connect(self.on_hash_progress)
+        self.worker.extras_progress.connect(self.on_movies_progress)
+        self.worker.game_progress.connect(self.on_game_progress)
+        self.worker.mod_progress.connect(self.on_mod_progress)
+        self.worker.download_progress.connect(self.on_download_progress)
+        self.worker.download_finished.connect(self.on_download_finished)
+        self.worker.download_started.connect(self.on_download_started)
+        self.worker_thread.started.connect(self.worker.do_update)
 
         self.progress = UpdaterProgressDialog(None, silent)
         self.progress.aborted.connect(self.abort)
 
         self.result = UpdaterResult.NONE
 
+    def on_processed_mod_changed(self, info: ProgressInfo) -> None:
+        text = f"Updating {info.description.upper()}... ({info.progress}/{info.total})"
+        self.progress.currentModLabel.setText(text)
+        self.progress.hashProgress.setValue(0)
+        self.progress.modProgress.setValue(0)
+        self.progress.extrasProgress.setValue(0)
+
     def on_movies_progress(self, info: ProgressInfo) -> None:
-        self.progress.moviesProgress.setMaximum(info.total)
-        self.progress.moviesProgress.setValue(info.progress)
+        self.progress.extrasProgress.setMaximum(info.total)
+        self.progress.extrasProgress.setValue(info.progress)
         self.progress.append_log(f"Checking for movies and sounds: {info.description}")
 
-    def on_md5_progress(self, info: ProgressInfo) -> None:
-        self.progress.md5Progress.setMaximum(info.total)
-        self.progress.md5Progress.setValue(info.progress)
+    def on_hash_progress(self, info: ProgressInfo) -> None:
+        self.progress.hashProgress.setMaximum(info.total)
+        self.progress.hashProgress.setValue(info.progress)
         self.progress.append_log(f"Calculating md5: {info.description}")
 
     def on_game_progress(self, info: ProgressInfo) -> None:
         self.progress.gameProgress.setMaximum(info.total)
         self.progress.gameProgress.setValue(info.progress)
-        self.progress.append_log(f"Copying game files: {info.description}")
+        self.progress.append_log(f"Checking/copying game file: {info.description}")
 
-    def on_feat_mod_progress(self, info: ProgressInfo) -> None:
-        self.progress.modProgress.setMaximum(info.total)
-        self.progress.modProgress.setValue(info.progress)
-        self.progress.append_log(f"Processing something: {info.description}")
+    def on_mod_progress(self, info: ProgressInfo) -> None:
+        if info.total == 0:
+            self.progress.modProgress.setMaximum(1)
+            self.progress.modProgress.setValue(1)
+            self.progress.append_log("Everything is up to date.")
+        else:
+            self.progress.append_log(f"Updating file: {info.description}")
+            self.progress.modProgress.setMaximum(info.total)
+            self.progress.modProgress.setValue(info.progress)
 
     def on_download_progress(self, dler: FileDownload) -> None:
         if dler.bytes_total == 0:
