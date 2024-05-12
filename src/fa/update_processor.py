@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import stat
+from functools import wraps
 
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import pyqtSignal
@@ -60,6 +61,17 @@ class UpdaterWorker(QObject):
         in_session_cache = Settings.get("cache/in_session", type=bool, default=False)
         self.cache_enabled = keep_cache or in_session_cache
 
+        self.dler: FileDownload | None = None
+        self._interruption_requested = False
+
+    def _check_interruption(fn):
+        @wraps(fn)
+        def wrapper(self, *args, **kwargs):
+            if self._interruption_requested:
+                raise UpdaterCancellation("User aborted the update")
+            return fn(self, *args, **kwargs)
+        return wrapper
+
     def get_files_to_update(self, mod_id: str, version: str) -> list[dict]:
         return FeaturedModFilesApiConnector(mod_id, version).get_files()
 
@@ -77,13 +89,14 @@ class UpdaterWorker(QObject):
             if precalculated_md5s[file.md5] != file.md5 and file.name != exe_name
         ]
 
+    @_check_interruption
     def _calculate_md5s(self, files: list[FeaturedModFile]) -> dict[str, str]:
         total = len(files)
         result = {}
         for index, file in enumerate(files, start=1):
             filepath = os.path.join(util.APPDATA_DIR, file.group, file.name)
-            self.hash_progress.emit(ProgressInfo(index, total, file.name))
             result[file.md5] = util.md5(filepath)
+            self.hash_progress.emit(ProgressInfo(index, total, file.name))
         return result
 
     def fetch_file(self, file: FeaturedModFile) -> None:
@@ -91,19 +104,21 @@ class UpdaterWorker(QObject):
         url = file.cacheable_url
         logger.info(f"Updater: Downloading {url}")
 
-        dler = FileDownload(
+        self.dler = FileDownload(
             target_path=target_path,
             nam=self.nam,
             addr=url,
             request_params={file.hmac_parameter: file.hmac_token},
         )
-        dler.progress.connect(lambda: self.download_progress.emit(dler))
-        dler.start.connect(lambda: self.download_started.emit(dler))
-        dler.finished.connect(lambda: self.download_finished.emit(dler))
-        dler.run()
-        dler.waitForCompletion()
-        if dler.failed():
-            raise UpdaterFailure()
+        self.dler.progress.connect(lambda: self.download_progress.emit(self.dler))
+        self.dler.start.connect(lambda: self.download_started.emit(self.dler))
+        self.dler.finished.connect(lambda: self.download_finished.emit(self.dler))
+        self.dler.run()
+        self.dler.waitForCompletion()
+        if self.dler.canceled:
+            raise UpdaterCancellation(self.dler.error_string())
+        elif self.dler.failed():
+            raise UpdaterFailure(f"Update failed: {self.dler.error_sring()}")
 
     def move_from_cache(self, file: FeaturedModFile) -> None:
         src_dir = os.path.join(util.APPDATA_DIR, file.group)
@@ -140,6 +155,7 @@ class UpdaterWorker(QObject):
             target = os.path.join(util.GAME_CACHE_DIR, file.group)
             os.makedirs(target, exist_ok=True)
 
+    @_check_interruption
     def update_file(
             self,
             file: FeaturedModFile,
@@ -152,6 +168,7 @@ class UpdaterWorker(QObject):
         else:
             self.fetch_file(file)
 
+    @_check_interruption
     def update_files(self, files: list[FeaturedModFile]) -> None:
         """
         Updates the files in the destination
@@ -168,18 +185,19 @@ class UpdaterWorker(QObject):
             self.mod_progress.emit(ProgressInfo(0, 0, ""))
 
         for index, file in enumerate(to_update, start=1):
-            self.mod_progress.emit(ProgressInfo(index, total, file.name))
             self.update_file(file, md5s)
+            self.mod_progress.emit(ProgressInfo(index, total, file.name))
 
         self.unpack_movies_and_sounds(files)
 
+    @_check_interruption
     def unpack_movies_and_sounds(self, files: list[FeaturedModFile]) -> None:
         logger.info("Checking files for movies and sounds")
 
         total = len(files)
         for index, file in enumerate(files, start=1):
-            self.extras_progress.emit(ProgressInfo(index, total, file.name))
             unpack_movies_and_sounds(file)
+            self.extras_progress.emit(ProgressInfo(index, total, file.name))
 
     def prepare_bin_FAF(self) -> None:
         """
@@ -201,7 +219,6 @@ class UpdaterWorker(QObject):
             os.makedirs(dst_dir, exist_ok=True)
             total_files = len(files)
             for index, file in enumerate(files, start=1):
-                self.game_progress.emit(ProgressInfo(index, total_files, file))
                 src_file = os.path.join(src_dir, file)
                 dst_file = os.path.join(dst_dir, file)
                 if not os.path.exists(dst_file):
@@ -210,6 +227,7 @@ class UpdaterWorker(QObject):
                 # make all files we were considering writable, because we may
                 # need to patch them
                 os.chmod(dst_file, st.st_mode | stat.S_IWRITE)
+                self.game_progress.emit(ProgressInfo(index, total_files, file))
 
         self.download_fa_executable()
 
@@ -245,6 +263,7 @@ class UpdaterWorker(QObject):
                 self.patch_fa_executable(version)
                 return
 
+    @_check_interruption
     def update_featured_mod(self, modname: str, modversion: str) -> list[FeaturedModFile]:
         fmod = self.get_featured_mod_by_name(modname)
         files = self.get_files_to_update(fmod.uid, modversion)
@@ -280,12 +299,17 @@ class UpdaterWorker(QObject):
                 self.current_mod.emit(ProgressInfo(2, 2, self.featured_mod))
                 self.update_featured_mod(self.featured_mod, self._resolve_modversion())
         except UpdaterCancellation as e:
-            log("CANCELLED: {}".format(e), logger)
+            log(f"CANCELLED: {e}", logger)
             self.result = UpdaterResult.CANCEL
         except Exception as e:
-            log("EXCEPTION: {}".format(e), logger)
+            log(f"EXCEPTION: {e}", logger)
             logger.exception(f"EXCEPTION: {e}")
             self.result = UpdaterResult.FAILURE
         else:
             self.result = UpdaterResult.SUCCESS
         self.done.emit(self.result)
+
+    def abort(self) -> None:
+        if self.dler is not None:
+            self.dler.cancel()
+        self._interruption_requested = True

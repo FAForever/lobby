@@ -39,7 +39,7 @@ FormClass, BaseClass = util.THEME.loadUiType("fa/updater/updater.ui")
 class UpdaterProgressDialog(FormClass, BaseClass):
     aborted = pyqtSignal()
 
-    def __init__(self, parent, abortable: bool) -> None:
+    def __init__(self, parent: QObject, silent: bool) -> None:
         BaseClass.__init__(self, parent)
         self.setupUi(self)
         self.setModal(True)
@@ -48,7 +48,7 @@ class UpdaterProgressDialog(FormClass, BaseClass):
         self.adjustSize()
         self.watches = []
 
-        if not abortable:
+        if silent:
             self.abortButton.hide()
 
         self.rejected.connect(self.abort)
@@ -217,8 +217,7 @@ class Updater(QObject):
             failure_dialog()
 
     def abort(self) -> None:
-        self.result = UpdaterResult.CANCEL
-        self.stop_thread()
+        self.worker.abort()
 
     def stop_thread(self) -> None:
         self.worker_thread.quit()

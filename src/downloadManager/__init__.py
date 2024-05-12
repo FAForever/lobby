@@ -71,6 +71,8 @@ class BaseDownload(QObject):
 
     def cancel(self):
         self.canceled = True
+        if not self._dfile.isFinished():
+            self._dfile.abort()
         self._stop()
 
     def _handle_status(self) -> None:
@@ -144,6 +146,11 @@ class BaseDownload(QObject):
 
     def failed(self) -> bool:
         return not self.succeeded()
+
+    def error_string(self) -> str:
+        if self._dfile is not None:
+            return self._dfile.errorString()
+        return ""
 
     def waitForCompletion(self) -> None:
         if not self._running:
