@@ -622,9 +622,7 @@ class ClientWindow(FormClass, BaseClass):
     def resize_widget(self, mouse_position: QtCore.QRectF) -> None:
         mouse_point = mouse_position.toPoint()
         if mouse_point.y() == 0:
-            self.rubber_band.setGeometry(
-                QtWidgets.QDesktopWidget().availableGeometry(self),
-            )
+            self.rubber_band.setGeometry(self.screen().availableGeometry())
             self.rubber_band.show()
         else:
             self.rubber_band.hide()
@@ -1351,8 +1349,7 @@ class ClientWindow(FormClass, BaseClass):
     def saveWindow(self):
         util.settings.beginGroup("window")
         util.settings.setValue("geometry", self.saveGeometry())
-        if self.is_window_maximized:
-            util.settings.setValue("maximized", True)
+        util.settings.setValue("maximized", self.is_window_maximized)
         util.settings.endGroup()
 
     def show_autojoin_settings_dialog(self):
@@ -1455,7 +1452,7 @@ class ClientWindow(FormClass, BaseClass):
         geometry = util.settings.value("geometry", None)
         # FIXME: looks like bug in Qt: restoring from maximized geometry doesn't work
         # see https://bugreports.qt.io/browse/QTBUG-123335 (?)
-        maximized = util.settings.value("maximized", False)
+        maximized = util.settings.value("maximized", defaultValue=False, type=bool)
         util.settings.endGroup()
         if maximized:
             self.setGeometry(self.screen().availableGeometry())
