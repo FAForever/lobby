@@ -87,7 +87,7 @@ class UpdaterProgressDialog(FormClass, BaseClass):
     @pyqtSlot()
     def watch_finished(self) -> None:
         for watch in self.watches:
-            if not watch.is_finished():
+            if not watch.isFinished():
                 return
         # equivalent to self.accept(), but clearer
         self.done(QDialog.DialogCode.Accepted)
