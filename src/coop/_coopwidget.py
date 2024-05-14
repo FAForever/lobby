@@ -231,7 +231,7 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
                 ),
             )
 
-    def coopListDoubleClicked(self, item):
+    def coopListDoubleClicked(self, item: CoopMapItem) -> None:
         """
         Hosting a coop event
         """
@@ -243,9 +243,6 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
             return
 
         self.client.games.stopSearch()
-
-        if not fa.check.check("coop"):
-            return
 
         self._game_launcher.host_game(item.name, item.mod, mapname)
 
