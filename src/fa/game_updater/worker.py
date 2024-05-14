@@ -17,11 +17,11 @@ from api.models.FeaturedMod import FeaturedMod
 from api.models.FeaturedModFile import FeaturedModFile
 from config import Settings
 from downloadManager import FileDownload
-from fa.updater_misc import ProgressInfo
-from fa.updater_misc import UpdaterCancellation
-from fa.updater_misc import UpdaterFailure
-from fa.updater_misc import UpdaterResult
-from fa.updater_misc import log
+from fa.game_updater.misc import ProgressInfo
+from fa.game_updater.misc import UpdaterCancellation
+from fa.game_updater.misc import UpdaterFailure
+from fa.game_updater.misc import UpdaterResult
+from fa.game_updater.misc import log
 from fa.utils import unpack_movies_and_sounds
 from vaults.dialogs import download_file
 

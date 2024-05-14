@@ -8,6 +8,8 @@ from PyQt6 import QtWidgets
 import config
 import fa
 import util
+from fa.game_updater.misc import UpdaterResult
+from fa.game_updater.updater import Updater
 from fa.mods import checkMods
 from fa.path import validatePath
 from fa.path import writeFAPathLua
@@ -127,12 +129,10 @@ def check(
         return False
 
     # Spawn an update for the required mod
-    game_updater = fa.updater.Updater(
-        featured_mod, version, modVersions, silent=silent,
-    )
+    game_updater = Updater(featured_mod, version, modVersions, silent=silent)
     result = game_updater.run()
 
-    if result != fa.updater.UpdaterResult.SUCCESS:
+    if result != UpdaterResult.SUCCESS:
         return False
 
     # Now it's down to having the right map
