@@ -12,7 +12,9 @@
 *.vcproj
 .idea/
 lib/
+natives/
 build/
+build_setup/
 dist/
 Thumbs.db
 .DS_Store

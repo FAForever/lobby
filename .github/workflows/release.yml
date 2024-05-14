@@ -13,51 +13,33 @@ jobs:
     runs-on: windows-latest
     env:
       UID_VERSION: v4.0.4
-      ICE_ADAPTER_VERSION: v3.1.2
-      PYWHEEL_INFIX: "cp36"
+      ICE_ADAPTER_VERSION: v3.3.7
       BUILD_VERSION: ${{ github.event.inputs.version }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Set up Python 3.6.7
-        uses: actions/setup-python@v2
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.6.7
-          architecture: x86
+          python-version: 3.12
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install sip==4.19.8
-          pip install pyqt5==5.7.1
-          pip install https://github.com/FAForever/python-wheels/releases/download/2.0.0/pywin32-221-${{ env.PYWHEEL_INFIX }}-${{ env.PYWHEEL_INFIX }}m-win32.whl
-          pip install wheel
-          pip install pytest
-          pip install cx_Freeze==5.0.2
-          pip install -r requirements.txt
-
-      - name: Copy required files for packaging in setup.py
-        run: |
-          xcopy ${{ env.pythonLocation }}\\lib\\site-packages\\PyQt5\\Qt\\plugins\\imageformats .\\imageformats /I
-          xcopy ${{ env.pythonLocation }}\\lib\\site-packages\\PyQt5\\Qt\\plugins\\platforms .\\platforms /I
-          xcopy ${{ env.pythonLocation }}\\lib\\site-packages\\PyQt5\\Qt\\plugins\\audio .\\audio /I
-          xcopy ${{ env.pythonLocation }}\\lib\\site-packages\\PyQt5\\Qt\\bin .
-          xcopy ${{ env.pythonLocation }}\\lib\\site-packages\\pywin32_system32 .
-          xcopy ${{ env.pythonLocation }}\\lib\\site-packages\\PyQt5\\Qt\\resources . /I
+          python -m pip install -r requirements.txt
 
       - name: Download ICE adapter and UID calculator
         run: |
-          mkdir lib\ice-adapter
-          Invoke-WebRequest -Uri "https://github.com/FAForever/uid/releases/download/$($env:UID_VERSION)/faf-uid.exe" -OutFile ".\\lib\\faf-uid.exe"
+          mkdir build_setup\ice-adapter
+          Invoke-WebRequest -Uri "https://github.com/FAForever/uid/releases/download/$($env:UID_VERSION)/faf-uid.exe" -OutFile ".\\build_setup\\faf-uid.exe"
           Invoke-WebRequest -Uri "https://github.com/FAForever/java-ice-adapter/releases/download/v1.0.0/faf-ice-adapter-jre-base.7z" -OutFile ".\\faf-ice-adapter-jre-base.7z"
-          7z x faf-ice-adapter-jre-base.7z -olib
-          Remove-Item .\lib\ice-adapter\jre -Force -Recurse
-          Remove-Item .\lib\ice-adapter\LICENSE.txt -Force -Recurse
-          Invoke-WebRequest -Uri "https://content.faforever.com/jre/windows-amd64-15.0.1.tar.gz" -OutFile ".\\windows-amd64-15.0.1.tar.gz"
+          7z x faf-ice-adapter-jre-base.7z -obuild_setup
+          Remove-Item .\build_setup\ice-adapter\jre -Force -Recurse
+          Invoke-WebRequest -Uri "https://content.faforever.com/build/jre/windows-amd64-21.0.1.tar.gz" -OutFile ".\\windows-amd64-15.0.1.tar.gz"
           7z x windows-amd64-15.0.1.tar.gz
-          7z x windows-amd64-15.0.1.tar -olib/ice-adapter/jre
-          Invoke-WebRequest -Uri "https://github.com/FAForever/java-ice-adapter/releases/download/$($env:ICE_ADAPTER_VERSION)/faf-ice-adapter.jar" -OutFile ".\\lib\\ice-adapter\\faf-ice-adapter.jar"
+          7z x windows-amd64-15.0.1.tar -obuild_setup/ice-adapter/jre
+          Invoke-WebRequest -Uri "https://github.com/FAForever/java-ice-adapter/releases/download/$($env:ICE_ADAPTER_VERSION)/faf-ice-adapter.jar" -OutFile ".\\build_setup\\ice-adapter\\faf-ice-adapter.jar"
 
       - name: Test with pytest
         run: |
@@ -81,6 +63,13 @@ jobs:
           echo "::set-output name=WINDOWS_MSI::${WINDOWS_MSI}"
           echo "::set-output name=WINDOWS_MSI_NAME::${WINDOWS_MSI_NAME}"
 
+      - name: Calculate checksum
+        id: checksum
+        run: |
+          $MSI_SUM = $(CertUtil -hashfile ${{ steps.artifact_paths.outputs.WINDOWS_MSI }} SHA256)[1] -replace " ",""
+          Write-Host $MSI_SUM
+          echo "::set-output name=MSI_SUM::${MSI_SUM}"
+
       - name: Create draft release
         id: create_release
         uses: actions/create-release@v1
@@ -89,6 +78,7 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.version }}
           release_name: ${{ github.event.inputs.version }}
+          body: "SHA256: ${{ steps.checksum.outputs.MSI_SUM }}"
           draft: true
           prerelease: true
 

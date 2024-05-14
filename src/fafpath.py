@@ -50,13 +50,13 @@ def get_libdir():
     """
     if run_from_frozen():
         # lib dir should be where our executable lives
-        return os.path.join(os.path.dirname(sys.executable), "lib")
+        return os.path.join(os.path.dirname(sys.executable), "natives")
     elif run_from_unix_install():
         # Everything should be in PATH
         return None
     else:
         # We are most likely running from source
-        return os.path.join(get_srcdir(), "lib")
+        return os.path.join(get_srcdir(), "natives")
 
 
 def get_java_path():
