@@ -9,7 +9,9 @@ import subprocess
 import sys
 
 from PyQt6 import QtWidgets
+from PyQt6.QtCore import QDateTime
 from PyQt6.QtCore import QStandardPaths
+from PyQt6.QtCore import Qt
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QMessageBox
@@ -499,12 +501,16 @@ def uniqueID(session):
         return None
 
 
-def strtodate(s):
-    return datetime.datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+def strtodate(s: str) -> QDateTime:
+    return QDateTime.fromString(s, Qt.DateFormat.ISODate).toLocalTime()
 
 
-def datetostr(d):
-    return d.strftime("%Y-%m-%d %H:%M:%S")
+def datetostr(d: QDateTime) -> str:
+    return d.toString("yyyy-mm-dd HH:MM:ss")
+
+
+def utctolocal(s: str) -> str:
+    return datetostr(strtodate(s))
 
 
 def capitalize(string: str) -> str:

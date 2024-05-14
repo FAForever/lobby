@@ -73,7 +73,7 @@ class ModListItem(VaultListItem):
                 description=self.item_version.description,
                 rating=score,
                 reviews=reviews,
-                date=self.item_version.create_time,
+                date=util.utctolocal(self.item_version.create_time),
                 modtype=modtype,
                 author=self.item_info.author,
             ),

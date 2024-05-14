@@ -70,7 +70,7 @@ class MapListItem(VaultListItem):
                 description=self.item_version.description,
                 rating=score,
                 reviews=reviews,
-                date=self.item_version.create_time,
+                date=util.utctolocal(self.item_version.create_time),
                 modtype=maptype,
                 height=self.item_version.size.height_km,
                 width=self.item_version.size.width_km,
