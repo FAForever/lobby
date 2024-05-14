@@ -39,7 +39,7 @@ jobs:
           Invoke-WebRequest -Uri "https://content.faforever.com/build/jre/windows-amd64-21.0.1.tar.gz" -OutFile ".\\windows-amd64-15.0.1.tar.gz"
           7z x windows-amd64-15.0.1.tar.gz
           7z x windows-amd64-15.0.1.tar -obuild_setup/ice-adapter/jre
-          Invoke-WebRequest -Uri "https://github.com/FAForever/java-ice-adapter/releases/download/$($env:ICE_ADAPTER_VERSION)/faf-ice-adapter.jar" -OutFile ".\\build_setup\\ice-adapter\\faf-ice-adapter.jar"
+          Invoke-WebRequest -Uri "https://github.com/FAForever/java-ice-adapter/releases/download/$($env:ICE_ADAPTER_VERSION)/faf-ice-adapter-$($env:ICE_ADAPTER_VERSION)-nojfx.jar" -OutFile ".\\build_setup\\ice-adapter\\faf-ice-adapter.jar"
 
       - name: Test with pytest
         run: |
