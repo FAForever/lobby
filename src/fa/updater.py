@@ -54,6 +54,10 @@ class UpdaterProgressDialog(FormClass, BaseClass):
         self.rejected.connect(self.abort)
         self.abortButton.clicked.connect(self.reject)
         self.detailsButton.clicked.connect(self.change_details_visibility)
+        self.load_stylesheet()
+
+    def load_stylesheet(self):
+        self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
 
     def change_details_visibility(self) -> None:
         visible = self.logFrame.isVisible()
