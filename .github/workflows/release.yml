@@ -61,15 +61,15 @@ jobs:
           Write-Host $WINDOWS_MSI
           $WINDOWS_MSI_NAME = (Get-Item $WINDOWS_MSI).Name
           Write-Host $WINDOWS_MSI_NAME
-          echo "::set-output name=WINDOWS_MSI::${WINDOWS_MSI}"
-          echo "::set-output name=WINDOWS_MSI_NAME::${WINDOWS_MSI_NAME}"
+          echo "WINDOWS_MSI=$WINDOWS_MSI" >> "$GITHUB_ENV"
+          echo "WINDOWS_MSI_NAME=$WINDOWS_MSI_NAME" >> "$GITHUB_ENV"
 
       - name: Calculate checksum
         id: checksum
         run: |
-          $MSI_SUM = $(CertUtil -hashfile ${{ steps.artifact_paths.outputs.WINDOWS_MSI }} SHA256)[1] -replace " ",""
+          $MSI_SUM = $(CertUtil -hashfile "$WINDOWS_MSI" SHA256)[1] -replace " ",""
           Write-Host $MSI_SUM
-          echo "::set-output name=MSI_SUM::${MSI_SUM}"
+          echo "MSI_SUM=$MSI_SUM" >> "GITHUB_ENV"
 
       - name: Create draft release
         id: create_release
@@ -86,9 +86,9 @@ jobs:
       - name: Check release paths
         run: |
           echo "MSI path:"
-          Write-Host ${{ steps.artifact_paths.outputs.WINDOWS_MSI }}
+          Write-Host $WINDOWS_MSI
           echo "MSI filename:"
-          Write-Host ${{ steps.artifact_paths.outputs.WINDOWS_MSI_NAME }}
+          Write-Host $WINDOWS_MSI_NAME
 
       - name: Upload Windows msi
         id: upload-msi
@@ -97,6 +97,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.artifact_paths.outputs.WINDOWS_MSI }}
-          asset_name: ${{ steps.artifact_paths.outputs.WINDOWS_MSI_NAME }}
+          asset_path: $WINDOWS_MSI
+          asset_name: $WINDOWS_MSI_NAME
           asset_content_type: application/vnd.microsoft.portable-executable
