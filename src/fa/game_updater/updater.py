@@ -39,7 +39,7 @@ FormClass, BaseClass = util.THEME.loadUiType("fa/updater/updater.ui")
 class UpdaterProgressDialog(FormClass, BaseClass):
     aborted = pyqtSignal()
 
-    def __init__(self, parent: QObject, silent: bool) -> None:
+    def __init__(self, parent: QObject, silent: bool = False) -> None:
         BaseClass.__init__(self, parent)
         self.setupUi(self)
         self.setModal(True)
