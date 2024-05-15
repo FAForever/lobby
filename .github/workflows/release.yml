@@ -58,9 +58,9 @@ jobs:
             (Get-Item $files).FullName
           }
           $WINDOWS_MSI = getMsiPath
-          Write-Host $WINDOWS_MSI
+          Write-Host "MSI path: $WINDOWS_MSI"
           $WINDOWS_MSI_NAME = (Get-Item $WINDOWS_MSI).Name
-          Write-Host $WINDOWS_MSI_NAME
+          Write-Host "MSI name: $WINDOWS_MSI_NAME"
           echo "WINDOWS_MSI=$WINDOWS_MSI" >> "$env:GITHUB_ENV"
           echo "WINDOWS_MSI_NAME=$WINDOWS_MSI_NAME" >> "$env:GITHUB_ENV"
 
@@ -74,30 +74,11 @@ jobs:
 
       - name: Create draft release
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ github.event.inputs.version }}
-          release_name: ${{ github.event.inputs.version }}
-          body: "SHA256: $env:MSI_SUM"
+          commit: ${{ github.sha }}
+          tag: ${{ github.event.inputs.version }}
+          body: "SHA256: ${{ env.MSI_SUM }}"
           draft: true
           prerelease: true
-
-      - name: Check release paths
-        run: |
-          echo "MSI path:"
-          Write-Host $env:WINDOWS_MSI
-          echo "MSI filename:"
-          Write-Host $env:WINDOWS_MSI_NAME
-
-      - name: Upload Windows msi
-        id: upload-msi
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "$env:WINDOWS_MSI"
-          asset_name: "$env:WINDOWS_MSI_NAME"
-          asset_content_type: application/vnd.microsoft.portable-executable
+          artifacts: ${{ env.WINDOWS_MSI }}
