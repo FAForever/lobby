@@ -34,13 +34,10 @@ jobs:
         run: |
           mkdir build_setup\ice-adapter
           Invoke-WebRequest -Uri "https://github.com/FAForever/uid/releases/download/$($env:UID_VERSION)/faf-uid.exe" -OutFile ".\\build_setup\\faf-uid.exe"
-          Invoke-WebRequest -Uri "https://github.com/FAForever/java-ice-adapter/releases/download/v1.0.0/faf-ice-adapter-jre-base.7z" -OutFile ".\\faf-ice-adapter-jre-base.7z"
-          7z x faf-ice-adapter-jre-base.7z -obuild_setup
-          Remove-Item .\build_setup\ice-adapter\jre -Force -Recurse
           Invoke-WebRequest -Uri "https://content.faforever.com/build/jre/windows-amd64-21.0.1.tar.gz" -OutFile ".\\windows-amd64-15.0.1.tar.gz"
           7z x windows-amd64-15.0.1.tar.gz
           7z x windows-amd64-15.0.1.tar -obuild_setup/ice-adapter/jre
-          Invoke-WebRequest -Uri "https://github.com/FAForever/java-ice-adapter/releases/download/$($env:ICE_ADAPTER_VERSION)/faf-ice-adapter-$($env:ICE_ADAPTER_VERSION)-nojfx.jar" -OutFile ".\\build_setup\\ice-adapter\\faf-ice-adapter.jar"
+          Invoke-WebRequest -Uri "https://github.com/FAForever/java-ice-adapter/releases/download/$($env:ICE_ADAPTER_VERSION)/faf-ice-adapter-$($env:ICE_ADAPTER_VERSION)-win.jar" -OutFile ".\\build_setup\\ice-adapter\\faf-ice-adapter.jar"
 
       - name: Test with pytest
         run: |
