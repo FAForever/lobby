@@ -23,7 +23,6 @@ from fa.game_updater.misc import UpdaterFailure
 from fa.game_updater.misc import UpdaterResult
 from fa.game_updater.misc import log
 from fa.utils import unpack_movies_and_sounds
-from vaults.dialogs import download_file
 
 logger = logging.getLogger(__name__)
 
@@ -99,26 +98,10 @@ class UpdaterWorker(QObject):
             self.hash_progress.emit(ProgressInfo(index, total, file.name))
         return result
 
-    def fetch_file(self, file: FeaturedModFile) -> None:
+    def fetch_fmod_file(self, file: FeaturedModFile) -> None:
         target_path = os.path.join(util.APPDATA_DIR, file.group, file.name)
         url = file.cacheable_url
-        logger.info(f"Updater: Downloading {url}")
-
-        self.dler = FileDownload(
-            target_path=target_path,
-            nam=self.nam,
-            addr=url,
-            request_params={file.hmac_parameter: file.hmac_token},
-        )
-        self.dler.progress.connect(lambda: self.download_progress.emit(self.dler))
-        self.dler.start.connect(lambda: self.download_started.emit(self.dler))
-        self.dler.finished.connect(lambda: self.download_finished.emit(self.dler))
-        self.dler.run()
-        self.dler.waitForCompletion()
-        if self.dler.canceled:
-            raise UpdaterCancellation(self.dler.error_string())
-        elif self.dler.failed():
-            raise UpdaterFailure(f"Update failed: {self.dler.error_sring()}")
+        self._download(target_path, url, {file.hmac_parameter: file.hmac_token})
 
     def move_from_cache(self, file: FeaturedModFile) -> None:
         src_dir = os.path.join(util.APPDATA_DIR, file.group)
@@ -150,10 +133,11 @@ class UpdaterWorker(QObject):
         cached_file = os.path.join(util.GAME_CACHE_DIR, file.group, file.name)
         return os.path.isfile(cached_file)
 
-    def create_cache_subdirs(self, files: list[FeaturedModFile]) -> None:
+    def ensure_subdirs(self, files: list[FeaturedModFile]) -> None:
         for file in files:
-            target = os.path.join(util.GAME_CACHE_DIR, file.group)
-            os.makedirs(target, exist_ok=True)
+            cache = os.path.join(util.GAME_CACHE_DIR, file.group)
+            os.makedirs(cache, exist_ok=True)
+            os.makedirs(util.GAMEDATA_DIR, exist_ok=True)
 
     @_check_interruption
     def update_file(
@@ -166,7 +150,7 @@ class UpdaterWorker(QObject):
                 self.move_to_cache(file, precalculated_md5s)
             self.move_from_cache(file)
         else:
-            self.fetch_file(file)
+            self.fetch_fmod_file(file)
 
     @_check_interruption
     def update_files(self, files: list[FeaturedModFile]) -> None:
@@ -174,7 +158,7 @@ class UpdaterWorker(QObject):
         Updates the files in the destination
         subdirectory of the Forged Alliance path.
         """
-        self.create_cache_subdirs(files)
+        self.ensure_subdirs(files)
         self.patch_fa_exe_if_needed(files)
         md5s = self._calculate_md5s(files)
 
@@ -238,15 +222,22 @@ class UpdaterWorker(QObject):
         if os.path.isfile(fa_exe):
             return True
 
-        url = Settings.get("game/exe-url")
-        return download_file(
-            url=url,
-            target_dir=util.BIN_DIR,
-            name=fa_exe_name,
-            category="Update",
-            silent=False,
-            label=f"Downloading FA file : <a href='{url}'>{url}</a><p>",
-        )
+        self._download(fa_exe, Settings.get("game/exe-url"))
+        return True
+
+    def _download(self, target_path: str, url: str, params: dict) -> None:
+        logger.info(f"Updater: Downloading {url}")
+        self.dler = FileDownload(target_path, self.nam, url, params)
+        self.dler.progress.connect(lambda: self.download_progress.emit(self.dler))
+        self.dler.start.connect(lambda: self.download_started.emit(self.dler))
+        self.dler.finished.connect(lambda: self.download_finished.emit(self.dler))
+        self.dler.run()
+        self.dler.waitForCompletion()
+        if self.dler.canceled:
+            raise UpdaterCancellation(self.dler.error_string())
+        elif self.dler.failed():
+            raise UpdaterFailure(f"Update failed: {self.dler.error_sring()}")
+        self.dler.deleteLater()
 
     def patch_fa_executable(self, version: int) -> None:
         exe_path = os.path.join(util.BIN_DIR, Settings.get("game/exe-name"))
