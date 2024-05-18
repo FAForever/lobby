@@ -92,6 +92,64 @@ class UpdaterProgressDialog(FormClass, BaseClass):
         # equivalent to self.accept(), but clearer
         self.done(QDialog.DialogCode.Accepted)
 
+    def on_processed_mod_changed(self, info: ProgressInfo) -> None:
+        text = f"Updating {info.description.upper()}... ({info.progress}/{info.total})"
+        self.currentModLabel.setText(text)
+        self.hashProgress.setValue(0)
+        self.modProgress.setValue(0)
+        self.extrasProgress.setValue(0)
+
+    def on_movies_progress(self, info: ProgressInfo) -> None:
+        self.extrasProgress.setMaximum(info.total)
+        self.extrasProgress.setValue(info.progress)
+        self.append_log(f"Checking for movies and sounds: {info.description}")
+
+    def on_hash_progress(self, info: ProgressInfo) -> None:
+        self.hashProgress.setMaximum(info.total)
+        self.hashProgress.setValue(info.progress)
+        self.append_log(f"Calculating md5: {info.description}")
+
+    def on_game_progress(self, info: ProgressInfo) -> None:
+        self.gameProgress.setMaximum(info.total)
+        self.gameProgress.setValue(info.progress)
+        self.append_log(f"Checking/copying game file: {info.description}")
+
+    def on_mod_progress(self, info: ProgressInfo) -> None:
+        if info.total == 0:
+            self.modProgress.setMaximum(1)
+            self.modProgress.setValue(1)
+            self.append_log("Everything is up to date.")
+        else:
+            self.append_log(f"Updating file: {info.description}")
+            self.modProgress.setMaximum(info.total)
+            self.modProgress.setValue(info.progress)
+
+    def on_download_progress(self, dler: FileDownload) -> None:
+        if dler.bytes_total == 0:
+            return
+
+        total = dler.bytes_total
+        ready = dler.bytes_progress
+
+        total_mb = round(total / (1024 ** 2), 2)
+        ready_mb = round(ready / (1024 ** 2), 2)
+
+        def construct_bar(blockchar: str = "=", fillchar: str = " ") -> str:
+            num_blocks = round(20 * ready / total)
+            empty_blocks = 20 - num_blocks
+            return f"[{blockchar * num_blocks}{fillchar * empty_blocks}]"
+
+        bar = construct_bar()
+        percent_text = f"{100 * ready / total:.1f}%"
+        text = f"{bar} {percent_text} ({ready_mb} MB / {total_mb} MB)"
+        self.replace_last_log_line(text)
+
+    def on_download_finished(self, dler: FileDownload) -> None:
+        self.append_log("Finished downloading.")
+
+    def on_download_started(self, dler: FileDownload) -> None:
+        self.append_log(f"Downloading file from {dler.addr}\n")
+
 
 class Updater(QObject):
     """
@@ -114,83 +172,24 @@ class Updater(QObject):
         """
         super().__init__(*args, **kwargs)
 
+        self.progress = UpdaterProgressDialog(None, silent)
+        self.progress.aborted.connect(self.abort)
+
         self.worker_thread = QThread()
         self.worker = UpdaterWorker(featured_mod, version, modversions, silent)
         self.worker.moveToThread(self.worker_thread)
 
         self.worker.done.connect(self.on_update_done)
-        self.worker.current_mod.connect(self.on_processed_mod_changed)
-        self.worker.hash_progress.connect(self.on_hash_progress)
-        self.worker.extras_progress.connect(self.on_movies_progress)
-        self.worker.game_progress.connect(self.on_game_progress)
-        self.worker.mod_progress.connect(self.on_mod_progress)
-        self.worker.download_progress.connect(self.on_download_progress)
-        self.worker.download_finished.connect(self.on_download_finished)
-        self.worker.download_started.connect(self.on_download_started)
+        self.worker.current_mod.connect(self.progress.on_processed_mod_changed)
+        self.worker.hash_progress.connect(self.progress.on_hash_progress)
+        self.worker.extras_progress.connect(self.progress.on_movies_progress)
+        self.worker.game_progress.connect(self.progress.on_game_progress)
+        self.worker.mod_progress.connect(self.progress.on_mod_progress)
+        self.worker.download_progress.connect(self.progress.on_download_progress)
+        self.worker.download_finished.connect(self.progress.on_download_finished)
+        self.worker.download_started.connect(self.progress.on_download_started)
         self.worker_thread.started.connect(self.worker.do_update)
-
-        self.progress = UpdaterProgressDialog(None, silent)
-        self.progress.aborted.connect(self.abort)
-
         self.result = UpdaterResult.NONE
-
-    def on_processed_mod_changed(self, info: ProgressInfo) -> None:
-        text = f"Updating {info.description.upper()}... ({info.progress}/{info.total})"
-        self.progress.currentModLabel.setText(text)
-        self.progress.hashProgress.setValue(0)
-        self.progress.modProgress.setValue(0)
-        self.progress.extrasProgress.setValue(0)
-
-    def on_movies_progress(self, info: ProgressInfo) -> None:
-        self.progress.extrasProgress.setMaximum(info.total)
-        self.progress.extrasProgress.setValue(info.progress)
-        self.progress.append_log(f"Checking for movies and sounds: {info.description}")
-
-    def on_hash_progress(self, info: ProgressInfo) -> None:
-        self.progress.hashProgress.setMaximum(info.total)
-        self.progress.hashProgress.setValue(info.progress)
-        self.progress.append_log(f"Calculating md5: {info.description}")
-
-    def on_game_progress(self, info: ProgressInfo) -> None:
-        self.progress.gameProgress.setMaximum(info.total)
-        self.progress.gameProgress.setValue(info.progress)
-        self.progress.append_log(f"Checking/copying game file: {info.description}")
-
-    def on_mod_progress(self, info: ProgressInfo) -> None:
-        if info.total == 0:
-            self.progress.modProgress.setMaximum(1)
-            self.progress.modProgress.setValue(1)
-            self.progress.append_log("Everything is up to date.")
-        else:
-            self.progress.append_log(f"Updating file: {info.description}")
-            self.progress.modProgress.setMaximum(info.total)
-            self.progress.modProgress.setValue(info.progress)
-
-    def on_download_progress(self, dler: FileDownload) -> None:
-        if dler.bytes_total == 0:
-            return
-
-        total = dler.bytes_total
-        ready = dler.bytes_progress
-
-        total_mb = round(total / (1024 ** 2), 2)
-        ready_mb = round(ready / (1024 ** 2), 2)
-
-        def construct_bar(blockchar: str = "=", fillchar: str = " ") -> str:
-            num_blocks = round(20 * ready / total)
-            empty_blocks = 20 - num_blocks
-            return f"[{blockchar * num_blocks}{fillchar * empty_blocks}]"
-
-        bar = construct_bar()
-        percent_text = f"{100 * ready / total:.1f}%"
-        text = f"{bar} {percent_text} ({ready_mb} MB / {total_mb} MB)"
-        self.progress.replace_last_log_line(text)
-
-    def on_download_finished(self, dler: FileDownload) -> None:
-        self.progress.append_log("Finished downloading.")
-
-    def on_download_started(self, dler: FileDownload) -> None:
-        self.progress.append_log(f"Downloading file from {dler.addr}\n")
 
     def run(self) -> UpdaterResult:
         clear_log()
