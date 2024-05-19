@@ -228,6 +228,7 @@ class UpdaterWorker(QObject):
     def _download(self, target_path: str, url: str, params: dict) -> None:
         logger.info(f"Updater: Downloading {url}")
         self.dler = FileDownload(target_path, self.nam, url, params)
+        self.dler.blocksize = None
         self.dler.progress.connect(lambda: self.download_progress.emit(self.dler))
         self.dler.start.connect(lambda: self.download_started.emit(self.dler))
         self.dler.finished.connect(lambda: self.download_finished.emit(self.dler))
