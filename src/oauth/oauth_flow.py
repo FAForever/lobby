@@ -79,8 +79,7 @@ class OAuth2Flow(QOAuth2AuthorizationCodeFlow):
         """
         Set client's credentials, scopes and OAuth endpoints
         """
-        # client_id = Settings.get("oauth/client_id")
-        client_id = "faf-java-client"  # FIXME: ask to configure ports for python client
+        client_id = Settings.get("oauth/client_id")
         scopes = Settings.get("oauth/scope")
 
         oauth_host = QUrl(Settings.get("oauth/host"))
