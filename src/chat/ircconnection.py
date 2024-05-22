@@ -1,25 +1,28 @@
+from __future__ import annotations
+
 import logging
 import re
-import ssl
 import sys
 
-import irc
-import irc.client
+from irc.client import Event
+from irc.client import IRCError
+from irc.client import ServerConnection
+from irc.client import SimpleIRCClient
+from irc.client import is_channel
 from PyQt6.QtCore import QObject
-from PyQt6.QtCore import QSocketNotifier
-from PyQt6.QtCore import QTimer
 from PyQt6.QtCore import pyqtSignal
 
 import config
 import util
 from api.ApiAccessors import UserApiAccessor
+from chat.socketadapter import ConnectionFactory
+from chat.socketadapter import ReactorForSocketAdapter
 from model.chat.channel import ChannelID
 from model.chat.channel import ChannelType
 from model.chat.chatline import ChatLine
 from model.chat.chatline import ChatLineType
 
 logger = logging.getLogger(__name__)
-PONG_INTERVAL = 60000  # milliseconds between pongs
 IRC_ELEVATION = '%@~%+&'
 
 
@@ -81,59 +84,41 @@ class IrcSignals(QObject):
         QObject.__init__(self)
 
 
-class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
+class IrcConnection(IrcSignals, SimpleIRCClient):
+    reactor_class = ReactorForSocketAdapter
+
     token_received = pyqtSignal(str)
 
     def __init__(self, host: int, port: int) -> None:
         IrcSignals.__init__(self)
-        irc.client.SimpleIRCClient.__init__(self)
+        SimpleIRCClient.__init__(self)
 
         self.host = host
         self.port = port
         self.api_accessor = UserApiAccessor()
         self.token_received.connect(self.on_token_received)
-        self.factory = self.create_connection_factory(self.port_uses_ssl(port))
+        self.connect_factory = ConnectionFactory()
 
         self._password = None
         self._nick = None
-
-        self._notifier = None
-        self._timer = QTimer()
-        self._timer.timeout.connect(self.reactor.process_once)
 
         self._nickserv_registered = False
         self._connected = False
 
     @classmethod
-    def build(cls, settings, **kwargs):
-        port = settings.get('chat/port', 6697, int)
-        host = settings.get('chat/host', 'irc.' + config.defaults['host'], str)
+    def build(cls, settings: config.Settings, **kwargs) -> IrcConnection:
+        port = settings.get("chat/port", 443, int)
+        host = settings.get("chat/host", "chat." + config.defaults["host"], str)
         return cls(host, port)
 
-    @staticmethod
-    def port_uses_ssl(port: int) -> bool:
-        return port == 6697
-
-    @staticmethod
-    def create_connection_factory(use_ssl: bool) -> irc.connection.Factory:
-        if use_ssl:
-            # unverified because certificate is self-signed
-            context = ssl._create_unverified_context()
-            return irc.connection.Factory(wrapper=context.wrap_socket)
-        return irc.connection.Factory()
-
-    def setPortFromConfig(self):
-        self.port = config.Settings.get('chat/port', type=int)
-        self.factory = self.create_connection_factory(self.port_uses_ssl(self.port))
+    def setPortFromConfig(self) -> None:
+        self.port = config.Settings.get("chat/port", type=int)
 
     def setHostFromConfig(self):
         self.host = config.Settings.get('chat/host', type=str)
 
-    def disconnect_(self):
+    def disconnect_(self) -> None:
         self.connection.disconnect()
-        if self._notifier is not None:
-            self._notifier.activated.disconnect()
-            self._notifier = None
 
     def set_nick_and_username(self, nick: str, username: str) -> None:
         self._nick = nick
@@ -161,18 +146,14 @@ class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
                 self.host,
                 self.port,
                 nick,
-                connect_factory=self.factory,
+                connect_factory=self.connect_factory,
                 ircname=nick,
                 sasl_login=username,
                 password=password,
             )
-            self._notifier = QSocketNotifier(
-                self.connection.socket.fileno(), QSocketNotifier.Type.Read, self,
-            )
-            self._notifier.activated.connect(lambda: self.reactor.process_once())
-            self._timer.start(PONG_INTERVAL)
+            self.connection.socket.message_received.connect(self.reactor.process_once)
             return True
-        except irc.client.IRCError:
+        except IRCError:
             logger.debug("Unable to connect to IRC server.")
             logger.error("IRC Exception", exc_info=sys.exc_info())
             return False
@@ -285,11 +266,8 @@ class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
         chatters = [userdata(user) for user in listing]
         self.new_channel_chatters.emit(channel, chatters)
 
-    def on_whoisuser(self, c, e):
-        if e.arguments[-1] == self._nick:
-            if not self._connected:
-                self._connected = True
-                self.on_connected()
+    def on_whoisuser(self, c: ServerConnection, e: Event) -> None:
+        self._log_event(e)
 
     def _event_to_chatter(self, e):
         name, _id, elevation, hostname = parse_irc_source(e.source)
@@ -413,13 +391,13 @@ class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
     # abuse potential, we match the pattern used by bots as closely as
     # possible, and mark the line as notice so views can display them
     # differently.
-    def _parse_target_from_privnotice_message(self, text):
+    def _parse_target_from_privnotice_message(self, text: str) -> tuple[str, str]:
         if re.match(r'\[[^ ]+\] ', text) is None:
             return None, text
         prefix, rest = text.split(" ", 1)
         prefix = prefix[1:-1]
         target = prefix.strip("[]")
-        if not irc.client.is_channel(target):
+        if not is_channel(target):
             return None, text
         return target, rest
 
@@ -442,9 +420,8 @@ class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
         elif "hold on" in notice or "You have regained control" in notice:
             self.connection.nick(self._nick)
 
-    def on_disconnect(self, c, e):
+    def on_disconnect(self, c: ServerConnection, e: Event) -> None:
         self._connected = False
-        self._timer.stop()
         self.disconnected.emit()
 
     def on_privmsg(self, c, e):
@@ -452,11 +429,11 @@ class IrcConnection(IrcSignals, irc.client.SimpleIRCClient):
         text = "\n".join(e.arguments)
         self._emit_line(chatter, None, ChannelType.PRIVATE, text)
 
-    def on_action(self, c, e):
+    def on_action(self, c: ServerConnection, e: Event) -> None:
         chatter = self._event_to_chatter(e)
         target = e.target
         text = "\n".join(e.arguments)
-        if irc.client.is_channel(target):
+        if is_channel(target):
             chtype = ChannelType.PUBLIC
         else:
             chtype = ChannelType.PRIVATE
