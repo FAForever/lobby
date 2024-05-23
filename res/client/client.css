@@ -467,12 +467,19 @@ QListWidget::item:hover, QListView::item:hover
     border-radius: 3px;
 }
 
-QListWidget::item:selected, QListView::item:selected, QTreeWidget::item:previously-selected
+QListView::item:selected, QTreeWidget::item:previously-selected
 {
     border: none;
 }
 
-QListWidget#modList::item:selected, QListWidget#newsList::item:selected
+QListWidget::item:selected
+{
+    color: orange;
+    background-color: #505050;
+    border: none;
+}
+
+QListWidget#newsList::item:selected
 
 {
     background-color: #505050;
@@ -761,7 +768,13 @@ QToolButton::checked
     padding:5px;
     background-color:#C0C0C0;
     border-radius : 5px;
- }
+}
+
+QPushButton
+{
+    color: silver;
+    background: #453939;
+}
 
 QPushButton#refreshButton, #nextButton, #previousButton, #goToPageButton, #firstButton, #lastButton,
 #resetButton, #searchPlayerButton, #UIButton, #uploadButton, #kickButton, #leaveButton

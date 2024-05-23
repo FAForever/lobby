@@ -14,9 +14,11 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QDialog
 from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QStyleFactory
 
 import util
 import util.crash
+from config import Settings
 
 # Some linux distros (like Gentoo) make package scripts available
 # by copying and modifying them. This breaks path to our modules.
@@ -78,7 +80,6 @@ def excepthook(
 
 
 def admin_user_error_dialog() -> None:
-    from config import Settings
     ignore_admin = Settings.get("client/ignore_admin", False, bool)
     if not ignore_admin:
         box = QMessageBox()
@@ -110,6 +111,13 @@ def run_faf():
     QApplication.exec()
 
 
+def set_style(app: QApplication) -> None:
+    styles = QStyleFactory.keys()
+    preferred_style = Settings.get("theme/style", "windowsvista")
+    if preferred_style in styles:
+        app.setStyle(QStyleFactory.create(preferred_style))
+
+
 if __name__ == '__main__':
     import logging
 
@@ -117,6 +125,7 @@ if __name__ == '__main__':
 
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
     app = QApplication(["FAF Python Client"] + trailing_args)
+    set_style(app)
 
     if sys.platform == 'win32':
         import ctypes
