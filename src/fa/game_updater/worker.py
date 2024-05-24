@@ -60,7 +60,7 @@ class UpdaterWorker(QObject):
         in_session_cache = Settings.get("cache/in_session", type=bool, default=False)
         self.cache_enabled = keep_cache or in_session_cache
 
-        self.dler: FileDownload | None = None
+        self.dlers: list[FileDownload] = []
         self._interruption_requested = False
 
     def _check_interruption(fn):
@@ -227,18 +227,18 @@ class UpdaterWorker(QObject):
 
     def _download(self, target_path: str, url: str, params: dict) -> None:
         logger.info(f"Updater: Downloading {url}")
-        self.dler = FileDownload(target_path, self.nam, url, params)
-        self.dler.blocksize = None
-        self.dler.progress.connect(lambda: self.download_progress.emit(self.dler))
-        self.dler.start.connect(lambda: self.download_started.emit(self.dler))
-        self.dler.finished.connect(lambda: self.download_finished.emit(self.dler))
-        self.dler.run()
-        self.dler.waitForCompletion()
-        if self.dler.canceled:
-            raise UpdaterCancellation(self.dler.error_string())
-        elif self.dler.failed():
-            raise UpdaterFailure(f"Update failed: {self.dler.error_sring()}")
-        self.dler.deleteLater()
+        dler = FileDownload(target_path, self.nam, url, params)
+        dler.blocksize = None
+        dler.progress.connect(self.download_progress.emit)
+        dler.start.connect(self.download_started.emit)
+        dler.finished.connect(self.download_finished.emit)
+        self.dlers.append(dler)
+        dler.run()
+        dler.waitForCompletion()
+        if dler.canceled:
+            raise UpdaterCancellation(dler.error_string())
+        elif dler.failed():
+            raise UpdaterFailure(f"Update failed: {dler.error_sring()}")
 
     def patch_fa_executable(self, version: int) -> None:
         exe_path = os.path.join(util.BIN_DIR, Settings.get("game/exe-name"))
@@ -302,6 +302,6 @@ class UpdaterWorker(QObject):
         self.done.emit(self.result)
 
     def abort(self) -> None:
-        if self.dler is not None:
-            self.dler.cancel()
+        for dler in self.dlers:
+            dler.cancel()
         self._interruption_requested = True
