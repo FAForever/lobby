@@ -73,6 +73,7 @@ class WebSocketToSocket(QObject):
         # FIXME: maybe there are too many usages of this loop trick
         loop = QEventLoop()
         self.socket.connected.connect(loop.exit)
+        self.socket.errorOccurred.connect(loop.exit)
         loop.exec()
 
     def close(self) -> None:
