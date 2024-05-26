@@ -1549,7 +1549,6 @@ class ClientWindow(FormClass, BaseClass):
         self._chatMVC.connection.setPortFromConfig()
         if api_changed:
             self.ladder.refreshLeaderboards()
-            self.news.updateNews()
             self.games.refreshMods()
 
         self.oauth_flow.setup_credentials()

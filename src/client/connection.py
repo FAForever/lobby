@@ -242,7 +242,7 @@ class ServerConnection(QtCore.QObject):
     def extract_url_from_api_response(self, data: dict) -> None:
         # FIXME: remove this workaround when bug is resolved
         # see https://bugreports.qt.io/browse/QTBUG-120492
-        url = data["accessUrl"].replace("com?", "com/?")
+        url = data["accessUrl"].replace("?verify", "/?verify")
         return QUrl(url)
 
     def handle_lobby_access_api_response(self, data: dict) -> None:

@@ -60,12 +60,6 @@ class NewsWidget(FormClass, BaseClass):
         newsItem = NewsItem(newsPost, self.newsList)
         self.newsItems.append(newsItem)
 
-    def updateNews(self) -> None:
-        self.hider.hide(self.newsTextBrowser)
-        self.newsItems = []
-        self.newsList.clear()
-        self.newsManager.WpApi.download()
-
     def download_image(self, img_url: str) -> None:
         name = os.path.basename(img_url)
         self._downloader.download(name, self._images_dl_request, img_url)
