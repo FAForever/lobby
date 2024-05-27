@@ -1,6 +1,10 @@
 cx_Freeze
+idna
 ipaddress
+irc
+jinja2
 pathlib
+pydantic
 pyqt6
 pyqt6-networkauth
 pytest
@@ -9,8 +13,4 @@ pytest-mock
 pytest-qt
 pywin32
 semantic_version
-idna
-jsonschema
-jinja2
 zstandard
-irc

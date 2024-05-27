@@ -3,7 +3,7 @@ import logging
 import os
 import time
 
-import jsonschema
+from pydantic import ValidationError
 from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
@@ -19,6 +19,7 @@ from config import Settings
 from downloadManager import DownloadRequest
 from fa.replay import replay
 from model.game import GameState
+from replays.models import MetadataModel
 from replays.replayitem import ReplayItem
 from replays.replayitem import ReplayItemDelegate
 from replays.replayToolbox import ReplayToolboxHandler
@@ -289,67 +290,30 @@ class LiveReplaysWidgetHandler(object):
 class ReplayMetadata:
     def __init__(self, data):
         self.raw_data = data
-        self.data = None
         self.is_broken = False
-        self.is_incomplete = False
+        self.model: MetadataModel | None = None
 
         try:
-            self.data = json.loads(data)
+            json_data = json.loads(data)
         except json.decoder.JSONDecodeError:
             self.is_broken = True
             return
 
-        self._validate_data()
-
-    # FIXME - this is what the widget uses so far, we should define this
-    # schema precisely in the future
-    def _validate_data(self):
-        if not isinstance(self.data, dict):
-            self.is_broken = True
-            return
-        if not self.data.get('complete', False):
-            self.is_incomplete = True
-            return
-
-        replay_schema = {
-            "type": "object",
-            "properties": {
-                "num_players": {"type": "number"},
-                "launched_at": {"type": "number"},
-                "game_time": {
-                    "type": "number",
-                    "minimum": 0,
-                },
-                "mapname": {"type": "string"},
-                "title": {"type": "string"},
-                "teams": {
-                    "type": "object",
-                    "patternProperties": {
-                        ".*": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                        },
-                    },
-                },
-                "featured_mod": {"type": "string"},
-            },
-            "required": [
-                "num_players", "mapname", "title", "teams",
-                "featured_mod",
-            ],
-        }
         try:
-            jsonschema.validate(self.data, replay_schema)
-        except jsonschema.ValidationError:
+            self.model = MetadataModel(**json_data)
+        except ValidationError:
             self.is_broken = True
+
+    @property
+    def is_incomplete(self) -> bool:
+        if self.model is None:
+            return True
+        return not self.model.complete
 
     def launch_time(self):
-        if 'launched_at' in self.data:
-            return self.data['launched_at']
-        elif 'game_time' in self.data:
-            return self.data['game_time']
-        else:
-            return time.time()  # FIXME
+        if self.model.launched_at > 0:
+            return self.model.launched_at
+        return self.model.game_time
 
 
 class LocalReplayItem(QtWidgets.QTreeWidgetItem):
@@ -396,38 +360,38 @@ class LocalReplayItem(QtWidgets.QTreeWidgetItem):
         # FIXME: Needs to come from theme
         self.setForeground(1, QtGui.QColor("yellow"))
 
-    def _setup_complete_appearance(self):
-        data = self._metadata.data
+    def _setup_complete_appearance(self) -> None:
+        data = self._metadata.model
         launch_time = time.localtime(self._metadata.launch_time())
         try:
             game_time = time.strftime("%H:%M", launch_time)
         except ValueError:
             game_time = "Unknown"
 
-        icon = fa.maps.preview(data['mapname'])
+        icon = fa.maps.preview(data.mapname)
         if icon:
             self.setIcon(0, icon)
         else:
             dler = client.instance.map_preview_downloader
-            dler.download_preview(data['mapname'], self._map_dl_request)
+            dler.download_preview(data.mapname, self._map_dl_request)
             self.setIcon(0, util.THEME.icon("games/unknown_map.png"))
 
-        self.setToolTip(0, fa.maps.getDisplayName(data['mapname']))
+        self.setToolTip(0, fa.maps.getDisplayName(data.mapname))
         self.setText(0, game_time)
         self.setForeground(
             0,
             QtGui.QColor(client.instance.player_colors.get_color("default")),
         )
-        self.setText(1, data['title'])
+        self.setText(1, data.title)
         self.setToolTip(1, self._replay_file)
 
         playerlist = []
-        for players in list(data['teams'].values()):
+        for players in data.teams.values():
             playerlist.extend(players)
         self.setText(2, ", ".join(playerlist))
         self.setToolTip(2, ", ".join(playerlist))
 
-        self.setText(3, data['featured_mod'])
+        self.setText(3, data.featured_mod)
         self.setTextAlignment(3, QtCore.Qt.AlignmentFlag.AlignCenter)
 
     def replay_bucket(self):

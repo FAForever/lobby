@@ -77,7 +77,7 @@ if sys.platform == "win32":
         "excludes": ["tkinter", "unittest", "pydoc", "tcl"],
 
         "zip_include_packages": ["*"],
-        "zip_exclude_packages": ["jsonchema", "jsonschema_specifications"],
+        "zip_exclude_packages": [],
     }
 
     platform_options = {
