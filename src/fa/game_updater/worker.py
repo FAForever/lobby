@@ -22,6 +22,7 @@ from fa.game_updater.misc import UpdaterCancellation
 from fa.game_updater.misc import UpdaterFailure
 from fa.game_updater.misc import UpdaterResult
 from fa.game_updater.misc import log
+from fa.game_updater.patcher import FAPatcher
 from fa.utils import unpack_movies_and_sounds
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,7 @@ class UpdaterWorker(QObject):
 
         self.dlers: list[FileDownload] = []
         self._interruption_requested = False
+        self.fa_patcher = FAPatcher()
 
     def _check_interruption(fn):
         @wraps(fn)
@@ -82,11 +84,7 @@ class UpdaterWorker(QObject):
         files: list[FeaturedModFile],
         precalculated_md5s: dict[str, str],
     ) -> list[FeaturedModFile]:
-        exe_name = Settings.get("game/exe-name")
-        return [
-            file for file in files
-            if precalculated_md5s[file.md5] != file.md5 and file.name != exe_name
-        ]
+        return [file for file in files if precalculated_md5s[file.md5] != file.md5]
 
     @_check_interruption
     def _calculate_md5s(self, files: list[FeaturedModFile]) -> dict[str, str]:
@@ -130,7 +128,7 @@ class UpdaterWorker(QObject):
 
     @staticmethod
     def _is_cached(file: FeaturedModFile) -> bool:
-        cached_file = os.path.join(util.GAME_CACHE_DIR, file.group, file.name)
+        cached_file = os.path.join(util.GAME_CACHE_DIR, file.group, file.md5)
         return os.path.isfile(cached_file)
 
     def ensure_subdirs(self, files: list[FeaturedModFile]) -> None:
@@ -145,9 +143,8 @@ class UpdaterWorker(QObject):
             file: FeaturedModFile,
             precalculated_md5s: dict[str, str] | None = None,
     ) -> None:
+        self.move_to_cache(file, precalculated_md5s)
         if self._is_cached(file):
-            if self.cache_enabled:
-                self.move_to_cache(file, precalculated_md5s)
             self.move_from_cache(file)
         else:
             self.fetch_fmod_file(file)
@@ -159,7 +156,6 @@ class UpdaterWorker(QObject):
         subdirectory of the Forged Alliance path.
         """
         self.ensure_subdirs(files)
-        self.patch_fa_exe_if_needed(files)
         md5s = self._calculate_md5s(files)
 
         to_update = self._filter_files_to_update(files, md5s)
@@ -173,6 +169,7 @@ class UpdaterWorker(QObject):
             self.mod_progress.emit(ProgressInfo(index, total, file.name))
 
         self.unpack_movies_and_sounds(files)
+        self.patch_fa_exe_if_needed(files)
 
     @_check_interruption
     def unpack_movies_and_sounds(self, files: list[FeaturedModFile]) -> None:
@@ -213,18 +210,6 @@ class UpdaterWorker(QObject):
                 os.chmod(dst_file, st.st_mode | stat.S_IWRITE)
                 self.game_progress.emit(ProgressInfo(index, total_files, file))
 
-        self.download_fa_executable()
-
-    def download_fa_executable(self) -> bool:
-        fa_exe_name = Settings.get("game/exe-name")
-        fa_exe = os.path.join(util.BIN_DIR, fa_exe_name)
-
-        if os.path.isfile(fa_exe):
-            return True
-
-        self._download(fa_exe, Settings.get("game/exe-url"))
-        return True
-
     def _download(self, target_path: str, url: str, params: dict) -> None:
         logger.info(f"Updater: Downloading {url}")
         dler = FileDownload(target_path, self.nam, url, params)
@@ -240,19 +225,25 @@ class UpdaterWorker(QObject):
         elif dler.failed():
             raise UpdaterFailure(f"Update failed: {dler.error_sring()}")
 
-    def patch_fa_executable(self, version: int) -> None:
-        exe_path = os.path.join(util.BIN_DIR, Settings.get("game/exe-name"))
-        version_addresses = (0xd3d40, 0x47612d, 0x476666)
-        with open(exe_path, "rb+") as file:
-            for address in version_addresses:
-                file.seek(address)
-                file.write(version.to_bytes(4, "little"))
+    def patch_fa_executable(self, exe_info: FeaturedModFile) -> None:
+        exe_path = os.path.join(util.BIN_DIR, exe_info.name)
+        version = int(self._resolve_base_version(exe_info))
+
+        if version == self.fa_patcher.read_version(exe_path):
+            return
+
+        for attempt in range(10):  # after download antimalware can interfere in our update process
+            if self.fa_patcher.patch(exe_path, version):
+                return
+            logger.warning(f"Could not open fa exe for patching. Attempt #{attempt + 1}")
+            self.thread().msleep(500)
+        else:
+            raise UpdaterFailure("Could not update FA exe to the correct version")
 
     def patch_fa_exe_if_needed(self, files: list[FeaturedModFile]) -> None:
         for file in files:
             if file.name == Settings.get("game/exe-name"):
-                version = int(self._resolve_base_version(file))
-                self.patch_fa_executable(version)
+                self.patch_fa_executable(file)
                 return
 
     @_check_interruption
