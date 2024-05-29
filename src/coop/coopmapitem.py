@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
 import util
+from api.models.CoopMission import CoopMission
 
 
 class CoopMapItemDelegate(QtWidgets.QStyledItemDelegate):
@@ -61,28 +64,28 @@ class CoopMapItem(QtWidgets.QTreeWidgetItem):
 
     FORMATTER_COOP = str(util.THEME.readfile("coop/formatters/coop.qthtml"))
 
-    def __init__(self, uid, parent, *args, **kwargs):
+    def __init__(self, order: int, parent: QtWidgets.QWidget, *args, **kwargs) -> None:
         QtWidgets.QTreeWidgetItem.__init__(self, *args, **kwargs)
 
-        self.uid = uid
+        self.order = order
         self.parent = parent
 
         self.name = None
         self.description = None
-        self.mapUrl = None
+        self.mapname = None
         self.options = []
 
         self.setHidden(True)
 
-    def update(self, message):
+    def update(self, mission: CoopMission) -> None:
         """
         Updates this item from the message dictionary supplied
         """
 
-        self.name = message["name"]
-        self.mapUrl = message["filename"]
-        self.description = message["description"]
-        self.mod = message["featured_mod"]
+        self.name = mission.name
+        self.mapname = mission.folder_name
+        self.description = mission.description
+        self.mission = mission
 
         self.viewtext = self.FORMATTER_COOP.format(
             name=self.name,
@@ -106,7 +109,7 @@ class CoopMapItem(QtWidgets.QTreeWidgetItem):
         """ Comparison operator used for item list sorting """
         return not self.__lt__(other)
 
-    def __lt__(self, other):
+    def __lt__(self, other: CoopMapItem) -> bool:
         """ Comparison operator used for item list sorting """
-        # Default: uid
-        return self.uid > other.uid
+        # Default: order
+        return self.order > other.order

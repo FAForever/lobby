@@ -9,6 +9,8 @@ from PyQt6.QtNetwork import QNetworkRequest
 
 import fa
 import util
+from api.coop_api import CoopApiAccessor
+from api.models.CoopScenario import CoopScenario
 from coop.coopmapitem import CoopMapItem
 from coop.coopmapitem import CoopMapItemDelegate
 from coop.coopmodel import CoopGameFilterModel
@@ -45,7 +47,8 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
 
         self.options = []
 
-        self.client.lobby_info.coopInfo.connect(self.processCoopInfo)
+        self.coop_api = CoopApiAccessor()
+        self.coop_api.data_ready.connect(self.process_coop_info)
 
         self.coopList.header().setSectionResizeMode(
             0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents,
@@ -55,7 +58,7 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
         self.gameview = self._gameview_builder(self._game_model, self.gameList)
         self.gameview.game_double_clicked.connect(self.game_double_clicked)
 
-        self.coopList.itemDoubleClicked.connect(self.coopListDoubleClicked)
+        self.coopList.itemDoubleClicked.connect(self.coop_list_double_clicked)
         self.coopList.itemClicked.connect(self.coopListClicked)
 
         self.client.lobby_info.coopLeaderBoard.connect(
@@ -194,7 +197,7 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
 
     def busy_entered(self):
         if not self.loaded:
-            self.client.lobby_connection.send(dict(command="coop_list"))
+            self.coop_api.request_coop_scenarios()
             self.loaded = True
 
     def askLeaderBoard(self):
@@ -231,50 +234,43 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
                 ),
             )
 
-    def coopListDoubleClicked(self, item: CoopMapItem) -> None:
+    def coop_list_double_clicked(self, item: CoopMapItem) -> None:
         """
         Hosting a coop event
         """
-        if not hasattr(item, "mapUrl"):
+        if not hasattr(item, "mapname"):
             return
-        mapname = fa.maps.link2name(item.mapUrl)
 
         if not fa.instance.available():
             return
 
         self.client.games.stopSearch()
 
-        self._game_launcher.host_game(item.name, item.mod, mapname)
+        self._game_launcher.host_game(item.name, "coop", item.mapname)
 
     @QtCore.pyqtSlot(dict)
-    def processCoopInfo(self, message):
+    def process_coop_info(self, message: dict[str, list[CoopScenario]]) -> None:
         """
-        Slot that interprets and propagates coop_info messages into the
-        coop list
+        Slot that interprets coop data from API into the coop list
         """
-        uid = message["uid"]
+        for campaign in message["values"]:
+            type_coop = campaign.name
 
-        if uid not in self.coop:
-            typeCoop = message["type"]
-
-            if typeCoop not in self.cooptypes:
+            if type_coop not in self.cooptypes:
                 root_item = QtWidgets.QTreeWidgetItem()
                 self.coopList.addTopLevelItem(root_item)
-                root_item.setText(
-                    0,
-                    "<font color='white' size=+3>{}</font>".format(typeCoop),
-                )
-                self.cooptypes[typeCoop] = root_item
+                root_item.setText(0, f"<font color='white' size=+3>{type_coop}</font>")
+                self.cooptypes[type_coop] = root_item
                 root_item.setExpanded(False)
             else:
-                root_item = self.cooptypes[typeCoop]
+                root_item = self.cooptypes[type_coop]
 
-            itemCoop = CoopMapItem(uid, self)
-            itemCoop.update(message)
+            for mission in campaign.maps:
+                item_coop = CoopMapItem(mission.order, self)
+                item_coop.update(mission)
+                root_item.addChild(item_coop)
 
-            root_item.addChild(itemCoop)
-
-            self.coop[uid] = itemCoop
+            self.coop[mission.uid] = item_coop
 
     def game_double_clicked(self, game: Game) -> None:
         """
