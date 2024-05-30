@@ -75,8 +75,6 @@ class ModVault(Vault):
         self.apiConnector = ModApiConnector()
         self.apiConnector.data_ready.connect(self.modInfo)
 
-        self.items_uid = "uid"
-
         self.uploadButton.hide()
 
     def create_item(self, item_key: str) -> ModListItem:

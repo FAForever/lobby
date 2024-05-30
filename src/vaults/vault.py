@@ -61,7 +61,6 @@ class Vault(FormClass, BaseClass, BusyWidget):
         self.lastButton.clicked.connect(lambda: self.goToPage(self.totalPages))
         self.resetButton.clicked.connect(self.resetSearch)
 
-        self.items_uid = ""
         self._items = {}
         self._installed_items = {}
 

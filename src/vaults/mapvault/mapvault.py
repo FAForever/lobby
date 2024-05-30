@@ -53,8 +53,6 @@ class MapVault(Vault):
 
         self.apiConnector = self.mapApiConnector
 
-        self.items_uid = "folderName"
-
         self.busy_entered()
         self.UIButton.hide()
         self.uploadButton.hide()
