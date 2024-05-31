@@ -12,11 +12,11 @@ class MapSize:
 
     @property
     def width_km(self) -> int:
-        return self.width_px // 51.2
+        return self.width_px / 51.2
 
     @property
     def height_km(self) -> int:
-        return self.height_px // 51.2
+        return self.height_px / 51.2
 
     def __lt__(self, other: MapSize) -> bool:
         return self.height_px * self.width_px < other.height_px * other.width_px
