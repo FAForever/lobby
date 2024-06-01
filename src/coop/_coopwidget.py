@@ -260,6 +260,7 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
                 root_item = QtWidgets.QTreeWidgetItem()
                 self.coopList.addTopLevelItem(root_item)
                 root_item.setText(0, f"<font color='white' size=+3>{type_coop}</font>")
+                root_item.setToolTip(0, campaign.description)
                 self.cooptypes[type_coop] = root_item
                 root_item.setExpanded(False)
             else:

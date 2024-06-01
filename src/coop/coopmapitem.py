@@ -92,6 +92,10 @@ class CoopMapItem(QtWidgets.QTreeWidgetItem):
             description=self.description,
         )
 
+        # adding tag is just a silly trick to make text rich and force
+        # QToolTip to enable word wrap
+        self.setToolTip(0, f"<qt>{self.description}</qt>")
+
     def display(self, column):
         if column == 0:
             return self.viewtext
