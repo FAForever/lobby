@@ -100,7 +100,7 @@ class Vault(FormClass, BaseClass, BusyWidget):
     @QtCore.pyqtSlot(dict)
     def items_info(self, message: dict) -> None:
         for value in message["values"]:
-            item_key = value.uid
+            item_key = value.xd
             if item_key in self._items:
                 item = self._items[item_key]
             else:

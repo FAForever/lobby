@@ -1,11 +1,17 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
+from pydantic import Field
+from pydantic import field_validator
 
 
-@dataclass
-class ReviewsSummary:
-    positive: float
-    negative: float
-    score: float
-    average_score: float
-    num_reviews: int
-    lower_bound: float
+class ReviewsSummary(BaseModel):
+    positive:      float
+    negative:      float
+    score:         float
+    average_score: float = Field(alias="averageScore")
+    num_reviews:   int   = Field(alias="reviews")
+    lower_bound:   float = Field(alias="lowerBound")
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def avoid_none(cls, value: float | int) -> float | int:
+        return value or 0

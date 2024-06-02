@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from pydantic import Field
+
 from api.models.AbstractEntity import AbstractEntity
 
 
@@ -28,16 +30,20 @@ class MapSize:
         return f"{self.width_km} x {self.height_km} km"
 
 
-@dataclass
 class MapVersion(AbstractEntity):
-    folder_name: str
-    games_played: int
-    description: str
-    max_players: int
-    size: MapSize
-    version: int
-    hidden: bool
-    ranked: bool
-    download_url: str
-    thumbnail_url_small: str
-    thumbnail_url_large: str
+    folder_name:         str       = Field(alias="folderName")
+    games_played:        int       = Field(alias="gamesPlayed")
+    description:         str
+    max_players:         int       = Field(alias="maxPlayers")
+    height:              int
+    width:               int
+    version:             int | str
+    hidden:              bool
+    ranked:              bool
+    download_url:        str       = Field(alias="downloadUrl")
+    thumbnail_url_small: str       = Field(alias="thumbnailUrlSmall")
+    thumbnail_url_large: str       = Field(alias="thumbnailUrlLarge")
+
+    @property
+    def size(self) -> MapSize:
+        return MapSize(self.height, self.width)

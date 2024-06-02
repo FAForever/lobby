@@ -1,8 +1,11 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 
-@dataclass
-class AbstractEntity:
-    uid: str
-    create_time: str
-    update_time: str
+class AbstractEntity(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    xd: str = Field(alias="id")
+    create_time: str = Field(alias="createTime")
+    update_time: str = Field(alias="updateTime")

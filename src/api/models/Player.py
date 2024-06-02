@@ -1,9 +1,10 @@
-from dataclasses import dataclass
+from __future__ import annotations
+
+from pydantic import Field
 
 from api.models.AbstractEntity import AbstractEntity
 
 
-@dataclass
 class Player(AbstractEntity):
-    login: str
-    user_agent: str
+    login:      str
+    user_agent: str | None = Field(alias="userAgent")

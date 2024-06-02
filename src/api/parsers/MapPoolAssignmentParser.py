@@ -1,29 +1,13 @@
 from api.models.Map import Map
 from api.models.MapPoolAssignment import MapPoolAssignment
-from api.parsers.GeneratedMapParamsParser import GeneratedMapParamsParser
 from api.parsers.MapParser import MapParser
-from api.parsers.MapVersionParser import MapVersionParser
 
 
 class MapPoolAssignmentParser:
 
     @staticmethod
     def parse(assignment_info: dict) -> MapPoolAssignment:
-        if assignment_info["mapVersion"]:
-            map_version = MapVersionParser.parse(assignment_info["mapVersion"])
-            map_params = None
-        elif assignment_info["mapParams"]:
-            map_version = None
-            map_params = GeneratedMapParamsParser.parse(assignment_info["mapParams"])
-
-        return MapPoolAssignment(
-            uid=assignment_info["id"],
-            create_time=assignment_info["createTime"],
-            update_time=assignment_info["updateTime"],
-            map_version=map_version,
-            map_params=map_params,
-            weight=assignment_info["weight"],
-        )
+        return MapPoolAssignment(**assignment_info)
 
     @staticmethod
     def parse_many(assignment_info: list[dict]) -> list[MapPoolAssignment]:

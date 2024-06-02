@@ -64,10 +64,10 @@ class CoopMapItem(QtWidgets.QTreeWidgetItem):
 
     FORMATTER_COOP = str(util.THEME.readfile("coop/formatters/coop.qthtml"))
 
-    def __init__(self, order: int, parent: QtWidgets.QWidget, *args, **kwargs) -> None:
+    def __init__(self, uid: int, parent: QtWidgets.QWidget, *args, **kwargs) -> None:
         QtWidgets.QTreeWidgetItem.__init__(self, *args, **kwargs)
 
-        self.order = order
+        self.uid = uid
         self.parent = parent
 
         self.name = None
@@ -115,5 +115,5 @@ class CoopMapItem(QtWidgets.QTreeWidgetItem):
 
     def __lt__(self, other: CoopMapItem) -> bool:
         """ Comparison operator used for item list sorting """
-        # Default: order
-        return self.order > other.order
+        # Default: uid
+        return self.uid > other.uid
