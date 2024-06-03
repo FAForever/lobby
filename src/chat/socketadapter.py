@@ -23,8 +23,7 @@ class WebSocketToSocket(QObject):
     def __init__(self) -> None:
         super().__init__()
         self.socket = QWebSocket()
-        self.socket.binaryFrameReceived.connect(self.on_bin_message_received)
-        self.socket.textMessageReceived.connect(self.on_text_message_received)
+        self.socket.binaryMessageReceived.connect(self.on_bin_message_received)
         self.socket.errorOccurred.connect(self.on_socket_error)
         self.buffer = b""
 
@@ -36,10 +35,6 @@ class WebSocketToSocket(QObject):
         # messages MUST NOT include trailing \r\n, but our non-websocket
         # library (irc) requires them
         self.buffer += message + b"\r\n"
-        self.message_received.emit()
-
-    def on_text_message_received(self, message: str) -> None:
-        self.buffer += f"{message}\r\n".encode()
         self.message_received.emit()
 
     def read(self, size: int) -> bytes:
