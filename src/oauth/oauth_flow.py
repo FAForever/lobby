@@ -65,7 +65,7 @@ class OAuth2Flow(QOAuth2AuthorizationCodeFlow):
         self._expires_in = QDateTime.currentDateTime().msecsTo(expiration_at)
 
     def on_token_changed(self, new_token: str) -> None:
-        self._logger.debug(f"Token changed to: {new_token}")
+        self._logger.debug("Token changed")
 
     def on_granted(self) -> None:
         self._logger.debug("Token granted successfuly!")
