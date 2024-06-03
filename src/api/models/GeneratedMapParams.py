@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
 from pydantic import Field
 
+from api.models.ConfiguredModel import ConfiguredModel
 from api.models.Map import Map
 from api.models.MapType import MapType
 from api.models.MapVersion import MapVersion
 
 
-class GeneratedMapParams(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
+class GeneratedMapParams(ConfiguredModel):
     name:        str = Field(alias="type")
     spawns:      int
     size:        int

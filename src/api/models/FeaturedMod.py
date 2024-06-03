@@ -1,8 +1,9 @@
-from pydantic import BaseModel
 from pydantic import Field
 
+from api.models.ConfiguredModel import ConfiguredModel
 
-class FeaturedMod(BaseModel):
+
+class FeaturedMod(ConfiguredModel):
     xd:          str  = Field(alias="id")
     name:        str  = Field(alias="technicalName")
     fullname:    str  = Field(alias="displayName")

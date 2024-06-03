@@ -1,9 +1,10 @@
-from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
 
+from api.models.ConfiguredModel import ConfiguredModel
 
-class ReviewsSummary(BaseModel):
+
+class ReviewsSummary(ConfiguredModel):
     positive:      float
     negative:      float
     score:         float

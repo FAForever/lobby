@@ -1,11 +1,9 @@
-from pydantic import BaseModel
-from pydantic import ConfigDict
 from pydantic import Field
 
+from api.models.ConfiguredModel import ConfiguredModel
 
-class AbstractEntity(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
 
+class AbstractEntity(ConfiguredModel):
     xd: str = Field(alias="id")
     create_time: str = Field(alias="createTime")
     update_time: str = Field(alias="updateTime")

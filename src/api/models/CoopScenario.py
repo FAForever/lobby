@@ -1,13 +1,10 @@
-from pydantic import BaseModel
-from pydantic import ConfigDict
 from pydantic import Field
 
+from api.models.ConfiguredModel import ConfiguredModel
 from api.models.CoopMission import CoopMission
 
 
-class CoopScenario(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
+class CoopScenario(ConfiguredModel):
     xd:          int = Field(alias="id")
     name:        str
     order:       int

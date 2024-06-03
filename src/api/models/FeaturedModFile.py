@@ -1,8 +1,9 @@
-from pydantic import BaseModel
 from pydantic import Field
 
+from api.models.ConfiguredModel import ConfiguredModel
 
-class FeaturedModFile(BaseModel):
+
+class FeaturedModFile(ConfiguredModel):
     xd:             str = Field(alias="id")
     version:        int
     group:          str

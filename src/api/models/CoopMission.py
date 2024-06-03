@@ -1,11 +1,9 @@
-from pydantic import BaseModel
-from pydantic import ConfigDict
 from pydantic import Field
 
+from api.models.ConfiguredModel import ConfiguredModel
 
-class CoopMission(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
 
+class CoopMission(ConfiguredModel):
     xd:                  int = Field(alias="id")
     category:            str
     description:         str
