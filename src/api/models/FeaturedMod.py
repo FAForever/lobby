@@ -1,11 +1,11 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
+from pydantic import Field
 
 
-@dataclass
-class FeaturedMod:
-    uid: str
-    name: str
-    fullname: str
-    visible: bool
-    order: int
-    description: str
+class FeaturedMod(BaseModel):
+    xd:          str  = Field(alias="id")
+    name:        str  = Field(alias="technicalName")
+    fullname:    str  = Field(alias="displayName")
+    visible:     bool
+    order:       int  = Field(0)
+    description: str  = Field("<i>No description provided</i>")

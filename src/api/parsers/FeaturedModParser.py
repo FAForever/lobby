@@ -5,17 +5,7 @@ class FeaturedModParser:
 
     @staticmethod
     def parse(data: dict) -> FeaturedMod:
-        return FeaturedMod(
-            uid=data["id"],
-            name=data["technicalName"],
-            fullname=data["displayName"],
-            visible=data.get("visible", False),
-            order=data.get("order", 0),
-            description=data.get(
-                "description",
-                "<i>No description provided</i>",
-            ),
-        )
+        return FeaturedMod(**data)
 
     @staticmethod
     def parse_many(data: list[dict]) -> list[FeaturedMod]:

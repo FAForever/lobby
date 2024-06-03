@@ -249,7 +249,7 @@ class UpdaterWorker(QObject):
     @_check_interruption
     def update_featured_mod(self, modname: str, modversion: str) -> list[FeaturedModFile]:
         fmod = self.get_featured_mod_by_name(modname)
-        files = self.get_files_to_update(fmod.uid, modversion)
+        files = self.get_files_to_update(fmod.xd, modversion)
         self.update_files(files)
         return files
 

@@ -1,14 +1,14 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
+from pydantic import Field
 
 
-@dataclass
-class FeaturedModFile:
-    uid: str
-    version: int
-    group: str
-    name: str
-    md5: str
-    url: str
-    cacheable_url: str
-    hmac_token: str
-    hmac_parameter: str
+class FeaturedModFile(BaseModel):
+    xd:             str = Field(alias="id")
+    version:        int
+    group:          str
+    name:           str
+    md5:            str
+    url:            str
+    cacheable_url:  str = Field(alias="cacheableUrl")
+    hmac_token:     str = Field(alias="hmacToken")
+    hmac_parameter: str = Field(alias="hmacParameter")
