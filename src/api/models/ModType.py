@@ -4,8 +4,8 @@ from enum import Enum
 
 
 class ModType(Enum):
-    UI = "modType.ui"
-    SIM = "modType.sim"
+    UI = "UI"
+    SIM = "SIM"
     OTHER = ""
 
     @staticmethod
