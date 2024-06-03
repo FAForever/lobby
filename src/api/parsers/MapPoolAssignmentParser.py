@@ -19,10 +19,9 @@ class MapPoolAssignmentParser:
         if pool.map_params is not None:
             return pool.map_params.to_map()
         if pool.map_version is not None:
-            return MapParser.parse_version(
-                assignment_info["mapVersion"]["map"],
-                assignment_info["mapVersion"],
-            )
+            map_model = MapParser.parse(assignment_info["mapVersion"]["map"])
+            map_model.version = pool.map_version
+            return map_model
         raise ValueError("MapPoolAssignment info does not contain mapVersion or mapParams")
 
     @staticmethod
