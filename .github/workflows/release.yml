@@ -12,7 +12,7 @@ jobs:
     environment: deploy
     runs-on: windows-latest
     env:
-      UID_VERSION: v4.0.4
+      UID_VERSION: v4.0.6
       ICE_ADAPTER_VERSION: v3.3.7
       BUILD_VERSION: ${{ github.event.inputs.version }}
 
