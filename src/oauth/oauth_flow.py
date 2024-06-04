@@ -94,3 +94,6 @@ class OAuth2Flow(QOAuth2AuthorizationCodeFlow):
         self.setClientIdentifier(client_id)
         self.setAccessTokenUrl(token_url)
         self.setScope(" ".join(scopes))
+
+
+OAuth2FlowInstance = OAuth2Flow()

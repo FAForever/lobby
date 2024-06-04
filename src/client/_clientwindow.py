@@ -12,7 +12,6 @@ import fa
 import notifications as ns
 import util
 import util.crash
-from api.ApiBase import ApiBase
 from chat import ChatMVC
 from chat._avatarWidget import AvatarWidget
 from chat.channel_autojoiner import ChannelAutojoiner
@@ -66,7 +65,7 @@ from model.playerset import Playerset
 from model.rating import MatchmakerQueueType
 from model.rating import RatingType
 from news import NewsWidget
-from oauth.oauth_flow import OAuth2Flow
+from oauth.oauth_flow import OAuth2FlowInstance
 from power import PowerTools
 from replays import ReplaysWidget
 from secondaryServer import SecondaryServer
@@ -142,8 +141,8 @@ class ClientWindow(FormClass, BaseClass):
         )
 
         self._network_access_manager = QNetworkAccessManager(self)
-        self.oauth_flow = OAuth2Flow(parent=self)
-        ApiBase.set_oauth(self.oauth_flow)
+        self.oauth_flow = OAuth2FlowInstance
+        self.oauth_flow.setParent(self)
         self.oauth_flow.granted.connect(self.do_connect)
         self.oauth_flow.granted.connect(self.save_refresh_token)
         self.oauth_flow.requestFailed.connect(self.show_login_widget)

@@ -15,6 +15,7 @@ from PyQt6.QtNetwork import QNetworkRequest
 
 from config import Settings
 from oauth.oauth_flow import OAuth2Flow
+from oauth.oauth_flow import OAuth2FlowInstance
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ DO_NOT_ENCODE.append(b":/?&=.,")
 
 
 class ApiBase(QObject):
-    oauth: OAuth2Flow = OAuth2Flow()
+    oauth: OAuth2Flow = OAuth2FlowInstance
 
     def __init__(self, route: str = "") -> None:
         QObject.__init__(self)
