@@ -140,6 +140,7 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
             w = self.leaderBoardTextFour
         model = CoopLeaderBoardModel(message)
         w.setModel(model)
+        w.setSortingEnabled(False)
         w.setItemDelegate(CoopLeaderboardItemDelegate(self))
         self.leaderBoard.setVisible(True)
 
