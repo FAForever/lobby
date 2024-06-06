@@ -14,5 +14,5 @@ class ReviewsSummary(ConfiguredModel):
 
     @field_validator("*", mode="before")
     @classmethod
-    def avoid_none(cls, value: float | int) -> float | int:
+    def avoid_none(cls, value: float | int | None) -> float | int:
         return value or 0

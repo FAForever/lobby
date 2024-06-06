@@ -62,8 +62,7 @@ class VerticalHeaderView(QHeaderView):
 
     def update_hover_section(self, event: QHoverEvent) -> None:
         index = self.logicalIndexAt(event.position().toPoint())
-        old_hover = self.hover
-        self.hover = index
+        old_hover, self.hover = self.hover, index
 
         if self.hover != old_hover:
             if old_hover != -1:

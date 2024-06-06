@@ -6,12 +6,7 @@ class GeneratedMapParamsParser:
 
     @staticmethod
     def parse(params_info: dict) -> GeneratedMapParams:
-        return GeneratedMapParams(
-            name=params_info["type"],
-            spawns=params_info["spawns"],
-            size=params_info["size"],
-            gen_version=params_info["version"],
-        )
+        return GeneratedMapParams(**params_info)
 
     @staticmethod
     def parse_to_map(params_info: dict) -> Map:

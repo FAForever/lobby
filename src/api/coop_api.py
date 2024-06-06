@@ -17,7 +17,7 @@ class CoopApiAccessor(DataApiAccessor):
 
 
 class CoopResultApiAccessor(DataApiAccessor):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("/data/coopResult")
 
     def prepare_query_dict(self, mission: int) -> dict:

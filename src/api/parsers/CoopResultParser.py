@@ -3,7 +3,7 @@ from api.models.CoopResult import CoopResult
 
 class CoopResultParser:
     @staticmethod
-    def parse(api_result: dict) -> None:
+    def parse(api_result: dict) -> CoopResult:
         return CoopResult(**api_result)
 
     @staticmethod

@@ -288,7 +288,7 @@ class LiveReplaysWidgetHandler(object):
 
 
 class ReplayMetadata:
-    def __init__(self, data):
+    def __init__(self, data: str) -> None:
         self.raw_data = data
         self.is_broken = False
         self.model: MetadataModel | None = None
@@ -310,7 +310,7 @@ class ReplayMetadata:
             return True
         return not self.model.complete
 
-    def launch_time(self):
+    def launch_time(self) -> float:
         if self.model.launched_at > 0:
             return self.model.launched_at
         return self.model.game_time
