@@ -2,10 +2,14 @@
 import os
 import urllib.parse
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import util
+from api.models.ModType import ModType
 from util import strtodate
+from vaults.modvault.moditem import ModListItem
 
 from .modvault import utils
 
@@ -15,7 +19,7 @@ FormClass, BaseClass = util.THEME.loadUiType("vaults/modvault/mod.ui")
 class ModWidget(FormClass, BaseClass):
     ICONSIZE = QtCore.QSize(100, 100)
 
-    def __init__(self, parent, mod, *args, **kwargs):
+    def __init__(self, parent: QtWidgets.QWidget, mod_item: ModListItem, *args, **kwargs) -> None:
         BaseClass.__init__(self, *args, **kwargs)
 
         self.setupUi(self)
@@ -24,25 +28,26 @@ class ModWidget(FormClass, BaseClass):
         util.THEME.stylesheets_reloaded.connect(self.load_stylesheet)
         self.load_stylesheet()
 
-        self.setWindowTitle(mod.name)
+        self.mod = mod_item.item_info
+        self.mod_version = mod_item.item_version
 
-        self.mod = mod
+        self.setWindowTitle(self.mod.display_name)
 
-        self.Title.setText(mod.name)
-        self.Description.setText(mod.description)
+        self.Title.setText(self.mod.display_name)
+        self.Description.setText(self.mod_version.description)
         modtext = ""
-        if mod.isuimod:
-            modtext = "UI mod\n"
+        if self.mod_version.modtype == ModType.UI:
+            modtext = "UI mod"
         self.Info.setText(
-            modtext + "By {}\nUploaded {}".format(mod.author, str(mod.date)),
+            f"{modtext}\nBy {self.mod.author}\nUploaded {self.mod_version.create_time}",
         )
-        mod.thumbnail = utils.getIcon(
-            os.path.basename(urllib.parse.unquote(mod.thumbstr)),
+        thumbnail = utils.getIcon(
+            os.path.basename(urllib.parse.unquote(self.mod_version.thumbnail_url)),
         )
-        if mod.thumbnail is None:
+        if thumbnail is None:
             self.Picture.setPixmap(util.THEME.pixmap("games/unknown_map.png"))
         else:
-            pixmap = util.THEME.pixmap(mod.thumbnail, False)
+            pixmap = util.THEME.pixmap(thumbnail, False)
             self.Picture.setPixmap(pixmap.scaled(self.ICONSIZE))
 
         # ensure that pixmap is set
@@ -54,7 +59,7 @@ class ModWidget(FormClass, BaseClass):
 
         self.tabWidget.setEnabled(False)
 
-        if self.mod.uid in self.parent.uids:
+        if self.mod_version.uid in self.parent.uids:
             self.DownloadButton.setText("Remove Mod")
         self.DownloadButton.clicked.connect(self.download)
 
@@ -79,20 +84,20 @@ class ModWidget(FormClass, BaseClass):
         self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
 
     @QtCore.pyqtSlot()
-    def download(self):
-        if self.mod.uid not in self.parent.uids:
-            self.parent.downloadMod(self.mod)
+    def download(self) -> None:
+        if self.mod_version.uid not in self.parent.uids:
+            self.parent.downloadMod(self.mod_version.download_url, self.mod.display_name)
             self.done(1)
         else:
             show = QtWidgets.QMessageBox.question(
                 self.parent.client,
                 "Delete Mod",
                 "Are you sure you want to delete this mod?",
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.No,
             )
-            if show == QtWidgets.QMessageBox.Yes:
-                self.parent.removeMod(self.mod)
+            if show == QtWidgets.QMessageBox.StandardButton.Yes:
+                self.parent.removeMod(self.mod.display_name, self.mod_version.uid)
                 self.done(1)
 
     @QtCore.pyqtSlot()
@@ -128,7 +133,7 @@ class CommentItemDelegate(QtWidgets.QStyledItemDelegate):
 
         option.text = ""
         option.widget.style().drawControl(
-            QtWidgets.QStyle.CE_ItemViewItem, option, painter, option.widget,
+            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
         )
 
         # Description

@@ -1,4 +1,6 @@
-from PyQt5.QtWidgets import QCompleter, QInputDialog, QLineEdit
+from PyQt6.QtWidgets import QCompleter
+from PyQt6.QtWidgets import QInputDialog
+from PyQt6.QtWidgets import QLineEdit
 
 
 class SelectPlayerDialog:

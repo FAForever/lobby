@@ -2,21 +2,20 @@ import html
 import time
 
 import jinja2
-from PyQt5.QtCore import QObject, pyqtSignal
-from PyQt5.QtGui import QDesktopServices
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QDesktopServices
 
 from chat.channel_tab import TabInfo
 from chat.channel_widget import ChannelWidget
 from chat.chatter_menu import ChatterMenu
-from chat.chatter_model import (
-    ChatterEventFilter,
-    ChatterFormat,
-    ChatterItemDelegate,
-    ChatterLayout,
-    ChatterLayoutElements,
-    ChatterModel,
-    ChatterSortFilterModel,
-)
+from chat.chatter_model import ChatterEventFilter
+from chat.chatter_model import ChatterFormat
+from chat.chatter_model import ChatterItemDelegate
+from chat.chatter_model import ChatterLayout
+from chat.chatter_model import ChatterLayoutElements
+from chat.chatter_model import ChatterModel
+from chat.chatter_model import ChatterSortFilterModel
 from downloadManager import DownloadRequest
 from model.chat.channel import ChannelType
 from model.chat.chatline import ChatLineType

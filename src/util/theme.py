@@ -1,7 +1,10 @@
 import logging
 import os
 
-from PyQt5 import QtCore, QtGui, QtMultimedia, QtWidgets, uic
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
+from PyQt6 import uic
 from semantic_version import Version
 
 logger = logging.getLogger(__name__)
@@ -261,18 +264,18 @@ class ThemeSet(QtCore.QObject):
             )
             b_yes = box.addButton(
                 "Apply this once",
-                QtWidgets.QMessageBox.YesRole,
+                QtWidgets.QMessageBox.ButtonRole.YesRole,
             )
             b_always = box.addButton(
                 "Always apply for this FA version",
-                QtWidgets.QMessageBox.YesRole,
+                QtWidgets.QMessageBox.ButtonRole.YesRole,
             )
             b_default = box.addButton(
                 "Use default theme",
-                QtWidgets.QMessageBox.NoRole,
+                QtWidgets.QMessageBox.ButtonRole.NoRole,
             )
-            b_no = box.addButton("Abort", QtWidgets.QMessageBox.NoRole)
-            box.exec_()
+            b_no = box.addButton("Abort", QtWidgets.QMessageBox.ButtonRole.NoRole)
+            box.exec()
             result = box.clickedButton()
 
             if result == b_always:
@@ -357,8 +360,9 @@ class ThemeSet(QtCore.QObject):
         return self._theme_callchain("readfile", filename, themed)
 
     @_warn_resource_null
-    def _sound(self, filename, themed=True):
-        return self._theme_callchain("sound", filename, themed)
+    def sound(self, filename: str, themed: bool = True) -> QtCore.QUrl:
+        filepath = self._theme_callchain("sound", filename, themed)
+        return QtCore.QUrl.fromLocalFile(filepath)
 
     def pixmap(self, filename, themed=True):
         # If we receive None, return the default pixmap
@@ -366,9 +370,6 @@ class ThemeSet(QtCore.QObject):
         if ret is None:
             return QtGui.QPixmap()
         return ret
-
-    def sound(self, filename, themed=True):
-        QtMultimedia.QSound.play(self._sound(filename, themed))
 
     def reloadStyleSheets(self):
         self.stylesheets_reloaded.emit()
@@ -382,7 +383,7 @@ class ThemeSet(QtCore.QObject):
             return self.pixmap(filename, themed)
         else:
             icon = QtGui.QIcon()
-            icon.addPixmap(self.pixmap(filename, themed), QtGui.QIcon.Normal)
+            icon.addPixmap(self.pixmap(filename, themed), QtGui.QIcon.Mode.Normal)
             splitExt = os.path.splitext(filename)
             if len(splitExt) == 2:
                 pixDisabled = self.pixmap(
@@ -390,7 +391,7 @@ class ThemeSet(QtCore.QObject):
                 )
                 if pixDisabled is not None:
                     icon.addPixmap(
-                        pixDisabled, QtGui.QIcon.Disabled, QtGui.QIcon.On,
+                        pixDisabled, QtGui.QIcon.Mode.Disabled, QtGui.QIcon.State.On,
                     )
 
                 pixActive = self.pixmap(
@@ -398,7 +399,7 @@ class ThemeSet(QtCore.QObject):
                 )
                 if pixActive is not None:
                     icon.addPixmap(
-                        pixActive, QtGui.QIcon.Active, QtGui.QIcon.On,
+                        pixActive, QtGui.QIcon.Mode.Active, QtGui.QIcon.State.On,
                     )
 
                 pixSelected = self.pixmap(
@@ -406,6 +407,6 @@ class ThemeSet(QtCore.QObject):
                 )
                 if pixSelected is not None:
                     icon.addPixmap(
-                        pixSelected, QtGui.QIcon.Selected, QtGui.QIcon.On,
+                        pixSelected, QtGui.QIcon.Mode.Selected, QtGui.QIcon.State.On,
                     )
             return icon

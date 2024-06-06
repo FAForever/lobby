@@ -1,4 +1,5 @@
-from PyQt5.QtCore import QAbstractListModel, Qt
+from PyQt6.QtCore import QAbstractListModel
+from PyQt6.QtCore import Qt
 
 from chat.lang import LANGUAGE_CHANNELS
 
@@ -83,25 +84,25 @@ class CheckableStringListModel(QAbstractListModel):
             return 0
         return len(self._items)
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         item = self._index_item(index)
         if item is None:
             return None
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return item.name
-        if role == Qt.DecorationRole:
+        if role == Qt.ItemDataRole.DecorationRole:
             return item.icon
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             return item.checked
         return None
 
-    def setData(self, index, value, role=Qt.EditRole):
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         item = self._index_item(index)
         if item is None:
             return False
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             item.checked = value
-            self.dataChanged.emit(index, index, [Qt.CheckStateRole])
+            self.dataChanged.emit(index, index, [Qt.ItemDataRole.CheckStateRole])
             return True
         return False
 
@@ -120,7 +121,7 @@ class CheckableStringListModel(QAbstractListModel):
 
     def flags(self, index):
         if index.isValid():
-            return Qt.ItemIsUserCheckable | Qt.ItemIsEnabled
+            return Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled
         return 0
 
     def checked_channels(self):

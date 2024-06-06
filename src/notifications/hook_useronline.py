@@ -1,7 +1,7 @@
 """
 Settings for notifications: if a player comes online
 """
-from PyQt5 import QtCore
+from PyQt6 import QtCore
 
 import notifications as ns
 import util
@@ -32,7 +32,7 @@ class UserOnlineDialog(FormClass, BaseClass):
 
         # remove help button
         self.setWindowFlags(
-            self.windowFlags() & (~QtCore.Qt.WindowContextHelpButtonHint),
+            self.windowFlags() & (~QtCore.Qt.WindowType.WindowContextHelpButtonHint),
         )
 
         self.loadSettings()

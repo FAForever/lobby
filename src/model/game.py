@@ -3,12 +3,14 @@ import string
 import time
 from enum import Enum
 
-from PyQt5.QtCore import QTimer, pyqtSignal
+from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import pyqtSignal
 
 from decorators import with_logger
 from model.modelitem import ModelItem
 from model.transaction import transactional
-from util.gameurl import GameUrl, GameUrlType
+from util.gameurl import GameUrl
+from util.gameurl import GameUrlType
 
 
 class GameState(Enum):
@@ -61,7 +63,7 @@ class Game(ModelItem):
         sim_mods,
         password_protected,
         visibility,
-        **kwargs
+        **kwargs,
     ):
 
         ModelItem.__init__(self)
@@ -112,7 +114,7 @@ class Game(ModelItem):
         self._check_live_replay_timer()
         self.emit_update(old, _transaction)
 
-    def _check_live_replay_timer(self):
+    def _check_live_replay_timer(self) -> None:
         if (
             self.state != GameState.PLAYING
             or self._live_replay_timer.isActive()
@@ -123,9 +125,9 @@ class Game(ModelItem):
         if self.has_live_replay:
             return
 
-        time_elapsed = time.time() - self.launched_at
+        time_elapsed = round(time.time() - self.launched_at, 0)
         time_to_replay = max(self.LIVE_REPLAY_DELAY_SECS - time_elapsed, 0)
-        self._live_replay_timer.start(time_to_replay * 1000)
+        self._live_replay_timer.start(int(time_to_replay * 1000))
 
     @transactional
     def _emit_live_replay(self, _transaction=None):
@@ -165,9 +167,7 @@ class Game(ModelItem):
         else:
             gtype = GameUrlType.LIVE_REPLAY
 
-        return GameUrl(
-            gtype, self.mapname, self.featured_mod, self.uid, player_id,
-        )
+        return GameUrl(gtype, self.mapname, self.featured_mod, self.uid, player_id, self.sim_mods)
 
     # Utility functions start here.
 

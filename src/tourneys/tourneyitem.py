@@ -1,4 +1,6 @@
-from PyQt5 import QtCore, QtGui, QtWebEngineWidgets, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import util
 
@@ -22,7 +24,7 @@ class TourneyItemDelegate(QtWidgets.QStyledItemDelegate):
 
         option.text = ""
         option.widget.style().drawControl(
-            QtWidgets.QStyle.CE_ItemViewItem, option, painter, option.widget,
+            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
         )
 
         # Description
@@ -40,17 +42,6 @@ class TourneyItemDelegate(QtWidgets.QStyledItemDelegate):
         html.setHtml(option.text)
         return QtCore.QSize(
             int(html.size().width()), int(html.size().height()),
-        )
-
-
-class QWebPageChrome(QtWebEngineWidgets.QWebEnginePage):
-    def __init__(self, *args, **kwargs):
-        QtWebEngineWidgets.QWebEnginePage.__init__(self, *args, **kwargs)
-
-    def userAgentForUrl(self, url):
-        return (
-            "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.2 "
-            "(KHTML, like Gecko) Chrome/15.0.874.121 Safari/535.2"
         )
 
 
@@ -94,11 +85,9 @@ class TourneyItem(QtWidgets.QListWidgetItem):
         self.players = message.get('participants', [])
 
         if old_state != self.state and self.state == "started":
-            widget = QtWebEngineWidgets.QWebEngineView()
-            webPage = QWebPageChrome()
-            widget.setPage(webPage)
-            widget.setUrl(QtCore.QUrl(self.url))
-            self.parent.topTabs.addTab(widget, self.title)
+            # create a widget and add it to the parent's tabs
+            # anyway, this tournaments feature most likely won't return
+            ...
 
         self.playersname = []
         for player in self.players:
@@ -131,9 +120,9 @@ class TourneyItem(QtWidgets.QListWidgetItem):
         return self.viewtext
 
     def data(self, role):
-        if role == QtCore.Qt.DisplayRole:
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
             return self.display()
-        elif role == QtCore.Qt.UserRole:
+        elif role == QtCore.Qt.ItemDataRole.UserRole:
             return self
         return super(TourneyItem, self).data(role)
 

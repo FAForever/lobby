@@ -1,10 +1,13 @@
+from __future__ import annotations
 
 import json
 import logging
 import os
 import time
 
-from PyQt5 import QtCore, QtNetwork, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtNetwork
+from PyQt6 import QtWidgets
 
 import fa
 import util
@@ -24,13 +27,17 @@ class ReplayRecorder(QtCore.QObject):
     """
     __logger = logging.getLogger(__name__)
 
-    def __init__(self, parent, local_socket, *args, **kwargs):
+    def __init__(
+            self,
+            parent: ReplayServer,
+            local_socket: QtNetwork.QTcpSocket,
+            *args,
+            **kwargs,
+    ) -> None:
         QtCore.QObject.__init__(self, *args, **kwargs)
         self.parent = parent
         self.inputSocket = local_socket
-        self.inputSocket.setSocketOption(
-            QtNetwork.QTcpSocket.KeepAliveOption, 1,
-        )
+        self.inputSocket.setSocketOption(QtNetwork.QTcpSocket.SocketOption.KeepAliveOption, 1)
         self.inputSocket.readyRead.connect(self.readDatas)
         self.inputSocket.disconnected.connect(self.inputDisconnected)
         self.__logger.info("FA connected locally.")
@@ -166,7 +173,7 @@ class ReplayRecorder(QtCore.QObject):
         )
 
         replay = QtCore.QFile(filename)
-        replay.open(QtCore.QIODevice.WriteOnly | QtCore.QIODevice.Text)
+        replay.open(QtCore.QIODevice.OpenModeFlag.WriteOnly | QtCore.QIODevice.OpenModeFlag.Text)
         replay.write(json.dumps(self.replayInfo).encode('utf-8'))
         replay.write(b'\n')
         replay.write(QtCore.qCompress(self.replayData).toBase64())
@@ -188,9 +195,9 @@ class ReplayServer(QtNetwork.QTcpServer):
         self.__logger.debug("initializing...")
         self.newConnection.connect(self.acceptConnection)
 
-    def doListen(self):
+    def doListen(self) -> bool:
         while not self.isListening():
-            self.listen(QtNetwork.QHostAddress.LocalHost, 0)
+            self.listen(QtNetwork.QHostAddress.SpecialAddress.LocalHost, 0)
             if self.isListening():
                 self.__logger.info(
                     "listening on address {}:{}".format(
@@ -213,10 +220,10 @@ class ReplayServer(QtNetwork.QTcpServer):
                         "likely)</li><li>another program is listening on port "
                         "{}</li></ul>".format(self.serverPort())
                     ),
-                    QtWidgets.QMessageBox.Retry,
-                    QtWidgets.QMessageBox.Abort,
+                    QtWidgets.QMessageBox.StandardButton.Retry,
+                    QtWidgets.QMessageBox.StandardButton.Abort,
                 )
-                if answer == QtWidgets.QMessageBox.Abort:
+                if answer == QtWidgets.QMessageBox.StandardButton.Abort:
                     return False
         return True
 

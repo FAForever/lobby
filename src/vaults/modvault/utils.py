@@ -4,7 +4,9 @@ import re
 import shutil
 import zipfile
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import util
 from config import Settings
@@ -406,7 +408,7 @@ def generateThumbnail(sourcename, destname):
         size = int((len(img) / 3) ** (1.0 / 2))
         image = QtGui.QImage(img, size, size, QtGui.QImage.Format_RGB888)
         imageFile = image.rgbSwapped().scaled(
-            100, 100, transformMode=QtCore.Qt.SmoothTransformation,
+            100, 100, transformMode=QtCore.Qt.TransformationMode.SmoothTransformation,
         )
         imageFile.save(destname)
     except IOError:
@@ -418,14 +420,10 @@ def generateThumbnail(sourcename, destname):
         return False
 
 
-def downloadMod(item):
-    if isinstance(item, str):
-        link = item
-    else:
-        link = item.link
-    logger.debug("Getting mod from: {}".format(link))
+def downloadMod(link: str, name: str) -> bool:
+    logger.debug(f"Getting mod from: {link}")
 
-    def handle_exist(path, modname):
+    def handle_exist(path: str, modname: str) -> bool:
         modpath = os.path.join(path, modname)
         oldmod = getModInfoFromFolder(modpath)
         result = QtWidgets.QMessageBox.question(
@@ -436,17 +434,15 @@ def downloadMod(item):
                 "already exists and contains <b>{}</b>. Do you want to "
                 "overwrite this mod?"
             ).format(modpath, oldmod.totalname),
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes,
+            QtWidgets.QMessageBox.StandardButton.No,
         )
-        if result == QtWidgets.QMessageBox.No:
+        if result == QtWidgets.QMessageBox.StandardButton.No:
             return False
         removeMod(oldmod)
         return True
 
-    return downloadVaultAsset(
-        link, MODFOLDER, handle_exist, link, "mod", False,
-    )
+    return downloadVaultAsset(link, MODFOLDER, handle_exist, name, "mod", silent=False)
 
 
 def removeMod(mod):

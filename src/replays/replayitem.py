@@ -1,8 +1,11 @@
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime
+from datetime import timezone
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import util
 from config import Settings
@@ -32,7 +35,7 @@ class ReplayItemDelegate(QtWidgets.QStyledItemDelegate):
         option.icon = QtGui.QIcon()
         option.text = ""
         option.widget.style().drawControl(
-            QtWidgets.QStyle.CE_ItemViewItem, option, painter, option.widget,
+            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
         )
 
         # Shadow
@@ -43,7 +46,7 @@ class ReplayItemDelegate(QtWidgets.QStyledItemDelegate):
         # Icon
         icon.paint(
             painter, option.rect.adjusted(3, -2, 0, 0),
-            QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter,
+            QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter,
         )
 
         # Frame around the icon
@@ -52,7 +55,7 @@ class ReplayItemDelegate(QtWidgets.QStyledItemDelegate):
         # FIXME: This needs to come from theme.
         # pen.setBrush(QtGui.QColor("#303030"))
 
-        # pen.setCapStyle(QtCore.Qt.RoundCap)
+        # pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
         # painter.setPen(pen)
         # painter.drawRect(option.rect.left()+5-2, option.rect.top()+5-2,
         #                  iconsize.width(), iconsize.height())
@@ -71,7 +74,7 @@ class ReplayItemDelegate(QtWidgets.QStyledItemDelegate):
         painter.restore()
 
     def sizeHint(self, option, index, *args, **kwargs):
-        clip = index.model().data(index, QtCore.Qt.UserRole)
+        clip = index.model().data(index, QtCore.Qt.ItemDataRole.UserRole)
         self.initStyleOption(option, index)
         html = QtGui.QTextDocument()
         html.setHtml(option.text)
@@ -226,7 +229,7 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
         if not self.icon:
             self.icon = util.THEME.icon("games/unknown_map.png")
             if self.mapname != "unknown":
-                self.client.map_downloader.download_preview(
+                self.client.map_preview_downloader.download_preview(
                     self.mapname, self._map_dl_request,
                 )
 
@@ -518,9 +521,9 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
             return self.viewtext
 
     def data(self, column, role):
-        if role == QtCore.Qt.DisplayRole:
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
             return self.display(column)
-        elif role == QtCore.Qt.UserRole:
+        elif role == QtCore.Qt.ItemDataRole.UserRole:
             return self
         return super(ReplayItem, self).data(column, role)
 

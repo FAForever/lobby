@@ -1,6 +1,7 @@
 from enum import Enum
 
-from PyQt5.QtCore import QUrl, QUrlQuery
+from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import QUrlQuery
 
 
 class GameUrlType(Enum):
@@ -27,8 +28,8 @@ class GameUrl:
         query = QUrlQuery()
         query.addQueryItem("map", self.map)
         query.addQueryItem("mod", self.mod)
-        if self.mods is not None:
-            query.addQueryItem("mods", self.mods)
+        if self.mods:
+            query.addQueryItem("mods", ";".join(self.mods))
 
         if self.game_type == GameUrlType.OPEN_GAME:
             url.setPath("/{}".format(self.player))

@@ -1,6 +1,7 @@
 from enum import Enum
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import config
 import util
@@ -127,8 +128,8 @@ class MapGenDialog(FormClass, BaseClass):
 
     def keyPressEvent(self, event):
         if (
-            event.key() == QtCore.Qt.Key_Enter
-            or event.key() == QtCore.Qt.Key_Return
+            event.key() == QtCore.Qt.Key.Key_Enter
+            or event.key() == QtCore.Qt.Key.Key_Return
         ):
             return
         QtWidgets.QDialog.keyPressEvent(self, event)

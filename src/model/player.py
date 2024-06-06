@@ -1,4 +1,4 @@
-from PyQt5.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 
 from model.modelitem import ModelItem
 from model.rating import RatingType

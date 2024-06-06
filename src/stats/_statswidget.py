@@ -1,12 +1,12 @@
 import logging
 import time
 
-from PyQt5 import QtCore, QtWebEngineWidgets, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import util
 from api.stats_api import LeaderboardApiConnector
 from ui.busy_widget import BusyWidget
-from util.qt import injectWebviewCSS
 
 from .leaderboard_widget import LeaderboardWidget
 
@@ -29,17 +29,8 @@ class StatsWidget(BaseClass, FormClass, BusyWidget):
 
         self.client = client
 
-        self.client.lobby_info.statsInfo.connect(self.processStatsInfos)
-
-        self.webview = QtWebEngineWidgets.QWebEngineView()
-        self.webpage = WebEnginePage()
-        self.webpage.profile().setHttpUserAgent("FAF Client")
-
-        self.websiteTab.layout().addWidget(self.webview)
-
         self.selected_player = None
         self.selected_player_loaded = False
-        self.webview.loadFinished.connect(self.webview.show)
         self.leagues.currentChanged.connect(self.leagueUpdate)
         self.currentChanged.connect(self.busy_entered)
         self.pagesDivisions = {}
@@ -62,13 +53,10 @@ class StatsWidget(BaseClass, FormClass, BusyWidget):
         self.load_stylesheet()
 
         # setup other tabs
-        self.webpage.setUrl(
-            QtCore.QUrl("https://faforever.com/competitive/leaderboards/1v1"),
-        )
-        self.webview.setPage(self.webpage)
 
-        self.apiConnector = LeaderboardApiConnector(self.client.lobby_dispatch)
-        self.apiConnector.requestData(dict(sort="id"))
+        self.apiConnector = LeaderboardApiConnector()
+        self.apiConnector.data_ready.connect(self.process_leaderboards_info)
+        self.apiConnector.requestData({"sort": "id"})
 
         # hiding some non-functional tabs
         self.removeTab(self.indexOf(self.ladderTab))
@@ -253,85 +241,19 @@ class StatsWidget(BaseClass, FormClass, BusyWidget):
         if self.leaderboards.widget(curr) is not None:
             self.leaderboards.widget(curr).entered()
 
-    @QtCore.pyqtSlot(dict)
-    def processStatsInfos(self, message):
-
-        typeStat = message["type"]
-        if typeStat == "divisions":
-            self.currentLeague = message["league"]
-            tab = self.currentLeague - 1
-
-            if tab not in self.pagesDivisions:
-                self.pagesDivisions[tab] = self.createDivisionsTabs(
-                    message["values"],
-                )
-                leagueTab = self.leagues.widget(tab).findChild(
-                    QtWidgets.QTabWidget, "league" + str(tab),
-                )
-                leagueTab.widget(1).layout().addWidget(
-                    self.pagesDivisions[tab],
-                )
-
-        elif typeStat == "division_table":
-            self.currentLeague = message["league"]
-            self.currentDivision = message["division"]
-
-            if self.currentLeague in self.pagesDivisionsResults:
-                if (
-                    self.currentDivision
-                    in self.pagesDivisionsResults[self.currentLeague]
-                ):
-                    self.createResults(
-                        message["values"],
-                        (
-                            self.pagesDivisionsResults[self.currentLeague]
-                            [self.currentDivision]
-                        ),
-                    )
-
-        elif typeStat == "league_table":
-            self.currentLeague = message["league"]
-            tab = self.currentLeague - 1
-            if tab not in self.pagesAllLeagues:
-                table = QtWidgets.QTextBrowser()
-                self.pagesAllLeagues[tab] = self.createResults(
-                    message["values"], table,
-                )
-                leagueTab = self.leagues.widget(tab).findChild(
-                    QtWidgets.QTabWidget, "league" + str(tab),
-                )
-                leagueTab.currentChanged.connect(self.divisionsUpdate)
-                leagueTab.widget(0).layout().addWidget(
-                    self.pagesAllLeagues[tab],
-                )
-
-        elif typeStat == "leaderboard":
-            self.leaderboardNames.clear()
-            for value in message["values"]:
-                self.leaderboardNames.append(value["technicalName"])
-            for i in range(len(self.leaderboardNames)):
-                self.leaderboards.insertTab(
-                    i,
-                    LeaderboardWidget(
-                        self.client, self, self.leaderboardNames[i],
-                    ),
-                    self.leaderboardNames[i].capitalize().replace("_", " "),
-                )
-                self.client.replays.leaderboardList.addItem(
-                    self.leaderboardNames[i],
-                )
-
-            self.leaderboards.setCurrentIndex(1)
-            self.leaderboards.currentChanged.connect(
-                self.leaderboardsTabChanged,
+    def process_leaderboards_info(self, message: dict) -> None:
+        self.leaderboardNames.clear()
+        for value in message["data"]:
+            self.leaderboardNames.append(value["technicalName"])
+        for index, name in enumerate(self.leaderboardNames):
+            self.leaderboards.insertTab(
+                index,
+                LeaderboardWidget(self.client, self, name),
+                name.capitalize().replace("_", " "),
             )
-
-    def _injectCSS(self):
-        if util.THEME.themeurl("ladder/style.css"):
-            injectWebviewCSS(
-                self.webview.page(),
-                util.THEME.readstylesheet("ladder/style.css"),
-            )
+            self.client.replays.leaderboardList.addItem(name)
+        self.leaderboards.setCurrentIndex(1)
+        self.leaderboards.currentChanged.connect(self.leaderboardsTabChanged)
 
     @QtCore.pyqtSlot()
     def busy_entered(self):
@@ -339,14 +261,3 @@ class StatsWidget(BaseClass, FormClass, BusyWidget):
             self.leaderboards.currentChanged.emit(
                 self.leaderboards.currentIndex(),
             )
-
-
-class WebEnginePage(QtWebEngineWidgets.QWebEnginePage):
-    def acceptNavigationRequest(self, url, type, isMainFrame):
-        if (
-            url.url().startswith("https://faforever.com/competitive/")
-            or url.url().startswith("https://challonge.com/")
-        ):
-            return True
-        else:
-            return False

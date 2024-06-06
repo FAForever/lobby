@@ -1,11 +1,16 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from __future__ import annotations
+
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import util
+from api.models.CoopMission import CoopMission
 
 
 class CoopMapItemDelegate(QtWidgets.QStyledItemDelegate):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         QtWidgets.QStyledItemDelegate.__init__(self, *args, **kwargs)
 
     def paint(self, painter, option, index, *args, **kwargs):
@@ -15,7 +20,7 @@ class CoopMapItemDelegate(QtWidgets.QStyledItemDelegate):
 
         html = QtGui.QTextDocument()
         textOption = QtGui.QTextOption()
-        textOption.setWrapMode(QtGui.QTextOption.WordWrap)
+        textOption.setWrapMode(QtGui.QTextOption.WrapMode.WordWrap)
         html.setDefaultTextOption(textOption)
 
         html.setTextWidth(option.rect.width())
@@ -25,7 +30,7 @@ class CoopMapItemDelegate(QtWidgets.QStyledItemDelegate):
         # rendering these parts ourselves
         option.text = ""
         option.widget.style().drawControl(
-            QtWidgets.QStyle.CE_ItemViewItem, option, painter, option.widget,
+            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
         )
         # Description
         painter.translate(option.rect.left(), option.rect.top())
@@ -34,11 +39,17 @@ class CoopMapItemDelegate(QtWidgets.QStyledItemDelegate):
 
         painter.restore()
 
-    def sizeHint(self, option, index, *args, **kwargs):
+    def sizeHint(
+            self,
+            option: QtWidgets.QStyleOptionViewItem,
+            index: QtCore.QModelIndex,
+            *args,
+            **kwargs,
+    ) -> None:
         self.initStyleOption(option, index)
         html = QtGui.QTextDocument()
         textOption = QtGui.QTextOption()
-        textOption.setWrapMode(QtGui.QTextOption.WordWrap)
+        textOption.setWrapMode(QtGui.QTextOption.WrapMode.WordWrap)
         html.setTextWidth(option.rect.width())
         html.setDefaultTextOption(textOption)
         html.setHtml(option.text)
@@ -53,7 +64,7 @@ class CoopMapItem(QtWidgets.QTreeWidgetItem):
 
     FORMATTER_COOP = str(util.THEME.readfile("coop/formatters/coop.qthtml"))
 
-    def __init__(self, uid, parent, *args, **kwargs):
+    def __init__(self, uid: int, parent: QtWidgets.QWidget, *args, **kwargs) -> None:
         QtWidgets.QTreeWidgetItem.__init__(self, *args, **kwargs)
 
         self.uid = uid
@@ -61,25 +72,29 @@ class CoopMapItem(QtWidgets.QTreeWidgetItem):
 
         self.name = None
         self.description = None
-        self.mapUrl = None
+        self.mapname = None
         self.options = []
 
         self.setHidden(True)
 
-    def update(self, message):
+    def update(self, mission: CoopMission) -> None:
         """
         Updates this item from the message dictionary supplied
         """
 
-        self.name = message["name"]
-        self.mapUrl = message["filename"]
-        self.description = message["description"]
-        self.mod = message["featured_mod"]
+        self.name = mission.name
+        self.mapname = mission.folder_name
+        self.description = mission.description
+        self.mission = mission
 
         self.viewtext = self.FORMATTER_COOP.format(
             name=self.name,
             description=self.description,
         )
+
+        # adding tag is just a silly trick to make text rich and force
+        # QToolTip to enable word wrap
+        self.setToolTip(0, f"<qt>{self.description}</qt>")
 
     def display(self, column):
         if column == 0:
@@ -88,9 +103,9 @@ class CoopMapItem(QtWidgets.QTreeWidgetItem):
             return self.viewtext
 
     def data(self, column, role):
-        if role == QtCore.Qt.DisplayRole:
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
             return self.display(column)
-        elif role == QtCore.Qt.UserRole:
+        elif role == QtCore.Qt.ItemDataRole.UserRole:
             return self
         return super(CoopMapItem, self).data(column, role)
 
@@ -98,7 +113,7 @@ class CoopMapItem(QtWidgets.QTreeWidgetItem):
         """ Comparison operator used for item list sorting """
         return not self.__lt__(other)
 
-    def __lt__(self, other):
+    def __lt__(self, other: CoopMapItem) -> bool:
         """ Comparison operator used for item list sorting """
         # Default: uid
         return self.uid > other.uid

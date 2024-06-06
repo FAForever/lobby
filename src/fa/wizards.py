@@ -1,20 +1,29 @@
-import os
+from __future__ import annotations
 
-from PyQt5 import QtCore, QtWidgets
+import os
+from typing import TYPE_CHECKING
+
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import util
-from fa.path import typicalForgedAlliancePaths, validatePath
+from fa.path import typicalForgedAlliancePaths
+from fa.path import validatePath
+
+if TYPE_CHECKING:
+    from client._clientwindow import ClientWindow
+
 
 __author__ = 'Thygrrr'
 
 
 class UpgradePage(QtWidgets.QWizardPage):
-    def __init__(self, parent=None):
+    def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super(UpgradePage, self).__init__(parent)
 
         self.setTitle("Specify Forged Alliance folder")
         self.setPixmap(
-            QtWidgets.QWizard.WatermarkPixmap,
+            QtWidgets.QWizard.WizardPixmap.WatermarkPixmap,
             util.THEME.pixmap("fa/updater/forged_alliance_watermark.png"),
         )
 
@@ -59,14 +68,14 @@ class UpgradePage(QtWidgets.QWizardPage):
         self.completeChanged.emit()
 
     @QtCore.pyqtSlot()
-    def showChooser(self):
+    def showChooser(self) -> None:
         path = QtWidgets.QFileDialog.getExistingDirectory(
             self,
             "Select Forged Alliance folder",
             self.comboBox.currentText(),
             (
-                QtWidgets.QFileDialog.DontResolveSymlinks
-                | QtWidgets.QFileDialog.ShowDirsOnly
+                QtWidgets.QFileDialog.Option.DontResolveSymlinks
+                | QtWidgets.QFileDialog.Option.ShowDirsOnly
             ),
         )
         if path:
@@ -86,20 +95,20 @@ class Wizard(QtWidgets.QWizard):
     The actual Wizard which walks the user through the install.
     """
 
-    def __init__(self, client, *args, **kwargs):
+    def __init__(self, client: ClientWindow, *args, **kwargs) -> None:
         QtWidgets.QWizard.__init__(self, client, *args, **kwargs)
         self.client = client  # type - ClientWindow
         self.upgrade = UpgradePage()
         self.addPage(self.upgrade)
 
-        self.setWizardStyle(QtWidgets.QWizard.ModernStyle)
+        self.setWizardStyle(QtWidgets.QWizard.WizardStyle.ModernStyle)
         self.setWindowTitle("Forged Alliance Game Path")
         self.setPixmap(
-            QtWidgets.QWizard.WatermarkPixmap,
+            QtWidgets.QWizard.WizardPixmap.WatermarkPixmap,
             util.THEME.pixmap("fa/updater/forged_alliance_watermark.png"),
         )
 
-        self.setOption(QtWidgets.QWizard.NoBackButtonOnStartPage, True)
+        self.setOption(QtWidgets.QWizard.WizardOption.NoBackButtonOnStartPage, True)
 
     def accept(self):
         util.settings.setValue(
@@ -108,11 +117,11 @@ class Wizard(QtWidgets.QWizard):
         QtWidgets.QWizard.accept(self)
 
 
-def constructPathChoices(combobox, validated_choices):
+def constructPathChoices(combobox: QtWidgets.QComboBox, validated_choices: list[str]) -> None:
     """
     Creates a combobox with all potentially valid paths for FA on this system
     """
     combobox.clear()
     for path in validated_choices:
-        if combobox.findText(path, QtCore.Qt.MatchFixedString) == -1:
+        if combobox.findText(path, QtCore.Qt.MatchFlag.MatchFixedString) == -1:
             combobox.addItem(path)

@@ -4,16 +4,16 @@ import logging
 import os
 import sys
 import traceback
-from logging.handlers import MemoryHandler, RotatingFileHandler
+from logging.handlers import MemoryHandler
+from logging.handlers import RotatingFileHandler
 
-from PyQt5 import QtCore
+from PyQt6 import QtCore
 
 import fafpath
-
-from . import version
-from .develop import default_values as develop_defaults
-from .production import default_values as production_defaults
-from .testing import default_values as testing_defaults
+from config import version
+from config.develop import default_values as develop_defaults
+from config.production import default_values as production_defaults
+from config.testing import default_values as testing_defaults
 
 if sys.platform == 'win32':
     import ctypes
@@ -25,15 +25,14 @@ if sys.platform == 'win32':
     from . import admin
 
 _settings = QtCore.QSettings(
-    QtCore.QSettings.IniFormat,
-    QtCore.QSettings.UserScope,
+    QtCore.QSettings.Format.IniFormat,
+    QtCore.QSettings.Scope.UserScope,
     "ForgedAllianceForever",
     "FA Lobby",
 )
 _unpersisted_settings = {}
 
 CONFIG_PATH = os.path.dirname(_settings.fileName())
-UNITDB_CONFIG_FILE = os.path.join(CONFIG_PATH, "unitdb.conf")
 
 
 class Settings:
@@ -217,10 +216,18 @@ def is_beta():
 if _settings.contains('client/force_environment'):
     environment = _settings.value('client/force_environment', 'development')
 
+
+class FormatDefault(dict):
+    def __missing__(self, key: str) -> str:
+        # if key wasn't formatted leave it to format later
+        # "{foo}{bar}".format_map(FormatDefault(foo="FOO")) -> "FOO{bar}"
+        return f"{{{key}}}"
+
+
 for defaults in [production_defaults, develop_defaults, testing_defaults]:
     for key, value in defaults.items():
         if isinstance(value, str):
-            defaults[key] = value.format(host=Settings.get('host'))
+            defaults[key] = value.format_map(FormatDefault(host=Settings.get("host")))
 
 if environment == 'production':
     defaults = production_defaults
@@ -306,15 +313,15 @@ logging.getLogger().info(
 
 def qt_log_handler(type_, context, text):
     loglvl = None
-    if type_ == QtCore.QtDebugMsg:
+    if type_ == QtCore.QtMsgType.QtDebugMsg:
         loglvl = logging.DEBUG
-    elif type_ == QtCore.QtInfoMsg:
+    elif type_ == QtCore.QtMsgType.QtInfoMsg:
         loglvl = logging.INFO
-    elif type_ == QtCore.QtWarningMsg:
+    elif type_ == QtCore.QtMsgType.QtWarningMsg:
         loglvl = logging.WARNING
-    elif type_ == QtCore.QtCriticalMsg:
+    elif type_ == QtCore.QtMsgType.QtCriticalMsg:
         loglvl = logging.ERROR
-    elif type_ == QtCore.QtFatalMsg:
+    elif type_ == QtCore.QtMsgType.QtFatalMsg:
         loglvl = logging.CRITICAL
     if loglvl is None:
         return

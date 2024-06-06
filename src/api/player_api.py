@@ -1,30 +1,19 @@
 import logging
 
-from .ApiBase import ApiBase
+from PyQt6.QtCore import pyqtSignal
+
+from api.ApiAccessors import DataApiAccessor
 
 logger = logging.getLogger(__name__)
 
 
-class PlayerApiConnector(ApiBase):
-    def __init__(self, dispatch):
-        ApiBase.__init__(self, '/data/player')
-        self.dispatch = dispatch
+class PlayerApiConnector(DataApiAccessor):
+    alias_info = pyqtSignal(dict)
 
-    def requestDataForLeaderboard(self, leaderboardName, queryDict={}):
-        self.leaderboardName = leaderboardName
-        self.request(queryDict, self.handleDataForLeaderboard)
+    def __init__(self) -> None:
+        super().__init__('/data/player')
 
-    def handleDataForLeaderboard(self, message, meta):
-        preparedData = dict(
-            command='stats',
-            type='player',
-            leaderboardName=self.leaderboardName,
-            values=message,
-            meta=meta['meta'],
-        )
-        self.dispatch.dispatch(preparedData)
-
-    def requestDataForAliasViewer(self, nameToFind):
+    def requestDataForAliasViewer(self, nameToFind: str) -> None:
         queryDict = {
             'include': 'names',
             'filter': '(login=="{name}",names.name=="{name}")'.format(
@@ -33,11 +22,7 @@ class PlayerApiConnector(ApiBase):
             'fields[player]': 'login,names',
             'fields[nameRecord]': 'name,changeTime,player',
         }
-        self.request(queryDict, self.handleDataForAliasViewer)
+        self.get_by_query(queryDict, self.handleDataForAliasViewer)
 
-    def handleDataForAliasViewer(self, message, meta=None):
-        preparedData = dict(
-            command='alias_info',
-            values=message,
-        )
-        self.dispatch.dispatch(preparedData)
+    def handleDataForAliasViewer(self, message: dict) -> None:
+        self.alias_info.emit(message)

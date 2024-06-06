@@ -1,30 +1,29 @@
 import logging
 
-from PyQt5 import QtWidgets
+from PyQt6 import QtWidgets
 
 import config
-import fa
-import vaults.modvault.utils
+from api.sim_mod_updater import SimModFiles
+from vaults.modvault.utils import downloadMod
+from vaults.modvault.utils import getInstalledMods
+from vaults.modvault.utils import setActiveMods
 
 logger = logging.getLogger(__name__)
 
 
-def checkMods(mods):  # mods is a dictionary of uid-name pairs
+def checkMods(mods: dict[str, str]) -> bool:  # mods is a dictionary of uid-name pairs
     """
     Assures that the specified mods are available in FA, or returns False.
     Also sets the correct active mods in the ingame mod manager.
     """
     logger.info("Updating FA for mods {}".format(", ".join(mods)))
-    to_download = []
-    inst = vaults.modvault.utils.getInstalledMods()
-    uids = [mod.uid for mod in inst]
-    for uid in mods:
-        if uid not in uids:
-            to_download.append(uid)
+
+    inst = set(mod.uid for mod in getInstalledMods())
+    to_download = {uid: name for uid, name in mods.items() if uid not in inst}
 
     auto = config.Settings.get('mods/autodownload', default=False, type=bool)
     if not auto:
-        mod_names = ", ".join([mods[uid] for uid in mods])
+        mod_names = ", ".join(mods.values())
         msgbox = QtWidgets.QMessageBox()
         msgbox.setWindowTitle("Download Mod")
         msgbox.setText(
@@ -36,42 +35,35 @@ def checkMods(mods):  # mods is a dictionary of uid-name pairs
             "downloaded automatically in the future",
         )
         msgbox.setStandardButtons(
-            QtWidgets.QMessageBox.Yes
-            | QtWidgets.QMessageBox.YesToAll
-            | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes
+            | QtWidgets.QMessageBox.StandardButton.YesToAll
+            | QtWidgets.QMessageBox.StandardButton.No,
         )
-        result = msgbox.exec_()
-        if result == QtWidgets.QMessageBox.No:
+        result = msgbox.exec()
+        if result == QtWidgets.QMessageBox.StandardButton.No:
             return False
-        elif result == QtWidgets.QMessageBox.YesToAll:
+        elif result == QtWidgets.QMessageBox.StandardButton.YesToAll:
             config.Settings.set('mods/autodownload', True)
 
-    for uid in to_download:
-        # Spawn an update for the required mod
-        updater = fa.updater.Updater(uid, sim=True)
-        result = updater.run()
-        if result != fa.updater.Updater.RESULT_SUCCESS:
-            logger.warning("Failure getting {}: {}".format(uid, mods[uid]))
+    api_accessor = SimModFiles()
+    for uid, name in to_download.items():
+        url = api_accessor.request_and_get_sim_mod_url_by_id(uid)
+        if not downloadMod(url, name):
+            logger.warning(f"Failure getting {name!r} with uid {uid!r}")
             return False
 
     actual_mods = []
-    inst = vaults.modvault.utils.getInstalledMods()
-    uids = {}
-    for mod in inst:
-        uids[mod.uid] = mod
-    for uid in mods:
+    uids = {mod.uid: mod for mod in getInstalledMods()}
+    for uid, name in mods.items():
         if uid not in uids:
             QtWidgets.QMessageBox.warning(
                 None,
                 "Mod not Found",
-                (
-                    "{} was apparently not installed correctly. Please check "
-                    "this.".format(mods[uid])
-                ),
+                f"{name} was apparently not installed correctly. Please check this.",
             )
             return
         actual_mods.append(uids[uid])
-    if not vaults.modvault.utils.setActiveMods(actual_mods):
+    if not setActiveMods(actual_mods):
         logger.warning("Couldn't set the active mods in the game.prefs file")
         return False
 

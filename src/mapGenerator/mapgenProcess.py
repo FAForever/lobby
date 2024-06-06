@@ -1,8 +1,12 @@
 import logging
 import re
 
-from PyQt5.QtCore import QEventLoop, QProcess, Qt
-from PyQt5.QtWidgets import QApplication, QMessageBox, QProgressDialog
+from PyQt6.QtCore import QEventLoop
+from PyQt6.QtCore import QProcess
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QProgressDialog
 
 import fafpath
 from config import setup_file_handler
@@ -22,7 +26,7 @@ class MapGeneratorProcess(object):
         self._progress.setWindowTitle("Generating map, please wait...")
         self._progress.setCancelButtonText("Cancel")
         self._progress.setWindowFlags(
-            Qt.CustomizeWindowHint | Qt.WindowTitleHint,
+            Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint,
         )
         self._progress.setAutoReset(False)
         self._progress.setModal(1)
@@ -104,18 +108,18 @@ class MapGeneratorProcess(object):
         generatorLogger.info("<<< --------------------- MapGenerator Shutdown")
 
     def close(self):
-        if self.map_generator_process.state() == QProcess.Running:
+        if self.map_generator_process.state() == QProcess.ProcessState.Running:
             logger.info("Waiting for map generator process shutdown")
             if not self.map_generator_process.waitForFinished(300):
-                if self.map_generator_process.state() == QProcess.Running:
+                if self.map_generator_process.state() == QProcess.ProcessState.Running:
                     logger.error("Terminating map generator process")
                     self.map_generator_process.terminate()
                     if not self.map_generator_process.waitForFinished(300):
                         logger.error("Killing map generator process")
                         self.map_generator_process.kill()
 
-    def waitForCompletion(self):
+    def waitForCompletion(self) -> None:
         '''Copied from downloadManager. I hope it's ok :)'''
-        waitFlag = QEventLoop.WaitForMoreEvents
+        waitFlag = QEventLoop.ProcessEventsFlag.WaitForMoreEvents
         while self._running:
             QApplication.processEvents(waitFlag)

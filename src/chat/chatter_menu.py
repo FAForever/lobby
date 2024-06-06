@@ -1,7 +1,9 @@
 import logging
 from enum import Enum
 
-from PyQt5.QtWidgets import QAction, QApplication, QMenu
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QMenu
 
 from model.game import GameState
 

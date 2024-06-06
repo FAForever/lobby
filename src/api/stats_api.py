@@ -1,42 +1,20 @@
 import logging
 
-from .ApiBase import ApiBase
+from api.ApiAccessors import DataApiAccessor
 
 logger = logging.getLogger(__name__)
 
 
-class LeaderboardRatingApiConnector(ApiBase):
-    def __init__(self, dispatch, leaderboardName):
-        ApiBase.__init__(self, '/data/leaderboardRating')
-        self.dispatch = dispatch
-        self.leadeboardName = leaderboardName
+class LeaderboardRatingApiConnector(DataApiAccessor):
+    def __init__(self, leaderboard_name: str) -> None:
+        super().__init__('/data/leaderboardRating')
+        self.leaderboard_name = leaderboard_name
 
-    def requestData(self, queryDict={}):
-        self.request(queryDict, self.handleData)
-
-    def handleData(self, message, meta):
-        preparedData = dict(
-            command='stats',
-            type='leaderboardRating',
-            leaderboardName=self.leadeboardName,
-            values=message,
-            meta=meta['meta'],
-        )
-        self.dispatch.dispatch(preparedData)
+    def prepare_data(self, message: dict) -> None:
+        message["leaderboard"] = self.leaderboard_name
+        return message
 
 
-class LeaderboardApiConnector(ApiBase):
-    def __init__(self, dispatch):
-        ApiBase.__init__(self, '/data/leaderboard')
-        self.dispatch = dispatch
-
-    def requestData(self, queryDict={}):
-        self.request(queryDict, self.handleData)
-
-    def handleData(self, message):
-        preparedData = dict(
-            command='stats',
-            type='leaderboard',
-            values=message,
-        )
-        self.dispatch.dispatch(preparedData)
+class LeaderboardApiConnector(DataApiAccessor):
+    def __init__(self) -> None:
+        super().__init__('/data/leaderboard')

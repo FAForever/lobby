@@ -1,6 +1,49 @@
-from PyQt5 import QtCore
+from PyQt6 import QtCore
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QPushButton
+from PyQt6.QtWidgets import QStyleFactory
 
 import util
+from config import Settings
+
+FormClass, BaseClass = util.THEME.loadUiType("client/change_style.ui")
+
+
+class ChangeAppStyleDialog(FormClass, BaseClass):
+    def __init__(self) -> None:
+        super(ChangeAppStyleDialog, self).__init__()
+        self.setupUi(self)
+        self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
+        self.setWindowTitle("Select Application Style")
+        self.stylesList.addItems(QStyleFactory.keys())
+        self.buttonBox.clicked.connect(self.on_button_clicked)
+
+    def highlight_current_style(self) -> None:
+        current_stylename = QApplication.style().name()
+        match_flag = QtCore.Qt.MatchFlag.MatchFixedString
+        current_item, = self.stylesList.findItems(current_stylename, match_flag)
+        self.stylesList.setCurrentItem(current_item)
+
+    def run(self) -> int:
+        self.highlight_current_style()
+        return self.exec()
+
+    def on_button_clicked(self, button: QPushButton) -> None:
+        roles = self.buttonBox.ButtonRole
+        role = self.buttonBox.buttonRole(button)
+        style_name = self.stylesList.currentItem().text()
+        if role == roles.ApplyRole:
+            self.select_style(style_name, apply=True)
+        elif role == roles.AcceptRole:
+            self.select_style(style_name, apply=False)
+
+    def save_preference(self, stylename: str) -> None:
+        Settings.set("theme/style", stylename)
+
+    def select_style(self, stylename: str, apply: bool) -> None:
+        self.save_preference(stylename)
+        if apply:
+            QApplication.setStyle(QStyleFactory.create(stylename))
 
 
 class ThemeMenu(QtCore.QObject):
@@ -12,6 +55,7 @@ class ThemeMenu(QtCore.QObject):
         self._themes = {}
         # Hack to not process check signals when we're changing them ourselves
         self._updating = False
+        self.app_style_handler = ChangeAppStyleDialog()
 
     def setup(self, themes):
         for theme in themes:
@@ -21,6 +65,8 @@ class ThemeMenu(QtCore.QObject):
             action.setCheckable(True)
         self._menu.addSeparator()
         self._menu.addAction("Reload Stylesheet", util.THEME.reloadStyleSheets)
+        self._menu.addSeparator()
+        self._menu.addAction("Change Style", self.app_style_handler.run)
 
         self._updateThemeChecks()
 

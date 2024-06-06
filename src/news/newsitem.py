@@ -1,6 +1,8 @@
 import logging
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import util
 
@@ -8,12 +10,12 @@ logger = logging.getLogger(__name__)
 
 
 class NewsItemDelegate(QtWidgets.QStyledItemDelegate):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         QtWidgets.QStyledItemDelegate.__init__(self, *args, **kwargs)
 
         html = QtGui.QTextDocument()
         to = QtGui.QTextOption()
-        to.setWrapMode(QtGui.QTextOption.WordWrap)
+        to.setWrapMode(QtGui.QTextOption.WrapMode.WordWrap)
         html.setDefaultTextOption(to)
         html.setTextWidth(NewsItem.TEXTWIDTH)
 
@@ -31,7 +33,7 @@ class NewsItemDelegate(QtWidgets.QStyledItemDelegate):
         option.icon = QtGui.QIcon()
         option.text = ""
         option.widget.style().drawControl(
-            QtWidgets.QStyle.CE_ItemViewItem, option, painter, option.widget,
+            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
         )
 
         # Shadow (100x100 shifted 8 right and 8 down)

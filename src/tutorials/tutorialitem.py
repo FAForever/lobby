@@ -1,5 +1,7 @@
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import util
 from config import Settings
@@ -28,7 +30,7 @@ class TutorialItemDelegate(QtWidgets.QStyledItemDelegate):
         option.icon = QtGui.QIcon()
         option.text = ""
         option.widget.style().drawControl(
-            QtWidgets.QStyle.CE_ItemViewItem, option, painter, option.widget,
+            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
         )
 
         # Shadow
@@ -40,7 +42,7 @@ class TutorialItemDelegate(QtWidgets.QStyledItemDelegate):
         # Icon
         icon.paint(
             painter, option.rect.adjusted(3, -2, 0, 0),
-            QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter,
+            QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter,
         )
 
         # Frame around the icon
@@ -49,7 +51,7 @@ class TutorialItemDelegate(QtWidgets.QStyledItemDelegate):
         # FIXME: This needs to come from theme.
         pen.setBrush(QtGui.QColor("#303030"))
 
-        pen.setCapStyle(QtCore.Qt.RoundCap)
+        pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
         painter.drawRect(
             option.rect.left() + 3, option.rect.top() + 3,
@@ -124,7 +126,7 @@ class TutorialItem(QtWidgets.QListWidgetItem):
             icon = maps.preview(self.mapname)
             if not icon:
                 icon = util.THEME.icon("games/unknown_map.png")
-                self.client.map_downloader.download_preview(
+                self.client.map_preview_downloader.download_preview(
                     self.mapname, self._map_dl_request,
                 )
 

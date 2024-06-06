@@ -1,6 +1,7 @@
 import signal
 
-from PyQt5.QtCore import QCoreApplication, QTimer
+from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtCore import QTimer
 
 from .connectivity import QTurnSocket
 
@@ -18,4 +19,4 @@ if __name__ == '__main__':
     timer.timeout.connect(lambda: None)
     c = QTurnSocket()
     c.run()
-    app.exec_()
+    app.exec()

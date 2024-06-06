@@ -1,23 +1,20 @@
 import logging
 
-from .ApiBase import ApiBase
+from api.ApiAccessors import DataApiAccessor
 
 logger = logging.getLogger(__name__)
 
 
-class SimModFiles(ApiBase):
-    def __init__(self):
-        ApiBase.__init__(self, '/data/modVersion')
-        self.simModUrl = ''
+class SimModFiles(DataApiAccessor):
+    def __init__(self) -> None:
+        super().__init__('/data/modVersion')
+        self.mod_url = ""
 
-    def requestData(self, queryDict):
-        self.request(queryDict, self.handleData)
+    def get_url_from_message(self, message: dict) -> str:
+        self.mod_url = message["data"][0]["downloadUrl"]
 
-    def getUrlFromMessage(self, message):
-        self.simModUrl = message[0]['downloadUrl']
-
-    def requestAndGetSimModUrlByUid(self, uid):
-        queryDict = dict(filter='uid=={}'.format(uid))
-        self.request(queryDict, self.getUrlFromMessage)
+    def request_and_get_sim_mod_url_by_id(self, uid: str) -> str:
+        query_dict = {"filter": f"uid=={uid}"}
+        self.get_by_query(query_dict, self.get_url_from_message)
         self.waitForCompletion()
-        return self.simModUrl
+        return self.mod_url

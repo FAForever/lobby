@@ -1,4 +1,6 @@
-from PyQt5.QtCore import QAbstractListModel, QModelIndex, Qt
+from PyQt6.QtCore import QAbstractListModel
+from PyQt6.QtCore import QModelIndex
+from PyQt6.QtCore import Qt
 
 
 class QtListModel(QAbstractListModel):
@@ -16,7 +18,7 @@ class QtListModel(QAbstractListModel):
     def data(self, index, role):
         if not index.isValid() or index.row() >= len(self._itemlist):
             return None
-        if role != Qt.DisplayRole:
+        if role != Qt.ItemDataRole.DisplayRole:
             return None
         return self._itemlist[index.row()]
 

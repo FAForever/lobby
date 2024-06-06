@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 import logging
 from functools import partial
+from typing import TYPE_CHECKING
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
 
 import fa
 import util
-from api.matchmaker_queue_api import matchmakerQueueApiConnector
+from api.matchmaker_queue_api import MatchmakerQueueApiConnector
 from config import Settings
 from fa.factions import Factions
 
@@ -13,10 +18,20 @@ FormClass, BaseClass = util.THEME.loadUiType("games/automatchframe.ui")
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from client._clientwindow import ClientWindow
+    from games._gameswidget import GamesWidget
+
 
 class MatchmakerQueue(FormClass, BaseClass):
 
-    def __init__(self, games, client, queueName, teamSize):
+    def __init__(
+            self,
+            games: GamesWidget,
+            client: ClientWindow,
+            queueName: str,
+            teamSize: int,
+    ) -> None:
         BaseClass.__init__(self, games)
         self.setupUi(self)
 
@@ -60,10 +75,10 @@ class MatchmakerQueue(FormClass, BaseClass):
         self.setFactionIcons(self.subFactions)
 
         keys = (
-            QtCore.Qt.Key_1, QtCore.Qt.Key_2, QtCore.Qt.Key_3, QtCore.Qt.Key_4,
+            QtCore.Qt.Key.Key_1, QtCore.Qt.Key.Key_2, QtCore.Qt.Key.Key_3, QtCore.Qt.Key.Key_4,
         )
-        self.shortcut = QtWidgets.QShortcut(
-            QtGui.QKeySequence(QtCore.Qt.CTRL + keys[self.teamSize - 1]),
+        self.shortcut = QtGui.QShortcut(
+            QtGui.QKeySequence(QtCore.Qt.Key.Key_Control + keys[self.teamSize - 1]),
             self.client,
             self.startSearchRanked,
         )
@@ -74,13 +89,9 @@ class MatchmakerQueue(FormClass, BaseClass):
         self.secondsToAutomatch = 0
 
         self.ratingType = ""
-        self.client.lobby_info.matchmakerQueueInfo.connect(
-            self.handleApiQueueInfo,
-        )
-        self.apiConnector = matchmakerQueueApiConnector(
-            self.client.lobby_dispatch,
-        )
-        self.apiConnector.requestData(queryDict=dict(include="leaderboard"))
+        self.apiConnector = MatchmakerQueueApiConnector()
+        self.apiConnector.data_ready.connect(self.handleApiQueueInfo)
+        self.apiConnector.requestData({"include": "leaderboard"})
 
         title = self.queueName.replace("_", " ").capitalize()
         self.automatchTitle.setText(title)

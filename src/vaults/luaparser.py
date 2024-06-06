@@ -128,8 +128,9 @@ class luaParser:
             line = line.strip()
             # if the string is not empty, proceed
             if line != "":
-                # split it by '='
-                lineArray = line.split("=")
+                # split it by '=' -- actually, by ' = ', because
+                # there can be values with '=' inside, e.g. '=============',
+                lineArray = line.split(" = ")
                 # if result is one element list
                 if len(lineArray) == 1:
                     # this element is value
@@ -162,9 +163,7 @@ class luaParser:
                         # add new item into the array: recursive function call
                         if self.__prevUnfinished:
                             self.__prevUnfinished = False
-                            lua[prevkey] = self.__processLine(
-                                parent + ">" + prevkey,
-                            )
+                            lua[prevkey] = self.__processLine(parent + ">" + prevkey)
                         else:
                             lua[key] = self.__processLine(parent + ">" + key)
                     else:
@@ -199,9 +198,7 @@ class luaParser:
                             else:
                                 count = 0
                             if resultKey in self.__searchResult:
-                                resultVal = (
-                                    self.__searchResult[resultKey] + count
-                                )
+                                resultVal = self.__searchResult[resultKey] + count
                             else:
                                 resultVal = count
                         else:
@@ -222,25 +219,15 @@ class luaParser:
                             self.__searchResult[resultKey] = resultVal
                         else:
                             if keydst in self.__searchResult:
-                                if isinstance(
-                                    self.__searchResult[keydst], dict,
-                                ):
-                                    self.__searchResult[keydst][resultKey] = (
-                                        resultVal
-                                    )
+                                if isinstance(self.__searchResult[keydst], dict):
+                                    self.__searchResult[keydst][resultKey] = resultVal
                             else:
                                 self.__searchResult[keydst] = dict()
-                                self.__searchResult[keydst][resultKey] = (
-                                    resultVal
-                                )
+                                self.__searchResult[keydst][resultKey] = resultVal
                         if isinstance(resultVal, int):
-                            self.__foundItemsCount[searchKey] = (
-                                self.__foundItemsCount[searchKey] + resultVal
-                            )
+                            self.__foundItemsCount[searchKey] += resultVal
                         else:
-                            self.__foundItemsCount[searchKey] = (
-                                self.__foundItemsCount[searchKey] + 1
-                            )
+                            self.__foundItemsCount[searchKey] += 1
             # increase counter
             counter = counter + 1
         # return resulting array
@@ -278,43 +265,28 @@ class luaParser:
             if len(key.split(":")) == 2 or key.find("*") != -1:
                 if self.__foundItemsCount[key] == 0:
                     if resultKey in self.__defaultValues:
-                        self.__searchResult[resultKey] = (
-                            self.__defaultValues[resultKey]
-                        )
+                        self.__searchResult[resultKey] = self.__defaultValues[resultKey]
                     else:
                         self.error = True
                         self.errors += 1
-                        self.errorMsg += (
-                            "Error: no matches for '{}' were "
-                            "found\n".format(key)
-                        )
+                        self.errorMsg += f"Error: no matches for {key!r} were found\n"
             else:
                 if self.__foundItemsCount[key] == 0:
                     if resultKey in self.__defaultValues:
-                        self.__searchResult[resultKey] = (
-                            self.__defaultValues[resultKey]
-                        )
+                        self.__searchResult[resultKey] = self.__defaultValues[resultKey]
                     else:
                         self.error = True
                         self.errors += 1
-                        self.errorMsg += (
-                            "Error: no matches for '{}' were "
-                            "found\n".format(key)
-                        )
+                        self.errorMsg += f"Error: no matches for {key!r} were found\n"
                 elif self.__foundItemsCount[key] > 1:
                     self.warning = True
                     self.warnings += 1
-                    self.errorMsg += (
-                        "Warning: there were duplicate "
-                        "occurrences for '{}'\n".format(key)
-                    )
+                    self.errorMsg += f"Warning: there were duplicate occurrences for {key!r}\n"
 
     def parse(self, luaSearch, defValues=dict()):
         self.__searchPattern.update(luaSearch)
         self.__defaultValues.update(defValues)
-        self.__foundItemsCount = (
-            {}.fromkeys(list(self.__searchPattern.keys()), 0)
-        )
+        self.__foundItemsCount = {}.fromkeys(self.__searchPattern, 0)
         self.__parsedData = self.__parseLua()
         self.__checkErrors()
         return self.__searchResult

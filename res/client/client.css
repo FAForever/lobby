@@ -317,6 +317,11 @@ QToolBox#replayToolBox::tab
     background-color: rgb(32, 32, 37);
 }
 
+QTableView
+{
+    outline: none,
+}
+
 QTableView::item:hover
 {
     background-color: #606060;
@@ -467,12 +472,19 @@ QListWidget::item:hover, QListView::item:hover
     border-radius: 3px;
 }
 
-QListWidget::item:selected, QListView::item:selected, QTreeWidget::item:previously-selected
+QListView::item:selected, QTreeWidget::item:previously-selected
 {
     border: none;
 }
 
-QListWidget#modList::item:selected, QListWidget#newsList::item:selected
+QListWidget::item:selected
+{
+    color: orange;
+    background-color: #505050;
+    border: none;
+}
+
+QListWidget#newsList::item:selected
 
 {
     background-color: #505050;
@@ -548,8 +560,13 @@ QScrollArea
 
 
 /* Scrollbars*/
-QScrollBar {
+QScrollBar:horizontal {
+    background-color: grey;
+    height: 15px;
+    margin: 0 16px;
+}
 
+QScrollBar:vertical {
     background-color: grey;
     width: 15px;
     margin: 16px 0;
@@ -569,8 +586,19 @@ QScrollBar::handle:hover {
     background-color: #d5d6d6;
     min-height: 24px;
 }
-
-QScrollBar::sub-line {
+QScrollBar::sub-line:horizontal {
+    background: #2f2f2f;
+    width: 15px;
+    subcontrol-position: left;
+    subcontrol-origin: margin;
+}
+QScrollBar::add-line:horizontal  {
+    background: #2f2f2f;
+    width: 15px;
+    subcontrol-position: right;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:vertical {
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
     background: #2f2f2f;
@@ -578,8 +606,8 @@ QScrollBar::sub-line {
     subcontrol-position: top;
     subcontrol-origin: margin;
 }
-QScrollBar::add-line  {
 
+QScrollBar::add-line:vertical  {
     border-bottom-left-radius: 3px;
     border-bottom-right-radius: 3px;
     background: #2f2f2f;
@@ -598,9 +626,19 @@ QScrollBar:down-arrow {
     background-image: url('%THEMEPATH%/client/scrollUp.png');
     background-position: center center;
     background-repeat:no-repeat;
+}
 
- }
+QScrollBar:right-arrow {
+    background-image: url('%THEMEPATH%/client/scrollRight.png');
+    background-position: center center;
+    background-repeat:no-repeat;
+}
 
+QScrollBar:left-arrow {
+    background-image: url('%THEMEPATH%/client/scrollLeft.png');
+    background-position: center center;
+    background-repeat:no-repeat;
+}
 
 QScrollBar::add-page
 {
@@ -761,7 +799,13 @@ QToolButton::checked
     padding:5px;
     background-color:#C0C0C0;
     border-radius : 5px;
- }
+}
+
+QPushButton
+{
+    color: silver;
+    background: #453939;
+}
 
 QPushButton#refreshButton, #nextButton, #previousButton, #goToPageButton, #firstButton, #lastButton,
 #resetButton, #searchPlayerButton, #UIButton, #uploadButton, #kickButton, #leaveButton

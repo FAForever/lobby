@@ -1,29 +1,26 @@
 import logging
 
-from .ApiBase import ApiBase
+from api.ApiAccessors import DataApiAccessor
 
 logger = logging.getLogger(__name__)
 
 
-class matchmakerQueueApiConnector(ApiBase):
-    def __init__(self, dispatch):
-        ApiBase.__init__(self, '/data/matchmakerQueue')
-        self.dispatch = dispatch
+class MatchmakerQueueApiConnector(DataApiAccessor):
+    def __init__(self) -> None:
+        super().__init__('/data/matchmakerQueue')
 
-    def requestData(self, queryDict={}):
-        self.request(queryDict, self.handleData)
-
-    def handleData(self, message):
-        preparedData = {
+    def prepare_data(self, message: dict) -> None:
+        prepared_data = {
             "command": "matchmaker_queue_info",
             "values": [],
+            "meta": message["meta"],
         }
-        for queue in message:
+        for queue in message["data"]:
             preparedQueue = {
                 "technicalName": queue["technicalName"],
                 "ratingType": queue["leaderboard"]["technicalName"],
                 "id": queue["id"],
                 "leaderboardId": queue["leaderboard"]["id"],
             }
-            preparedData["values"].append(preparedQueue)
-        self.dispatch.dispatch(preparedData)
+            prepared_data["values"].append(preparedQueue)
+        return prepared_data

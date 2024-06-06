@@ -1,4 +1,5 @@
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 
 # TODO: probably create a common ancestor of ChatLineEdit and this
@@ -14,10 +15,10 @@ class LeaderboardLineEdit(QtWidgets.QLineEdit):
         self.completionList = list_
 
     def event(self, event):
-        if event.type() == QtCore.QEvent.KeyPress:
+        if event.type() == QtCore.QEvent.Type.KeyPress:
             # Swallow a selection of keypresses that we want for our history
             # support.
-            if event.key() == QtCore.Qt.Key_Tab:
+            if event.key() == QtCore.Qt.Key.Key_Tab:
                 self.try_completion()
                 return True
             else:

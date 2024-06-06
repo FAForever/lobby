@@ -1,9 +1,11 @@
 import os
 import sys
 
-from PyQt5.QtCore import QProcess, QProcessEnvironment
-from PyQt5.QtNetwork import QHostAddress, QTcpServer
-from PyQt5.QtWidgets import QMessageBox
+from PyQt6.QtCore import QProcess
+from PyQt6.QtCore import QProcessEnvironment
+from PyQt6.QtNetwork import QHostAddress
+from PyQt6.QtNetwork import QTcpServer
+from PyQt6.QtWidgets import QMessageBox
 
 import fafpath
 from config import Settings
@@ -12,22 +14,23 @@ from decorators import with_logger
 
 @with_logger
 class IceAdapterProcess(object):
-    def __init__(self, player_id, player_login):
+    def __init__(self, player_id: int, player_login: str, game_id: int) -> None:
 
         # determine free listen port for the RPC server inside the ice adapter
         # process
         s = QTcpServer()
-        s.listen(QHostAddress.LocalHost, 0)
+        s.listen(QHostAddress.SpecialAddress.LocalHost, 0)
         self._rpc_server_port = s.serverPort()
         s.close()
 
         if sys.platform == 'win32':
-            exe_path = os.path.join(
-                fafpath.get_libdir(), "ice-adapter", "faf-ice-adapter.exe",
-            )
+            exe_path = fafpath.get_java_path()
+            args = [
+                "-jar", os.path.join(fafpath.get_libdir(), "ice-adapter", "faf-ice-adapter.jar"),
+            ]
         else:  # Expect it to be in PATH already
             exe_path = "faf-ice-adapter"
-
+            args = []
         show_adapter_window = Settings.get(
             "iceadapter/info_window", default=False, type=bool,
         )
@@ -35,13 +38,12 @@ class IceAdapterProcess(object):
             "iceadapter/delay_ui_seconds", default=10, type=int,
         )
         self.ice_adapter_process = QProcess()
-        args = [
+        args.extend([
             "--id", str(player_id),
             "--login", player_login,
+            "--game-id", str(game_id),
             "--rpc-port", str(self._rpc_server_port),
-            "--gpgnet-port", "0",
-            "--log-level", "debug",
-        ]
+        ])
         if show_adapter_window:
             args.extend(["--info-window", "--delay-ui", str(delay_adapter_ui)])
         if Settings.contains('iceadapter/args'):
@@ -93,8 +95,8 @@ class IceAdapterProcess(object):
         for line in standard_error.splitlines():
             self._logger.debug("ICEERROR: " + line)
 
-    def on_exit(self, code, status):
-        if status == QProcess.CrashExit:
+    def on_exit(self, code: int, status: QProcess.ExitStatus) -> None:
+        if status == QProcess.ExitStatus.CrashExit:
             self._logger.error("the ICE crashed")
             QMessageBox.critical(
                 None, "ICE adapter error",
@@ -119,10 +121,10 @@ class IceAdapterProcess(object):
         return self._rpc_server_port
 
     def close(self):
-        if self.ice_adapter_process.state() == QProcess.Running:
+        if self.ice_adapter_process.state() == QProcess.ProcessState.Running:
             self._logger.info("Waiting for ice adapter process shutdown")
             if not self.ice_adapter_process.waitForFinished(1000):
-                if self.ice_adapter_process.state() == QProcess.Running:
+                if self.ice_adapter_process.state() == QProcess.ProcessState.Running:
                     self._logger.error("Terminating ice adapter process")
                     self.ice_adapter_process.terminate()
                     if not self.ice_adapter_process.waitForFinished(1000):

@@ -70,7 +70,7 @@ def test_version_correctly_read(tmpdir):
 
 
 def test_pixmap_cache_caches(tmpdir, mocker):
-    mocker.patch('PyQt5.QtGui.QPixmap', side_effect=[1, 2])
+    mocker.patch('PyQt6.QtGui.QPixmap', side_effect=[1, 2])
     themedir = tmpdir.mkdir("theme")
     themedir.join("file").write("content")
     themedir.join("second_file").write("content")

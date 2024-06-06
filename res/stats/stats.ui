@@ -42,12 +42,6 @@
     </item>
    </layout>
   </widget>
-  <widget class="QWidget" name="websiteTab">
-   <attribute name="title">
-    <string>Website</string>
-   </attribute>
-   <layout class="QGridLayout" name="gridLayout_23"/>
-  </widget>
   <widget class="QWidget" name="ladderTab">
    <attribute name="title">
     <string>Ladder</string>

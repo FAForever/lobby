@@ -1,4 +1,6 @@
-from PyQt5.QtCore import QObject, QTimer, pyqtSignal
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import pyqtSignal
 
 from fa import maps
 from model.game import GameState

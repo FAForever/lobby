@@ -1,12 +1,10 @@
 import json
 import logging
 
-from PyQt5 import QtCore
-from PyQt5.QtNetwork import (
-    QNetworkAccessManager,
-    QNetworkReply,
-    QNetworkRequest,
-)
+from PyQt6 import QtCore
+from PyQt6.QtNetwork import QNetworkAccessManager
+from PyQt6.QtNetwork import QNetworkReply
+from PyQt6.QtNetwork import QNetworkRequest
 
 from config import Settings
 
@@ -70,5 +68,4 @@ class WPAPI(QtCore.QObject):
             ),
         )
         request = QNetworkRequest(url)
-        request.setAttribute(QNetworkRequest.FollowRedirectsAttribute, True)
         self.nam.get(request)

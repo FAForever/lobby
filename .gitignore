@@ -12,7 +12,9 @@
 *.vcproj
 .idea/
 lib/
+natives/
 build/
+build_setup/
 dist/
 Thumbs.db
 .DS_Store
@@ -24,12 +26,3 @@ client_venv
 *.egg-info
 .vagrant
 .cache
-*.dll
-*.exe
-*.pac
-*.conf
-*.dat
-audio
-imageformats
-platforms
-*.json

@@ -1,17 +1,23 @@
-# system imports
 import logging
 import os
 import random
 
-from PyQt5 import QtCore, QtNetwork, QtWidgets
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import QEventLoop
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtNetwork import QNetworkAccessManager
+from PyQt6.QtNetwork import QNetworkReply
+from PyQt6.QtNetwork import QNetworkRequest
 
 import util
-# local imports
 from config import Settings
 from fa.maps import getUserMapsFolder
 from mapGenerator.mapgenProcess import MapGeneratorProcess
 from mapGenerator.mapgenUtils import generatedMapPattern
-from vaults.dialogs import downloadFile
+from vaults.dialogs import download_file
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +26,12 @@ RELEASE_VERSION_PATH = "download/{version}/NeroxisGen_{version}.jar"
 GENERATOR_JAR_NAME = "MapGenerator_{}.jar"
 
 
-class MapGeneratorManager(object):
-    def __init__(self):
+class MapGeneratorManager(QObject):
+    version_received = pyqtSignal()
+
+    def __init__(self) -> None:
+        super().__init__()
         self.latestVersion = None
-        self.response = None
 
         self.currentVersion = Settings.get('mapGenerator/version', "0", str)
 
@@ -73,14 +81,14 @@ class MapGeneratorManager(object):
                     "time.",
                 )
                 msgbox.setStandardButtons(
-                    QtWidgets.QMessageBox.Yes
-                    | QtWidgets.QMessageBox.YesToAll
-                    | QtWidgets.QMessageBox.No,
+                    QtWidgets.QMessageBox.StandardButton.Yes
+                    | QtWidgets.QMessageBox.StandardButton.YesToAll
+                    | QtWidgets.QMessageBox.StandardButton.No,
                 )
-                result = msgbox.exec_()
-                if result == QtWidgets.QMessageBox.No:
+                result = msgbox.exec()
+                if result == QtWidgets.QMessageBox.StandardButton.No:
                     return False
-                elif result == QtWidgets.QMessageBox.YesToAll:
+                elif result == QtWidgets.QMessageBox.StandardButton.YesToAll:
                     Settings.set('mapGenerator/autostart', True)
 
             mapsFolder = getUserMapsFolder()
@@ -130,40 +138,36 @@ class MapGeneratorManager(object):
 
         return self.generateMap(mapName)
 
-    def versionController(self, version):
+    def versionController(self, version: str) -> str:
         name = GENERATOR_JAR_NAME.format(version)
-        filePath = os.path.join(util.MAPGEN_DIR, name)
+        file_path = os.path.join(util.MAPGEN_DIR, name)
 
         # Check if required version is already in folder
         if os.path.isdir(util.MAPGEN_DIR):
             for infile in os.listdir(util.MAPGEN_DIR):
                 if infile.lower() == name.lower():
-                    return filePath
+                    return file_path
 
         # Download from github if not
         url = RELEASE_URL + RELEASE_VERSION_PATH.format(version=version)
-        return downloadFile(
-            url, filePath, name, "map generator", silent=False,
-        )
+        if download_file(url, util.MAPGEN_DIR, name, "map generator", silent=False):
+            return file_path
+        return ""
 
-    def checkUpdates(self):
+    def checkUpdates(self) -> None:
         '''
         Not downloading anything here.
         Just requesting latest version and return the number
         '''
-        self.manager = QtNetwork.QNetworkAccessManager()
-        self.manager.finished.connect(self.onRequestFinished)
+        self.manager = QNetworkAccessManager()
+        self.manager.finished.connect(self.on_request_finished)
 
-        request = QtNetwork.QNetworkRequest(
-            QtCore.QUrl(RELEASE_URL + "latest"),
-        )
+        request = QNetworkRequest(QUrl(RELEASE_URL).resolved(QUrl("latest")))
         self.manager.get(request)
 
         progress = QtWidgets.QProgressDialog()
         progress.setCancelButtonText("Cancel")
-        progress.setWindowFlags(
-            QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowTitleHint,
-        )
+        progress.setWindowFlags(Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)
         progress.setAutoClose(False)
         progress.setAutoReset(False)
         progress.setMinimum(0)
@@ -173,15 +177,13 @@ class MapGeneratorManager(object):
         progress.setWindowTitle("Looking for updates")
         progress.show()
 
-        while not self.response:
-            QtWidgets.QApplication.processEvents()
+        loop = QEventLoop()
+        self.version_received.connect(loop.quit)
+        loop.exec()
         progress.close()
 
-    def onRequestFinished(self, reply):
-        redirectUrl = reply.attribute(2)
-        if redirectUrl:
-            redirectUrl = redirectUrl.toString()
-            if "releases/tag/" in redirectUrl:
-                self.latestVersion = redirectUrl.rsplit('/', 1)[1]
-
-        self.response = True
+    def on_request_finished(self, reply: QNetworkReply) -> None:
+        redirect_url = reply.url()
+        if "releases/tag/" in redirect_url.toString():
+            self.latestVersion = redirect_url.fileName()
+        self.version_received.emit()

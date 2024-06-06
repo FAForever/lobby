@@ -1,8 +1,11 @@
 import logging
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QColor, QCursor
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QCursor
 
 import fa
 import util
@@ -10,7 +13,8 @@ from api.featured_mod_api import FeaturedModApiConnector
 from config import Settings
 from games.automatchframe import MatchmakerQueue
 from games.gamemodel import CustomGameFilterModel
-from games.moditem import ModItem, mod_invisible
+from games.moditem import ModItem
+from games.moditem import mod_invisible
 from model.chat.channel import PARTY_CHANNEL_SUFFIX
 
 logger = logging.getLogger(__name__)
@@ -93,7 +97,8 @@ class GamesWidget(FormClass, BaseClass):
         self._game_model = CustomGameFilterModel(self._me, game_model)
         self._game_launcher = game_launcher
 
-        self.apiConnector = FeaturedModApiConnector(self.client.lobby_dispatch)
+        self.apiConnector = FeaturedModApiConnector()
+        self.apiConnector.data_ready.connect(self.process_mod_info)
 
         self.gameview = gameview_builder(self._game_model, self.gameList)
         self.gameview.game_double_clicked.connect(self.gameDoubleClicked)
@@ -101,8 +106,6 @@ class GamesWidget(FormClass, BaseClass):
         self.matchFoundQueueName = ""
         self.ispassworded = False
         self.party = None
-
-        self.client.lobby_info.modInfo.connect(self.processModInfo)
 
         self.client.matchmaker_info.connect(self.handleMatchmakerInfo)
         self.client.game_enter.connect(self.stopSearch)
@@ -169,14 +172,14 @@ class GamesWidget(FormClass, BaseClass):
         self.matchmakerFramesInitialized = False
 
     @pyqtSlot(dict)
-    def processModInfo(self, message):
+    def process_mod_info(self, message: dict) -> None:
         """
         Slot that interprets and propagates mod_info messages into the mod list
         """
-        for value in message["values"]:
-            mod = value['name']
+        for featured_mod in message["values"]:
+            mod = featured_mod.name
             old_mod = self.mods.get(mod, None)
-            self.mods[mod] = ModItem(value)
+            self.mods[mod] = ModItem(featured_mod)
 
             if old_mod:
                 if mod in mod_invisible:
@@ -188,12 +191,12 @@ class GamesWidget(FormClass, BaseClass):
                     if self.client.replays.modList.itemText(i) == old_mod.mod:
                         self.client.replays.modList.removeItem(i)
 
-            if value["publish"]:
+            if featured_mod.visible:
                 self.modList.addItem(self.mods[mod])
             else:
                 mod_invisible[mod] = self.mods[mod]
 
-            self.client.replays.modList.addItem(value["name"])
+            self.client.replays.modList.addItem(mod)
 
     @pyqtSlot(int)
     def togglePrivateGames(self, state):
@@ -265,12 +268,12 @@ class GamesWidget(FormClass, BaseClass):
         self._game_model.sort_type = CustomGameFilterModel.SortType(index)
 
     def teamListItemClicked(self, item):
-        if QtWidgets.QApplication.mouseButtons() == Qt.LeftButton:
+        if QtWidgets.QApplication.mouseButtons() == Qt.MouseButton.LeftButton:
             # for no good reason doesn't always work as expected
             item.setSelected(False)
 
         if (
-            QtWidgets.QApplication.mouseButtons() == Qt.RightButton
+            QtWidgets.QApplication.mouseButtons() == Qt.MouseButton.RightButton
             and self.party.owner_id == self._me.id
         ):
             self.teamList.setCurrentItem(item)
@@ -363,9 +366,9 @@ class GamesWidget(FormClass, BaseClass):
         result = QtWidgets.QMessageBox.question(
             self, "Kick Player: {}".format(login),
             "Are you sure you want to kick {} from party?".format(login),
-            QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No,
         )
-        if result == QtWidgets.QMessageBox.Yes:
+        if result == QtWidgets.QMessageBox.StandardButton.Yes:
             self.stopSearch()
             msg = {
                 'command': 'kick_player_from_party',
@@ -376,9 +379,9 @@ class GamesWidget(FormClass, BaseClass):
     def leave_party(self):
         result = QtWidgets.QMessageBox.question(
             self, "Leaving Party", "Are you sure you want to leave party?",
-            QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No,
         )
-        if result == QtWidgets.QMessageBox.Yes:
+        if result == QtWidgets.QMessageBox.StandardButton.Yes:
             msg = {
                 'command': 'leave_party',
             }

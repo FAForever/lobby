@@ -8,17 +8,21 @@ import shutil
 import subprocess
 import sys
 
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QStandardPaths, QUrl
-from PyQt5.QtGui import QDesktopServices
-from PyQt5.QtWidgets import QMessageBox
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import QDateTime
+from PyQt6.QtCore import QStandardPaths
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QUrl
+from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtWidgets import QMessageBox
 
 import fafpath
 from config import VERSION as VERSION_STRING
-from config import _settings  # Stolen from Config because reasons
 from config import Settings
+from config import _settings  # Stolen from Config because reasons
 from mapGenerator import mapgenUtils
-from util.theme import Theme, ThemeSet
+from util.theme import Theme
+from util.theme import ThemeSet
 
 if sys.platform == 'win32':
     import win32service
@@ -52,6 +56,12 @@ MAP_PREVIEW_SMALL_DIR = os.path.join(CACHE_DIR, "maps", "small")
 MAP_PREVIEW_LARGE_DIR = os.path.join(CACHE_DIR, "maps", "large")
 
 MOD_PREVIEW_DIR = os.path.join(CACHE_DIR, "mod_previews")
+
+# Cache for news images
+NEWS_CACHE_DIR = os.path.join(CACHE_DIR, "news")
+
+# This contains cached game files
+GAME_CACHE_DIR = os.path.join(CACHE_DIR, "featured_mod")
 
 # This contains cached data downloaded for FA extras
 EXTRA_DIR = os.path.join(APPDATA_DIR, "extra")
@@ -126,7 +136,7 @@ def getPersonalDir():
     else:
         dir_ = str(
             QStandardPaths.standardLocations(
-                QStandardPaths.DocumentsLocation,
+                QStandardPaths.StandardLocation.DocumentsLocation,
             )[0],
         )
         try:
@@ -157,7 +167,8 @@ logger.info('PERSONAL_DIR final: ' + PERSONAL_DIR)
 for data_dir in [
     APPDATA_DIR, PERSONAL_DIR, LUA_DIR, CACHE_DIR,
     MAP_PREVIEW_SMALL_DIR, MAP_PREVIEW_LARGE_DIR, MOD_PREVIEW_DIR,
-    THEME_DIR, REPLAY_DIR, LOG_DIR, EXTRA_DIR,
+    THEME_DIR, REPLAY_DIR, LOG_DIR, EXTRA_DIR, NEWS_CACHE_DIR,
+    GAME_CACHE_DIR, GAMEDATA_DIR, BIN_DIR, REPLAY_DIR,
 ]:
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
@@ -257,13 +268,13 @@ def clearDirectory(directory, confirm=True):
                     "Are you sure you wish to clear the following directory:"
                     "<br/><b>&nbsp;&nbsp;{}</b>".format(directory)
                 ),
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.No,
             )
         else:
-            result = QtWidgets.QMessageBox.Yes
+            result = QtWidgets.QMessageBox.StandardButton.Yes
 
-        if result == QtWidgets.QMessageBox.Yes:
+        if result == QtWidgets.QMessageBox.StandardButton.Yes:
             shutil.rmtree(directory)
             return True
         else:
@@ -490,9 +501,20 @@ def uniqueID(session):
         return None
 
 
-def strtodate(s):
-    return datetime.datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+def strtodate(s: str) -> QDateTime:
+    return QDateTime.fromString(s, Qt.DateFormat.ISODate).toLocalTime()
 
 
-def datetostr(d):
-    return d.strftime("%Y-%m-%d %H:%M:%S")
+def datetostr(d: QDateTime) -> str:
+    return d.toString("yyyy-mm-dd HH:MM:ss")
+
+
+def utctolocal(s: str) -> str:
+    return datetostr(strtodate(s))
+
+
+def capitalize(string: str) -> str:
+    """
+    Capitalize the first letter only, leave the rest as it is
+    """
+    return f"{string[0].upper()}{string[1:]}"

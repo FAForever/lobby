@@ -1,6 +1,7 @@
 from enum import IntEnum
 
-from PyQt5.QtCore import QTimer
+from PyQt6.QtCore import QTimer
+from PyQt6.QtMultimedia import QSoundEffect
 
 from chat.chat_widget import TabIcon
 
@@ -28,6 +29,9 @@ class ChannelTab:
         self._ping_timer = QTimer()
         self._ping_timer.setSingleShot(True)
         self._ping_timer.setInterval(self._chat_config.channel_ping_timeout)
+
+        self._ping_sound = QSoundEffect()
+        self._ping_sound.setSource(self._theme.sound("chat/sfx/query.wav"))
 
     def _config_updated(self, option):
         c = self._chat_config
@@ -69,14 +73,14 @@ class ChannelTab:
             self._timer.start()
         self._ping()
 
-    def _ping(self):
+    def _ping(self) -> None:
         self._widget.alert_tab()
         if not self._chat_config.soundeffects:
             return
         if self._ping_timer.isActive():
             return
         self._ping_timer.start()
-        self._theme.sound("chat/sfx/query.wav")
+        self._ping_sound.play()
 
     def _stop_blinking(self):
         self._timer.stop()

@@ -1,23 +1,36 @@
-import io
 import logging
 import os
-import zipfile
+from enum import Enum
+from enum import auto
+from typing import Callable
 
-from PyQt5 import QtCore, QtNetwork, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtNetwork
+from PyQt6 import QtWidgets
 
 from downloadManager import FileDownload
+from downloadManager import ZipDownloadExtract
+from util import capitalize
 
 logger = logging.getLogger(__name__)
 
 
-class VaultDownloadDialog(object):
-    # Result codes
-    SUCCESS = 0
-    CANCELED = 1
-    DL_ERROR = 2
-    UNKNOWN_ERROR = 3
+class VaultDownloadResult(Enum):
+    SUCCESS = auto()
+    CANCELED = auto()
+    DL_ERROR = auto()
+    UNKNOWN_ERROR = auto()
 
-    def __init__(self, dler, title, label, silent=False):
+
+class VaultDownloadDialog(object):
+
+    def __init__(
+            self,
+            dler: FileDownload | ZipDownloadExtract,
+            title: str,
+            label: str,
+            silent: bool = False,
+    ) -> None:
         self._silent = silent
         self._result = None
 
@@ -36,38 +49,41 @@ class VaultDownloadDialog(object):
         else:
             self._progress.setCancelButton(None)
         self._progress.setWindowFlags(
-            QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowTitleHint,
+            QtCore.Qt.WindowType.CustomizeWindowHint | QtCore.Qt.WindowType.WindowTitleHint,
         )
         self._progress.setAutoReset(False)
         self._progress.setModal(1)
         self._progress.canceled.connect(self._dler.cancel)
 
         progressBar = QtWidgets.QProgressBar(self._progress)
-        progressBar.setAlignment(QtCore.Qt.AlignCenter)
+        progressBar.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self._progress.setBar(progressBar)
 
+        self.progress_measure_interaval = 250
         self.timer = QtCore.QTimer()
-        self.timer.setInterval(500)
+        self.timer.setInterval(self.progress_measure_interaval)
         self.timer.timeout.connect(self.updateLabel)
         self.bytes_prev = 0
 
-    def updateLabel(self):
-        self._progress.setLabelText(
-            '{label}\n\n{downloaded} MiB ({speed} MiB/s)'
-            .format(
-                label=self.label,
-                downloaded=self.getDownloadProgressMiB(),
-                speed=self.getDownloadSpeed(),
-            ),
-        )
+    def updateLabel(self) -> None:
+        label_text = f"{self.label}\n\n{self.get_download_progress_mb()}"
+        speed_text = f"({self.get_download_speed()} MB/s)"
+        if self._dler.bytes_total > 0:
+            label_text = f"{label_text}/{self.get_download_size_mb()} MB\n\n{speed_text}"
+        else:
+            label_text = f"{label_text} MB {speed_text}"
+        self._progress.setLabelText(label_text)
 
-    def getDownloadSpeed(self):
+    def get_download_speed(self) -> float:
         bytes_diff = self._dler.bytes_progress - self.bytes_prev
         self.bytes_prev = self._dler.bytes_progress
-        return round(bytes_diff * 2 / 1024 / 1024, 2)
+        return round(bytes_diff * (1000 / self.progress_measure_interaval) / 1024 / 1024, 2)
 
-    def getDownloadProgressMiB(self):
+    def get_download_progress_mb(self) -> float:
         return round(self._dler.bytes_progress / 1024 / 1024, 2)
+
+    def get_download_size_mb(self) -> float:
+        return round(self._dler.bytes_total / 1024 / 1024, 2)
 
     def run(self):
         self.updateLabel()
@@ -91,24 +107,25 @@ class VaultDownloadDialog(object):
 
         QtWidgets.QApplication.processEvents()
 
-    def _finished(self, dler):
+    def _finished(self, dler: FileDownload | ZipDownloadExtract) -> None:
         self.timer.stop()
         self._progress.reset()
+        self._set_result(dler)
 
-        if not dler.succeeded():
+    def _set_result(self, dler: FileDownload | ZipDownloadExtract) -> None:
+        if dler.failed():
             if dler.canceled:
-                self._result = self.CANCELED
+                self._result = VaultDownloadResult.CANCELED
                 return
-
             elif dler.error:
-                self._result = self.DL_ERROR
+                self._result = VaultDownloadResult.DL_ERROR
                 return
             else:
                 logger.error('Unknown download error')
-                self._result = self.UNKNOWN_ERROR
+                self._result = VaultDownloadResult.UNKNOWN_ERROR
                 return
 
-        self._result = self.SUCCESS
+        self._result = VaultDownloadResult.SUCCESS
         return
 
 
@@ -116,135 +133,112 @@ class VaultDownloadDialog(object):
 _global_nam = QtNetwork.QNetworkAccessManager()
 
 
+def _download_asset(
+        dler: FileDownload | ZipDownloadExtract,
+        category: str,
+        silent: bool,
+        label: str = "",
+) -> VaultDownloadResult:
+    ddialog = VaultDownloadDialog(dler, f"Downloading {category}", label, silent)
+    result = ddialog.run()
+
+    if result == VaultDownloadResult.CANCELED:
+        logger.warning(f"{category} Download canceled for: {dler.addr}")
+    if result in [
+        VaultDownloadResult.DL_ERROR,
+        VaultDownloadResult.UNKNOWN_ERROR,
+    ]:
+        logger.warning(f"Download failed. {dler.addr}")
+    return result
+
+
 def downloadVaultAssetNoMsg(
-    url, target_dir, exist_handler, name, category, silent,
-):
+        url: str,
+        target_dir: str,
+        exist_handler: Callable[[str, str], bool],
+        name: str,
+        category: str,
+        silent: bool,
+        request_params: dict | None = None,
+        label: str = "",
+) -> tuple[bool, Callable[[], None] | None]:
     """
     Download and unpack a zip from the vault, interacting with the user and
     logging things.
     """
     global _global_nam
+
     msg = None
-    msg_title = ""
-    msg_text = ""
-    output = io.BytesIO()
-    capitCat = category[0].upper() + category[1:]
+    capit_cat = capitalize(category)
 
-    dler = FileDownload(_global_nam, url, output)
-    ddialog = VaultDownloadDialog(
-        dler, "Downloading {}".format(category), name, silent,
-    )
-    result = ddialog.run()
+    if os.path.exists(os.path.join(target_dir, name)):
+        proceed = exist_handler(target_dir, name)
+        if not proceed:
+            return False, msg
 
-    if result == VaultDownloadDialog.CANCELED:
-        logger.warning("{} Download canceled for: {}".format(capitCat, url))
+    os.makedirs(target_dir, exist_ok=True)
+    dler = ZipDownloadExtract(target_dir, _global_nam, url, request_params)
+    result = _download_asset(dler, capit_cat, silent, label or name)
 
     if result in [
-        VaultDownloadDialog.DL_ERROR,
-        VaultDownloadDialog.UNKNOWN_ERROR,
+        VaultDownloadResult.DL_ERROR,
+        VaultDownloadResult.UNKNOWN_ERROR,
     ]:
-        logger.warning(
-            "Vault download failed, {} probably not in vault "
-            "(or broken).".format(category),
-        )
-        msg_title = "{} not downloadable".format(capitCat)
+        logger.warning(f"Vault download failed, {category} is probably not in vault (or broken).")
+        msg_title = "{} not downloadable".format(capit_cat)
         msg_text = (
-            "<b>This {} was not found in the vault (or is broken).</b>"
-            "<br/>You need to get it from somewhere else in order to "
-            "use it.".format(category)
+            f"<b>This {category} was not found in the vault (or is broken).</b>"
+            f"<br/>You need to get it from somewhere else in order to "
+            f"use it."
         )
 
-    if msg_title and msg_text:
         def msg():
             QtWidgets.QMessageBox.information(None, msg_title, msg_text)
 
-    if result != VaultDownloadDialog.SUCCESS:
-        return False, msg
-
-    try:
-        zfile = zipfile.ZipFile(output)
-        # FIXME - nothing in python 2.7 that can do that
-        dirname = zfile.namelist()[0].split(os.path.sep, 1)[0]
-
-        if os.path.exists(os.path.join(target_dir, dirname)):
-            proceed = exist_handler(target_dir, dirname)
-            if not proceed:
-                return False
-        zfile.extractall(target_dir)
-        logger.debug(
-            "Successfully downloaded and extracted {} from: {}"
-            .format(category, url),
-        )
-        return True, msg
-
-    except BaseException:
-        logger.error("Extract error")
-
-        def msg():
-            QtWidgets.QMessageBox.information(
-                None,
-                "{} installation failed".format(capitCat),
-                (
-                    "<b>This {} could not be installed (please report this {} "
-                    "or bug).</b>".format(category, category)
-                ),
-            )
-        return False, msg
+    return result == VaultDownloadResult.SUCCESS, msg
 
 
-def downloadVaultAsset(url, target_dir, exist_handler, name, category, silent):
-    ret, dialog = downloadVaultAssetNoMsg(
-        url, target_dir, exist_handler, name, category, silent,
-    )
+def downloadVaultAsset(
+        url: str,
+        target_dir: str,
+        exist_handler: Callable[[str, str], bool],
+        name: str,
+        category: str,
+        silent: bool,
+) -> bool:
+    ret, dialog = downloadVaultAssetNoMsg(url, target_dir, exist_handler, name, category, silent)
     if dialog is not None:
         dialog()
-
     return ret
 
 
-def downloadFile(url, target_dir, name, category, silent):
+def download_file(
+        url: str,
+        target_dir: str,
+        name: str,
+        category: str,
+        silent: bool,
+        request_params: dict | None = None,
+        label: str = "",
+) -> bool:
     """
     Basically a copy of downloadVaultAssetNoMsg without zip
     """
+    capit_cat = capitalize(category)
 
-    global _global_nam
-    msg = None
-    output = io.BytesIO()
-    capitCat = category[0].upper() + category[1:]
+    os.makedirs(target_dir, exist_ok=True)
+    target_path = os.path.join(target_dir, name)
 
-    dler = FileDownload(_global_nam, url, output)
-    ddialog = VaultDownloadDialog(
-        dler, "Downloading {}".format(category), name, silent,
-    )
-    result = ddialog.run()
+    dler = FileDownload(target_path, _global_nam, url, request_params)
+    result = _download_asset(dler, capit_cat, silent, label or name)
 
-    if result == VaultDownloadDialog.CANCELED:
-        logger.warning("{} Download canceled for: {}".format(capitCat, url))
     if result in [
-        VaultDownloadDialog.DL_ERROR,
-        VaultDownloadDialog.UNKNOWN_ERROR,
+        VaultDownloadResult.DL_ERROR,
+        VaultDownloadResult.UNKNOWN_ERROR,
     ]:
-        logger.warning("Download failed. {}".format(url))
-
-        def msg():
-            QtWidgets.QMessageBox.information(
-                None,
-                "{} not downloadable".format(capitCat),
-                (
-                    "<b>Failed to download {} from</b><br/>"
-                    "{}".format(category, url)
-                ),
-            )
-
-    if result != VaultDownloadDialog.SUCCESS:
-        if msg:
-            msg()
-        return False
-
-    if not os.path.exists(os.path.dirname(target_dir)):
-        os.makedirs(os.path.dirname(target_dir))
-
-    with open(target_dir, "w+b") as f:
-        f.write(output.getvalue())
-
-    return target_dir
+        QtWidgets.QMessageBox.information(
+            None,
+            f"{capit_cat} not downloadable",
+            f"<b>Failed to download {category} from</b><br/>{url}",
+        )
+    return result == VaultDownloadResult.SUCCESS

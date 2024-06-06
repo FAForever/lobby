@@ -1,12 +1,11 @@
 import logging
-import sys
 import time
 from functools import partial
 
-from oauthlib.oauth2 import WebApplicationClient
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtNetwork import QNetworkAccessManager
-from requests_oauthlib import OAuth2Session
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
+from PyQt6.QtNetwork import QNetworkAccessManager
 
 import config
 import fa
@@ -24,34 +23,28 @@ from chat.chatter_model import ChatterLayoutElements
 from chat.ircconnection import IrcConnection
 from chat.language_channel_config import LanguageChannelConfig
 from chat.line_restorer import ChatLineRestorer
-from client.aliasviewer import AliasSearchWindow, AliasWindow
+from client.aliasviewer import AliasSearchWindow
+from client.aliasviewer import AliasWindow
 from client.chat_config import ChatConfig
 from client.clientstate import ClientState
-from client.connection import (
-    ConnectionState,
-    Dispatcher,
-    LobbyInfo,
-    ServerConnection,
-    ServerReconnecter,
-)
+from client.connection import ConnectionState
+from client.connection import Dispatcher
+from client.connection import LobbyInfo
+from client.connection import ServerConnection
+from client.connection import ServerReconnecter
 from client.gameannouncer import GameAnnouncer
 from client.login import LoginWidget
 from client.playercolors import PlayerColors
 from client.theme_menu import ThemeMenu
-from client.user import (
-    User,
-    UserRelationController,
-    UserRelationModel,
-    UserRelations,
-    UserRelationTrackers,
-)
+from client.user import User
+from client.user import UserRelationController
+from client.user import UserRelationModel
+from client.user import UserRelations
+from client.user import UserRelationTrackers
 from connectivity.ConnectivityDialog import ConnectivityDialog
 from coop import CoopWidget
-from downloadManager import (
-    MAP_PREVIEW_ROOT,
-    AvatarDownloader,
-    PreviewDownloader,
-)
+from downloadManager import AvatarDownloader
+from downloadManager import MapSmallPreviewDownloader
 from fa.factions import Factions
 from fa.game_runner import GameRunner
 from fa.game_session import GameSession
@@ -61,33 +54,34 @@ from games.gameitem import GameViewBuilder
 from games.gamemodel import GameModel
 from games.hostgamewidget import build_launcher
 from mapGenerator.mapgenManager import MapGeneratorManager
-from model.chat.channel import ChannelID, ChannelType
+from model.chat.channel import ChannelID
+from model.chat.channel import ChannelType
 from model.chat.chat import Chat
 from model.chat.chatline import ChatLineMetadataBuilder
-from model.gameset import Gameset, PlayerGameIndex
+from model.gameset import Gameset
+from model.gameset import PlayerGameIndex
 from model.player import Player
 from model.playerset import Playerset
-from model.rating import MatchmakerQueueType, RatingType
+from model.rating import MatchmakerQueueType
+from model.rating import RatingType
 from news import NewsWidget
+from oauth.oauth_flow import OAuth2FlowInstance
 from power import PowerTools
 from replays import ReplaysWidget
 from secondaryServer import SecondaryServer
 from stats import StatsWidget
 from ui.busy_widget import BusyWidget
 from ui.status_logo import StatusLogo
-from unitdb import unitdbtab
+from unitdb.unitdbtab import UnitDBTab
 from updater import ClientUpdateTools
 from vaults.mapvault.mapvault import MapVault
 from vaults.modvault.modvault import ModVault
-from vaults.modvault.utils import getModFolder, setModFolder
+from vaults.modvault.utils import getModFolder
+from vaults.modvault.utils import setModFolder
 
 from .mouse_position import MousePosition
-from .oauth_dialog import OAuthWidget
 
 logger = logging.getLogger(__name__)
-
-OAUTH_TOKEN_PATH = "/oauth2/token"
-OAUTH_AUTH_PATH = "/oauth2/auth"
 
 FormClass, BaseClass = util.THEME.loadUiType("client/client.ui")
 
@@ -147,9 +141,11 @@ class ClientWindow(FormClass, BaseClass):
         )
 
         self._network_access_manager = QNetworkAccessManager(self)
-        self.OAuthSession = None
-        self.tokenTimer = QtCore.QTimer()
-        self.tokenTimer.timeout.connect(self.checkOAuthToken)
+        self.oauth_flow = OAuth2FlowInstance
+        self.oauth_flow.setParent(self)
+        self.oauth_flow.granted.connect(self.do_connect)
+        self.oauth_flow.granted.connect(self.save_refresh_token)
+        self.oauth_flow.requestFailed.connect(self.show_login_widget)
 
         self.unique_id = None
         self._chat_config = ChatConfig(util.settings)
@@ -238,21 +234,14 @@ class ClientWindow(FormClass, BaseClass):
         )
         self.me.relations = self.user_relations
 
-        self.map_downloader = PreviewDownloader(
-            util.MAP_PREVIEW_SMALL_DIR,
-            util.MAP_PREVIEW_LARGE_DIR,
-            MAP_PREVIEW_ROOT,
-        )
-        self.mod_downloader = PreviewDownloader(
-            util.MOD_PREVIEW_DIR, None, None,
-        )
+        self.map_preview_downloader = MapSmallPreviewDownloader(util.MAP_PREVIEW_SMALL_DIR)
         self.avatar_downloader = AvatarDownloader()
 
         # Map generator
         self.map_generator = MapGeneratorManager()
 
         # Qt model for displaying active games.
-        self.game_model = GameModel(self.me, self.map_downloader, self.gameset)
+        self.game_model = GameModel(self.me, self.map_preview_downloader, self.gameset)
 
         self.gameset.added.connect(self.fill_in_session_info)
 
@@ -283,7 +272,7 @@ class ClientWindow(FormClass, BaseClass):
         # Process used to run Forged Alliance (managed in module fa)
         fa.instance.started.connect(self.started_fa)
         fa.instance.finished.connect(self.finished_fa)
-        fa.instance.error.connect(self.error_fa)
+        fa.instance.errorOccurred.connect(self.error_fa)
         self.gameset.added.connect(fa.instance.newServerGame)
 
         # Local Replay Server
@@ -306,13 +295,13 @@ class ClientWindow(FormClass, BaseClass):
 
         # Frameless
         self.setWindowFlags(
-            QtCore.Qt.FramelessWindowHint
-            | QtCore.Qt.WindowSystemMenuHint
-            | QtCore.Qt.WindowMinimizeButtonHint,
+            QtCore.Qt.WindowType.FramelessWindowHint
+            | QtCore.Qt.WindowType.WindowSystemMenuHint
+            | QtCore.Qt.WindowType.WindowMinimizeButtonHint,
         )
 
         self.rubber_band = QtWidgets.QRubberBand(
-            QtWidgets.QRubberBand.Rectangle,
+            QtWidgets.QRubberBand.Shape.Rectangle,
         )
 
         self.mouse_position = MousePosition(self)
@@ -352,7 +341,7 @@ class ClientWindow(FormClass, BaseClass):
         self.topLayout.addWidget(close)
         self.topLayout.setSpacing(0)
         self.setSizePolicy(
-            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed,
+            QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed,
         )
         self.is_window_maximized = False
 
@@ -491,17 +480,17 @@ class ClientWindow(FormClass, BaseClass):
         self.games.stopSearch()
 
     def appStateChanged(self, state):
-        if state == QtCore.Qt.ApplicationInactive:
-            self._lastDeactivateTime = time.time()
+        if state == QtCore.Qt.ApplicationState.ApplicationInactive:
+            self._lastDeactivateTime = time.monotonic()
 
     def eventFilter(self, obj, event):
-        if event.type() == QtCore.QEvent.HoverMove:
+        if event.type() == QtCore.QEvent.Type.HoverMove:
             self.dragging_hover = self.dragging
             if self.dragging:
-                self.resize_widget(self.mapToGlobal(event.pos()))
+                self.resize_widget(self.mapToGlobal(event.position()))
             else:
                 if not self.is_window_maximized:
-                    self.mouse_position.update_mouse_position(event.pos())
+                    self.mouse_position.update_mouse_position(event.position())
                 else:
                     self.mouse_position.reset_to_false()
             self.update_cursor_shape()
@@ -514,33 +503,40 @@ class ClientWindow(FormClass, BaseClass):
             or self.mouse_position.on_bottom_right_edge
         ):
             self.mouse_position.cursor_shape_change = True
-            self.setCursor(QtCore.Qt.SizeFDiagCursor)
+            self.setCursor(QtCore.Qt.CursorShape.SizeFDiagCursor)
         elif (
             self.mouse_position.on_top_right_edge
             or self.mouse_position.on_bottom_left_edge
         ):
-            self.setCursor(QtCore.Qt.SizeBDiagCursor)
+            self.setCursor(QtCore.Qt.CursorShape.SizeBDiagCursor)
             self.mouse_position.cursor_shape_change = True
         elif (
             self.mouse_position.on_left_edge
             or self.mouse_position.on_right_edge
         ):
-            self.setCursor(QtCore.Qt.SizeHorCursor)
+            self.setCursor(QtCore.Qt.CursorShape.SizeHorCursor)
             self.mouse_position.cursor_shape_change = True
         elif (
             self.mouse_position.on_top_edge
             or self.mouse_position.on_bottom_edge
         ):
-            self.setCursor(QtCore.Qt.SizeVerCursor)
+            self.setCursor(QtCore.Qt.CursorShape.SizeVerCursor)
             self.mouse_position.cursor_shape_change = True
         else:
             if self.mouse_position.cursor_shape_change:
                 self.unsetCursor()
                 self.mouse_position.cursor_shape_change = False
 
-    def handle_tray_icon_activation(self, reason):
-        if reason == QtWidgets.QSystemTrayIcon.Trigger:
-            inactiveTime = time.time() - self._lastDeactivateTime
+    def handle_tray_icon_activation(
+            self,
+            reason: QtWidgets.QSystemTrayIcon.ActivationReason,
+    ) -> None:
+        if reason is QtWidgets.QSystemTrayIcon.ActivationReason.Trigger:
+            if self._lastDeactivateTime is None:
+                self.showMinimized()
+                return
+
+            inactiveTime = time.monotonic() - self._lastDeactivateTime
             if (
                 self.isMinimized()
                 or inactiveTime >= self.keepActiveForTrayIcon
@@ -548,7 +544,7 @@ class ClientWindow(FormClass, BaseClass):
                 self.show_normal()
             else:
                 self.showMinimized()
-        elif reason == QtWidgets.QSystemTrayIcon.Context:
+        elif reason is QtWidgets.QSystemTrayIcon.ActivationReason.Context:
             position = QtGui.QCursor.pos()
             position.setY(position.y() - self.tray.contextMenu().height())
             self.tray.contextMenu().popup(position)
@@ -566,9 +562,7 @@ class ClientWindow(FormClass, BaseClass):
         else:
             self.is_window_maximized = True
             self.current_geometry = self.geometry()
-            self.setGeometry(
-                QtWidgets.QDesktopWidget().availableGeometry(self),
-            )
+            self.setGeometry(self.screen().availableGeometry())
 
     def mouseDoubleClickEvent(self, event):
         self.show_max_restore()
@@ -584,7 +578,7 @@ class ClientWindow(FormClass, BaseClass):
             # self.show_max_restore()
 
     def mousePressEvent(self, event):
-        if event.button() == QtCore.Qt.LeftButton:
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
             if (
                 self.mouse_position.is_on_edge()
                 and not self.is_window_maximized
@@ -595,22 +589,22 @@ class ClientWindow(FormClass, BaseClass):
                 self.dragging = False
 
             self.moving = True
-            self.offset = event.pos()
+            self.offset = event.position()
 
     def mouseMoveEvent(self, event):
         if self.dragging and not self.dragging_hover:
-            self.resize_widget(event.globalPos())
+            self.resize_widget(event.globalPosition())
 
         elif self.moving and self.offset is not None:
-            desktop = QtWidgets.QDesktopWidget().availableGeometry(self)
-            if event.globalPos().y() == 0:
+            desktop = self.screen().availableGeometry()
+            if event.globalPosition().y() == 0:
                 self.rubber_band.setGeometry(desktop)
                 self.rubber_band.show()
-            elif event.globalPos().x() == 0:
+            elif event.globalPosition().x() == 0:
                 desktop.setRight(desktop.right() / 2.0)
                 self.rubber_band.setGeometry(desktop)
                 self.rubber_band.show()
-            elif event.globalPos().x() == desktop.right():
+            elif event.globalPosition().x() == desktop.right():
                 desktop.setRight(desktop.right() / 2.0)
                 desktop.moveLeft(desktop.right())
                 self.rubber_band.setGeometry(desktop)
@@ -621,13 +615,13 @@ class ClientWindow(FormClass, BaseClass):
                 if self.is_window_maximized:
                     self.show_max_restore()
 
-            self.move(event.globalPos() - self.offset)
+            point_f = event.globalPosition() - self.offset
+            self.move(point_f.toPoint())
 
-    def resize_widget(self, mouse_position):
-        if mouse_position.y() == 0:
-            self.rubber_band.setGeometry(
-                QtWidgets.QDesktopWidget().availableGeometry(self),
-            )
+    def resize_widget(self, mouse_position: QtCore.QRectF) -> None:
+        mouse_point = mouse_position.toPoint()
+        if mouse_point.y() == 0:
+            self.rubber_band.setGeometry(self.screen().availableGeometry())
             self.rubber_band.show()
         else:
             self.rubber_band.hide()
@@ -638,26 +632,25 @@ class ClientWindow(FormClass, BaseClass):
         min_width = self.minimumWidth()
         min_height = self.minimumHeight()
         if self.mouse_position.on_top_left_edge:
-            left = mouse_position.x()
-            top = mouse_position.y()
-
+            left = mouse_point.x()
+            top = mouse_point.y()
         elif self.mouse_position.on_bottom_left_edge:
-            left = mouse_position.x()
-            bottom = mouse_position.y()
+            left = mouse_point.x()
+            bottom = mouse_point.y()
         elif self.mouse_position.on_top_right_edge:
-            right = mouse_position.x()
-            top = mouse_position.y()
+            right = mouse_point.x()
+            top = mouse_point.y()
         elif self.mouse_position.on_bottom_right_edge:
-            right = mouse_position.x()
-            bottom = mouse_position.y()
+            right = mouse_point.x()
+            bottom = mouse_point.y()
         elif self.mouse_position.on_left_edge:
-            left = mouse_position.x()
+            left = mouse_point.x()
         elif self.mouse_position.on_right_edge:
-            right = mouse_position.x()
+            right = mouse_point.x()
         elif self.mouse_position.on_top_edge:
-            top = mouse_position.y()
+            top = mouse_point.y()
         elif self.mouse_position.on_bottom_edge:
-            bottom = mouse_position.y()
+            bottom = mouse_point.y()
 
         new_rect = QtCore.QRect(
             QtCore.QPoint(left, top),
@@ -702,7 +695,7 @@ class ClientWindow(FormClass, BaseClass):
         self.game_launcher = build_launcher(
             self.players, self.me,
             self, self.gameview_builder,
-            self.map_downloader,
+            self.map_preview_downloader,
         )
         self._avatar_widget_builder = AvatarWidget.builder(
             parent_widget=self,
@@ -739,7 +732,7 @@ class ClientWindow(FormClass, BaseClass):
             me=self.me,
             user_relations=self.user_relations,
             power_tools=self.power_tools,
-            map_preview_dler=self.map_downloader,
+            map_preview_dler=self.map_preview_downloader,
             avatar_dler=self.avatar_downloader,
             avatar_widget_builder=self._avatar_widget_builder,
             alias_viewer=self._alias_viewer,
@@ -809,7 +802,7 @@ class ClientWindow(FormClass, BaseClass):
             self, self.gameset, self.players, self.me,
         )
 
-        self._unitdb = unitdbtab.build_db_tab(config.UNITDB_CONFIG_FILE)
+        self._unitdb = UnitDBTab()
 
         # TODO: some day when the tabs only do UI we'll have all this in the
         # .ui file
@@ -844,8 +837,8 @@ class ClientWindow(FormClass, BaseClass):
             "A player of your skill level is currently searching for a 1v1 "
             "game. Click a faction to join them! ",
         )
-        self.warnPlayer.setAlignment(QtCore.Qt.AlignHCenter)
-        self.warnPlayer.setAlignment(QtCore.Qt.AlignVCenter)
+        self.warnPlayer.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
+        self.warnPlayer.setAlignment(QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.warnPlayer.setProperty("warning", True)
         self.warning.addStretch()
         self.warning.addWidget(self.warnPlayer)
@@ -881,7 +874,8 @@ class ClientWindow(FormClass, BaseClass):
     def _connect_chat(self, me):
         if not self.use_chat:
             return
-        self._chatMVC.connection.connect_(me.login, me.id, self.irc_password)
+        self._chatMVC.connection.set_nick_and_username(me.login, f"{me.login}@FAF")
+        self._chatMVC.connection.begin_connection_process()
 
     def warningHide(self):
         """
@@ -911,7 +905,7 @@ class ClientWindow(FormClass, BaseClass):
             self.lobby_connection.disconnect_()
             self._chatMVC.connection.disconnect_()
             self.games.onLogOut()
-            self.tokenTimer.stop()
+            self.oauth_flow.stop_checking_expiration()
             config.Settings.set("oauth/token", None, persist=False)
 
     def chat_reconnect(self):
@@ -1000,10 +994,10 @@ class ClientWindow(FormClass, BaseClass):
                     "Seems like you still have Forged Alliance running!"
                     "<br/><b>Close anyway?</b>"
                 ),
-                QtWidgets.QMessageBox.Yes,
-                QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.No,
             )
-            if result == QtWidgets.QMessageBox.No:
+            if result == QtWidgets.QMessageBox.StandardButton.No:
                 event.ignore()
                 return
 
@@ -1266,7 +1260,7 @@ class ClientWindow(FormClass, BaseClass):
 
     @QtCore.pyqtSlot()
     def switchPath(self):
-        fa.wizards.Wizard(self).exec_()
+        fa.wizards.Wizard(self).exec()
 
     @QtCore.pyqtSlot()
     def clearSettings(self):
@@ -1275,10 +1269,10 @@ class ClientWindow(FormClass, BaseClass):
             "Clear Settings",
             "Are you sure you wish to clear all settings, "
             "login info, etc. used by this program?",
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.StandardButton.Yes,
+            QtWidgets.QMessageBox.StandardButton.No,
         )
-        if result == QtWidgets.QMessageBox.Yes:
+        if result == QtWidgets.QMessageBox.StandardButton.Yes:
             util.settings.clear()
             util.settings.sync()
             QtWidgets.QMessageBox.information(
@@ -1337,7 +1331,7 @@ class ClientWindow(FormClass, BaseClass):
     def linkAbout(self):
         dialog = util.THEME.loadUi("client/about.ui")
         dialog.version_label.setText("Version: {}".format(util.VERSION_STRING))
-        dialog.exec_()
+        dialog.exec()
 
     @QtCore.pyqtSlot()
     def check_for_updates(self):
@@ -1354,6 +1348,7 @@ class ClientWindow(FormClass, BaseClass):
     def saveWindow(self):
         util.settings.beginGroup("window")
         util.settings.setValue("geometry", self.saveGeometry())
+        util.settings.setValue("maximized", self.is_window_maximized)
         util.settings.endGroup()
 
     def show_autojoin_settings_dialog(self):
@@ -1454,12 +1449,14 @@ class ClientWindow(FormClass, BaseClass):
         # Load settings
         util.settings.beginGroup("window")
         geometry = util.settings.value("geometry", None)
-        if geometry:
+        # FIXME: looks like bug in Qt: restoring from maximized geometry doesn't work
+        # see https://bugreports.qt.io/browse/QTBUG-123335 (?)
+        maximized = util.settings.value("maximized", defaultValue=False, type=bool)
+        util.settings.endGroup()
+        if maximized:
+            self.setGeometry(self.screen().availableGeometry())
+        elif geometry:
             self.restoreGeometry(geometry)
-        util.settings.endGroup()
-
-        util.settings.beginGroup("ForgedAlliance")
-        util.settings.endGroup()
 
     def load_chat(self):
         cc = self._chat_config
@@ -1498,7 +1495,13 @@ class ClientWindow(FormClass, BaseClass):
         except BaseException:
             pass
 
-    def do_connect(self):
+    def save_refresh_token(self) -> None:
+        self.refresh_token = self.oauth_flow.refreshToken()
+
+    def do_connect(self) -> bool:
+        if self.state in (ClientState.CONNECTING, ClientState.CONNECTED, ClientState.LOGGED_IN):
+            return True
+
         if not self.replayServer.doListen():
             return False
 
@@ -1510,77 +1513,33 @@ class ClientWindow(FormClass, BaseClass):
         # FIXME - option updating is silly
         self.actionSetAutoLogin.setChecked(self.remember)
 
-    def try_to_auto_login(self):
+    def try_to_auto_login(self) -> None:
         if (
             self._auto_relogin
             and self.refresh_token
-            and self.refreshOAuthToken()
         ):
-            self.do_connect()
+            self.oauth_flow.setRefreshToken(self.refresh_token)
+            self.oauth_flow.refreshAccessToken()
         else:
             self.show_login_widget()
 
-    def get_creds_and_login(self):
-        if self.OAuthSession.token and self.checkOAuthToken():
-            if self.send_token(self.OAuthSession.token.get("access_token")):
-                return
+    def get_creds_and_login(self) -> None:
+        if self.send_token(self.oauth_flow.token()):
+            return
         QtWidgets.QMessageBox.warning(
             self, "Log In", "OAuth token verification failed, please relogin",
         )
         self.show_login_widget()
-
-    def createOAuthSession(self):
-        client_id = config.Settings.get("oauth/client_id")
-        refresh_kwargs = dict(client_id=client_id)
-        redirect_uri = config.Settings.get("oauth/redirect_uri")
-        scope = config.Settings.get("oauth/scope")
-        app_client = WebApplicationClient(client_id=client_id)
-        OAuth = OAuth2Session(
-            client=app_client,
-            redirect_uri=redirect_uri,
-            scope=scope,
-            auto_refresh_kwargs=refresh_kwargs,
-        )
-        return OAuth
-
-    def checkOAuthToken(self):
-        if self.OAuthSession.token.get("expires_at", 0) < time.time() + 5:
-            self.tokenTimer.stop()
-            logger.info("Token expired, going to refresh")
-            return self.refreshOAuthToken()
-        return True
-
-    def refreshOAuthToken(self):
-        token_url = config.Settings.get('oauth/host') + OAUTH_TOKEN_PATH
-        if not self.OAuthSession:
-            self.OAuthSession = self.createOAuthSession()
-        try:
-            logger.debug("Refreshing OAuth token")
-            token = self.OAuthSession.refresh_token(
-                token_url,
-                refresh_token=self.refresh_token,
-                verify=False,
-            )
-            self.saveOAuthToken(token)
-            return True
-        except BaseException:
-            logger.error("Error during refreshing token")
-            return False
-
-    def saveOAuthToken(self, token):
-        config.Settings.set("oauth/token", token, persist=False)
-        self.refresh_token = token.get("refresh_token")
-        self.tokenTimer.start(1 * 1000)
 
     def show_login_widget(self):
         login_widget = LoginWidget(self.remember)
         login_widget.finished.connect(self.on_widget_login_data)
         login_widget.rejected.connect(self.on_widget_no_login)
         login_widget.request_quit.connect(
-            self.on_login_widget_quit, QtCore.Qt.QueuedConnection,
+            self.on_login_widget_quit, QtCore.Qt.ConnectionType.QueuedConnection,
         )
         login_widget.remember.connect(self.set_remember)
-        login_widget.exec_()
+        login_widget.exec()
 
     def on_widget_login_data(self, api_changed):
         self.lobby_connection.setHostFromConfig()
@@ -1589,50 +1548,10 @@ class ClientWindow(FormClass, BaseClass):
         self._chatMVC.connection.setPortFromConfig()
         if api_changed:
             self.ladder.refreshLeaderboards()
-            self.map_downloader.update_url_prefix()
-            self.news.updateNews()
             self.games.refreshMods()
 
-        oauth_host = config.Settings.get("oauth/host")
-        authorization_endpoint = oauth_host + OAUTH_AUTH_PATH
-        self.OAuthSession = self.createOAuthSession()
-        authorization_url, oauth_state = self.OAuthSession.authorization_url(
-            authorization_endpoint,
-        )
-        oauth_widget = OAuthWidget(
-            oauth_state=oauth_state,
-            url=authorization_url,
-        )
-        oauth_widget.finished.connect(self.oauth_finished)
-        oauth_widget.rejected.connect(self.on_widget_no_login)
-        oauth_widget.exec_()
-
-    def oauth_finished(self, state, code, error):
-        token_url = config.Settings.get("oauth/host") + OAUTH_TOKEN_PATH
-        if state:
-            try:
-                logger.debug("Fetching OAuth token")
-                token = self.OAuthSession.fetch_token(
-                    token_url,
-                    code=code,
-                    include_client_id=True,
-                    verify=False,
-                )
-                self.saveOAuthToken(token)
-                self.do_connect()
-                return
-            except BaseException:
-                logger.error(
-                    "Fetching token failed: ",
-                    exc_info=sys.exc_info(),
-                )
-        elif error:
-            logger.error("Error during logging in: {}".format(error))
-
-        QtWidgets.QMessageBox.warning(
-            self, "Log In", "Error occured, please retry",
-        )
-        self.on_widget_no_login()
+        self.oauth_flow.setup_credentials()
+        self.oauth_flow.grant()
 
     def on_widget_no_login(self):
         self.state = ClientState.DISCONNECTED
@@ -1819,8 +1738,10 @@ class ClientWindow(FormClass, BaseClass):
 
         self.game_session.gameFullSignal.connect(self.emit_game_full)
 
-    def handle_irc_password(self, message):
-        self.irc_password = message.get("password", "")
+    def handle_irc_password(self, message: dict) -> None:
+        # DEPRECATED: this command is meaningless and can be removed at any time
+        # see https://github.com/FAForever/server/issues/977
+        ...
 
     def handle_registration_response(self, message):
         if message["result"] == "SUCCESS":
@@ -1899,7 +1820,7 @@ class ClientWindow(FormClass, BaseClass):
         self.lobby_connection.send(msg)
 
     def handle_game_launch(self, message):
-
+        self.game_session.game_uid = message['uid']
         self.game_session.startIceAdapter()
 
         logger.info("Handling game_launch via JSON {}".format(message))
@@ -1976,8 +1897,6 @@ class ClientWindow(FormClass, BaseClass):
             featured_mod=message['mod'],
             launched_at=time.time(),
         )
-
-        self.game_session.game_uid = message['uid']
 
         fa.run(
             info, self.game_session.relay_port, self.replayServer.serverPort(),

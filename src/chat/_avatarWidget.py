@@ -1,6 +1,8 @@
-from PyQt5.QtCore import QObject, QSize
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QListWidgetItem, QPushButton
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QSize
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QListWidgetItem
+from PyQt6.QtWidgets import QPushButton
 
 from downloadManager import DownloadRequest
 
@@ -28,7 +30,7 @@ class AvatarWidget(QObject):
     @classmethod
     def builder(
         cls, parent_widget, lobby_connection, lobby_info, avatar_dler,
-        theme, **kwargs
+        theme, **kwargs,
     ):
         return lambda: cls(
             parent_widget, lobby_connection, lobby_info, avatar_dler, theme,

@@ -1,6 +1,7 @@
 from enum import Enum
 
-from PyQt5.QtCore import QSortFilterProxyModel, Qt
+from PyQt6.QtCore import QSortFilterProxyModel
+from PyQt6.QtCore import Qt
 
 from games.moditem import mod_invisible
 from model.game import GameState
@@ -47,8 +48,8 @@ class GameSortModel(QSortFilterProxyModel):
         self.sort(0)
 
     def lessThan(self, leftIndex, rightIndex):
-        left = self.sourceModel().data(leftIndex, Qt.DisplayRole).game
-        right = self.sourceModel().data(rightIndex, Qt.DisplayRole).game
+        left = self.sourceModel().data(leftIndex, Qt.ItemDataRole.DisplayRole).game
+        right = self.sourceModel().data(rightIndex, Qt.ItemDataRole.DisplayRole).game
 
         comp_list = [self._lt_friend, self._lt_type, self._lt_fallback]
 

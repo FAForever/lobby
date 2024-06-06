@@ -7,15 +7,18 @@ Created on Dec 1, 2011
 
 import os
 import sys
+from types import TracebackType
 
-# According to PyQt5 docs we need to import QtWebEngineWidgets before we create
-# QApplication
-from PyQt5 import QtWebEngineWidgets  # noqa: F401
-from PyQt5 import QtWidgets, uic
-from PyQt5.QtCore import Qt
+from PyQt6 import uic
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QDialog
+from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QStyleFactory
 
 import util
 import util.crash
+from config import Settings
 
 # Some linux distros (like Gentoo) make package scripts available
 # by copying and modifying them. This breaks path to our modules.
@@ -35,34 +38,22 @@ import argparse
 cmd_parser = argparse.ArgumentParser(
     description='FAF client commandline arguments.',
 )
-cmd_parser.add_argument(
-    '--qt-angle-workaround',
-    action='store_true',
-    help=(
-        'Use Qt5 ANGLE backend. Enable if some client '
-        'tabs appear frozen. On by default.'
-    ),
-)
-cmd_parser.add_argument(
-    '--no-qt-angle-workaround',
-    action='store_true',
-    help='Do not use Qt5 ANGLE backend.',
-)
 
 args, trailing_args = cmd_parser.parse_known_args()
-if sys.platform == 'win32' and not args.no_qt_angle_workaround:
-    os.environ.setdefault('QT_OPENGL', 'angle')
-    os.environ.setdefault('QT_ANGLE_PLATFORM', 'd3d9')
 
 
-path = os.path.join(os.path.dirname(sys.argv[0]), "PyQt5.uic.widget-plugins")
+path = os.path.join(os.path.dirname(sys.argv[0]), "PyQt6.uic.widget-plugins")
 uic.widgetPluginPath.append(path)
 
 # Set up crash reporting
 excepthook_original = sys.excepthook
 
 
-def excepthook(exc_type, exc_value, traceback_object):
+def excepthook(
+        exc_type: type[BaseException],
+        exc_value: BaseException,
+        traceback_object: TracebackType | None,
+) -> None:
     """
     This exception hook will stop the app if an uncaught error occurred,
     regardless where in the QApplication.
@@ -80,30 +71,27 @@ def excepthook(exc_type, exc_value, traceback_object):
     )
     logger.error("Runtime Info:\n{}".format(util.crash.runtime_info()))
     dialog = util.crash.CrashDialog((exc_type, exc_value, traceback_object))
-    answer = dialog.exec_()
+    answer = dialog.exec()
 
-    if answer == QtWidgets.QDialog.Rejected:
-        QtWidgets.QApplication.exit(1)
+    if answer == QDialog.DialogCode.Rejected:
+        QApplication.exit(1)
 
     sys.excepthook = excepthook
 
 
-def admin_user_error_dialog():
-    from config import Settings
+def admin_user_error_dialog() -> None:
     ignore_admin = Settings.get("client/ignore_admin", False, bool)
     if not ignore_admin:
-        box = QtWidgets.QMessageBox()
+        box = QMessageBox()
         box.setText(
             "FAF should not be run as an administrator!<br><br>This "
             "probably means you need to fix the file permissions in "
             "C:\\ProgramData.<br>Proceed at your own risk.",
         )
-        box.setStandardButtons(
-            QtWidgets.QMessageBox.Ignore | QtWidgets.QMessageBox.Close,
-        )
-        box.setIcon(QtWidgets.QMessageBox.Critical)
+        box.setStandardButtons(QMessageBox.StandardButton.Ignore | QMessageBox.StandardButton.Close)
+        box.setIcon(QMessageBox.Icon.Critical)
         box.setWindowTitle("FAF privilege error")
-        if box.exec_() == QtWidgets.QMessageBox.Ignore:
+        if box.exec() == QMessageBox.StandardButton.Ignore:
             Settings.set("client/ignore_admin", True)
 
 
@@ -120,7 +108,14 @@ def run_faf():
     faf_client.try_to_auto_login()
 
     # Main update loop
-    QtWidgets.QApplication.exec_()
+    QApplication.exec()
+
+
+def set_style(app: QApplication) -> None:
+    styles = QStyleFactory.keys()
+    preferred_style = Settings.get("theme/style", "windowsvista")
+    if preferred_style in styles:
+        app.setStyle(QStyleFactory.create(preferred_style))
 
 
 if __name__ == '__main__':
@@ -128,8 +123,9 @@ if __name__ == '__main__':
 
     import config
 
-    QtWidgets.QApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
-    app = QtWidgets.QApplication(trailing_args)
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
+    app = QApplication(["FAF Python Client"] + trailing_args)
+    set_style(app)
 
     if sys.platform == 'win32':
         import ctypes

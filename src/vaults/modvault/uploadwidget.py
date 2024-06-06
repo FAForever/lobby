@@ -2,7 +2,8 @@ import os
 import tempfile
 import zipfile
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import util
 from vaults.modvault import utils

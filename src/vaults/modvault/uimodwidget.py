@@ -1,5 +1,6 @@
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import util
 from vaults.modvault import utils
@@ -33,7 +34,7 @@ class UIModWidget(FormClass, BaseClass):
         names = [mod.totalname for mod in utils.getActiveMods(uimods=True)]
         for name in names:
             activeModList = self.modList.findItems(
-                name, QtCore.Qt.MatchExactly,
+                name, QtCore.Qt.MatchFlag.MatchExactly,
             )
             if activeModList:
                 activeModList[0].setSelected(True)

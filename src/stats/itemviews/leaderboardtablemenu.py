@@ -1,6 +1,7 @@
 from enum import Enum
 
-from PyQt5 import QtWidgets
+from PyQt6 import QtWidgets
+from PyQt6.QtGui import QAction
 
 
 class LeaderboardTableMenuItems(Enum):
@@ -52,11 +53,11 @@ class LeaderboardTableMenu:
             yield LeaderboardTableMenuItems.ADD_FRIEND
             yield LeaderboardTableMenuItems.ADD_FOE
 
-    def getMenu(self, name, uid):
+    def getMenu(self, name: str, uid: int) -> QtWidgets.QMenu:
         menu = QtWidgets.QMenu(self.parent)
 
         def addEntry(item):
-            action = QtWidgets.QAction(item.value, menu)
+            action = QAction(item.value, menu)
             action.triggered.connect(self.handler(name, uid, item))
             menu.addAction(action)
 

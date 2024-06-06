@@ -1,8 +1,11 @@
 import json
 from enum import Enum
 
-from PyQt5.QtCore import QObject, QUrl, pyqtSignal
-from PyQt5.QtNetwork import QNetworkReply, QNetworkRequest
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtNetwork import QNetworkReply
+from PyQt6.QtNetwork import QNetworkRequest
 from semantic_version import Version
 
 from config import Settings
@@ -188,7 +191,7 @@ class GithubUpdateChecker(QObject):
         self.finished.emit()
 
     def _process_response(self, rep):
-        if rep.error() != QNetworkReply.NoError:
+        if rep.error() != QNetworkReply.NetworkError.NoError:
             return None
         release_data = bytes(self._rep.readAll())
         try:

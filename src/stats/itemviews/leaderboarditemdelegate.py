@@ -1,41 +1,30 @@
-from PyQt5 import QtCore, QtWidgets
+from PyQt6.QtCore import QModelIndex
+from PyQt6.QtCore import QRect
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPainter
+from PyQt6.QtWidgets import QStyleOptionViewItem
+
+from qt.itemviews.tableitemdelegte import TableItemDelegate
+from util.qt import qpainter
 
 
-class LeaderboardItemDelegate(QtWidgets.QStyledItemDelegate):
-    def paint(self, painter, option, index):
-        opt = QtWidgets.QStyleOptionViewItem(option)
-        opt.state &= ~QtWidgets.QStyle.State_HasFocus
-        opt.state &= ~QtWidgets.QStyle.State_MouseOver
-
-        view = opt.styleObject
-        behavior = view.selectionBehavior()
-        hoverIndex = view.hoverIndex()
-
-        if (
-            not (option.state & QtWidgets.QStyle.State_Selected)
-            and behavior != QtWidgets.QTableView.SelectItems
-        ):
-            if (
-                behavior == QtWidgets.QTableView.SelectRows
-                and hoverIndex.row() == index.row()
-            ):
-                opt.state |= QtWidgets.QStyle.State_MouseOver
-
-        self.initStyleOption(opt, index)
-        painter.save()
+class LeaderboardItemDelegate(TableItemDelegate):
+    def paint(
+            self,
+            painter: QPainter,
+            option: QStyleOptionViewItem,
+            index: QModelIndex,
+    ) -> None:
+        opt = self._customize_style_option(option, index)
         text = opt.text
-        opt.text = ""
-        opt.widget.style().drawControl(
-            QtWidgets.QStyle.CE_ItemViewItem, opt, painter, opt.widget,
-        )
-        if opt.state & QtWidgets.QStyle.State_Selected:
-            painter.setPen(QtCore.Qt.white)
-        if index.column() == 0:
-            rect = QtCore.QRect(opt.rect)
-            rect.setLeft(opt.rect.left() + opt.rect.width() // 2.125)
-            painter.drawText(
-                rect, QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter, text,
-            )
-        else:
-            painter.drawText(opt.rect, QtCore.Qt.AlignCenter, text)
-        painter.restore()
+
+        with qpainter(painter):
+            self._draw_clear_option(painter, opt)
+            self._set_pen(painter, opt)
+            if index.column() == 0:
+                rect = QRect(opt.rect)
+                rect.setLeft(int(opt.rect.left() + opt.rect.width() // 2.125))
+                alignment_flags = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+                painter.drawText(rect, alignment_flags, text)
+            else:
+                painter.drawText(opt.rect, Qt.AlignmentFlag.AlignCenter, text)

@@ -217,32 +217,13 @@
        </widget>
       </item>
       <item>
-       <widget class="QWebEngineView" name="newsWebView" native="true">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="url" stdset="0">
-         <url>
-          <string>about:blank</string>
-         </url>
-        </property>
-       </widget>
+       <widget class="QTextBrowser" name="newsTextBrowser"/>
       </item>
      </layout>
     </widget>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QWebEngineView</class>
-   <extends>QWidget</extends>
-   <header location="global">QtWebEngineWidgets/QWebEngineView</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

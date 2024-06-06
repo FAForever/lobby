@@ -1,6 +1,9 @@
-from struct import pack, unpack
+from struct import pack
+from struct import unpack
 
-from PyQt5.QtCore import QDataStream, QObject, pyqtSignal
+from PyQt6.QtCore import QDataStream
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import pyqtSignal
 
 from decorators import with_logger
 

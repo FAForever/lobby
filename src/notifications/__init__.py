@@ -2,13 +2,14 @@
 The Notification Systems reacts on events and displays a popup.
 Each event_type has a NsHook to customize it.
 """
-from PyQt5 import QtCore
+from PyQt6 import QtCore
 
 import util
 from config import Settings
 from fa import maps
 from notifications.ns_dialog import NotificationDialog
-from notifications.ns_settings import IngameNotification, NsSettingsDialog
+from notifications.ns_settings import IngameNotification
+from notifications.ns_settings import NsSettingsDialog
 
 
 class Notifications:

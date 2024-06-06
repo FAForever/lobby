@@ -1,7 +1,9 @@
 import logging
 from enum import IntEnum
 
-from PyQt5.QtCore import QCoreApplication, QObject, pyqtSignal
+from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import pyqtSignal
 
 import client
 from config import setup_file_handler
@@ -67,6 +69,7 @@ class GameSession(QObject):
         self.ice_adapter_process = IceAdapterProcess(
             player_id=self.player_id,
             player_login=self.player_login,
+            game_id=self.game_uid,
         )
         self.ice_adapter_client = IceAdapterClient(game_session=self)
         self.ice_adapter_client.statusChanged.connect(self.onIceAdapterStarted)
@@ -76,20 +79,14 @@ class GameSession(QObject):
         while self._relay_port == 0:
             QCoreApplication.processEvents()
 
-    def onIceAdapterStarted(self, status):
+    def onIceAdapterStarted(self, status: dict) -> None:
         self._relay_port = status["gpgnet"]["local_port"]
         logger.info(
             "ICE adapter started an listening on port {} for GPGNet "
             "connections".format(self._relay_port),
         )
-        self.ice_adapter_client.statusChanged.disconnect(
-            self.onIceAdapterStarted,
-        )
-        self.ice_servers_poller = IceServersPoller(
-            dispatcher=client.instance.lobby_dispatch,
-            ice_adapter_client=self.ice_adapter_client,
-            lobby_connection=client.instance.lobby_connection,
-        )
+        self.ice_adapter_client.statusChanged.disconnect(self.onIceAdapterStarted)
+        self.ice_servers_poller = IceServersPoller(self.ice_adapter_client, self.game_uid)
 
     def closeIceAdapter(self):
         if self.ice_adapter_client:

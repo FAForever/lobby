@@ -2,7 +2,8 @@ import json
 import random
 from enum import Enum
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import pyqtSignal
 
 
 class PlayerAffiliation(Enum):

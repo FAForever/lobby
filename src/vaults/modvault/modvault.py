@@ -40,16 +40,15 @@ the modvault.
 
 import logging
 import os
-import urllib.error
-import urllib.parse
-import urllib.request
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
-import util
 from api.vaults_api import ModApiConnector
 from vaults.modvault import utils
-from vaults.vault import Vault, VaultItem
+from vaults.modvault.moditem import ModListItem
+from vaults.modvault.utils import ModInfo
+from vaults.vault import Vault
 
 from .modwidget import ModWidget
 from .uimodwidget import UIModWidget
@@ -67,29 +66,23 @@ class ModVault(Vault):
 
         self.itemList.itemDoubleClicked.connect(self.modClicked)
         self.UIButton.clicked.connect(self.openUIModForm)
-        self.client.lobby_info.modVaultInfo.connect(self.modInfo)
 
         self.uids = [mod.uid for mod in utils.getInstalledMods()]
 
         for type_ in ["UI Only", "Sim Only", "Uploaded by You", "Installed"]:
             self.ShowTypeList.addItem(type_)
 
-        self.apiConnector = ModApiConnector(self.client.lobby_dispatch)
+        self.apiConnector = ModApiConnector()
+        self.apiConnector.data_ready.connect(self.modInfo)
 
         self.uploadButton.hide()
 
+    def create_item(self, item_key: str) -> ModListItem:
+        return ModListItem(self, item_key)
+
     @QtCore.pyqtSlot(dict)
-    def modInfo(self, message):
-        for value in message["values"]:
-            uid = value["uid"]
-            if uid not in self._items:
-                mod = ModItem(self, uid)
-                self._items[uid] = mod
-                self.itemList.addItem(mod)
-            else:
-                mod = self._items[uid]
-            mod.update(value)
-        self.itemList.sortItems(1)
+    def modInfo(self, message: dict) -> None:
+        super().items_info(message)
 
     @QtCore.pyqtSlot(int)
     def sortChanged(self, index):
@@ -99,7 +92,7 @@ class ModVault(Vault):
             self.sortType = "date"
         elif index == 2:
             self.sortType = "rating"
-        self.updateVisibilities()
+        self.update_visibilities()
 
     @QtCore.pyqtSlot(int)
     def showChanged(self, index):
@@ -113,17 +106,17 @@ class ModVault(Vault):
             self.showType = "yours"
         elif index == 4:
             self.showType = "installed"
-        self.updateVisibilities()
+        self.update_visibilities()
 
     @QtCore.pyqtSlot(QtWidgets.QListWidgetItem)
     def modClicked(self, item):
         widget = ModWidget(self, item)
-        widget.exec_()
+        widget.exec()
 
     @QtCore.pyqtSlot()
     def openUIModForm(self):
         dialog = UIModWidget(self)
-        dialog.exec_()
+        dialog.exec()
 
     @QtCore.pyqtSlot()
     def openUploadForm(self):
@@ -160,17 +153,17 @@ class ModVault(Vault):
                                 modinfofile.errorMsg
                                 + "\nDo you want to upload the mod?"
                             ),
-                            QtWidgets.QMessageBox.Yes,
-                            QtWidgets.QMessageBox.No,
+                            QtWidgets.QMessageBox.StandardButton.Yes,
+                            QtWidgets.QMessageBox.StandardButton.No,
                         )
                     else:
-                        uploadmod = QtWidgets.QMessageBox.Yes
-                    if uploadmod == QtWidgets.QMessageBox.Yes:
+                        uploadmod = QtWidgets.QMessageBox.StandardButton.Yes
+                    if uploadmod == QtWidgets.QMessageBox.StandardButton.Yes:
                         modinfo = utils.ModInfo(**modinfo)
                         modinfo.setFolder(os.path.split(modDir)[1])
                         modinfo.update()
                         dialog = UploadModWidget(self, modDir, modinfo)
-                        dialog.exec_()
+                        dialog.exec()
             else:
                 QtWidgets.QMessageBox.information(
                     self.client,
@@ -178,96 +171,16 @@ class ModVault(Vault):
                     "This folder doesn't contain a mod_info.lua file",
                 )
 
-    def downloadMod(self, mod):
-        if utils.downloadMod(mod):
+    def downloadMod(self, link: str, name: str) -> bool:
+        if utils.downloadMod(link, name):
             self.uids = [mod.uid for mod in utils.getInstalledMods()]
-            self.updateVisibilities()
+            self.update_visibilities()
             return True
         else:
             return False
 
-    def removeMod(self, mod):
+    def removeMod(self, name: str, uid: str) -> None:
+        mod = ModInfo(name=name, uid=uid)
         if utils.removeMod(mod):
             self.uids = [m.uid for m in utils.installedMods]
-            mod.updateVisibility()
-
-
-class ModItem(VaultItem):
-    def __init__(self, parent, uid, *args, **kwargs):
-        VaultItem.__init__(self, parent, *args, **kwargs)
-
-        self.formatterItem = str(
-            util.THEME.readfile("vaults/modvault/modinfo.qthtml"),
-        )
-
-        self.uid = uid
-        self.author = ""
-        self.thumbstr = ""
-        self.isuidmod = False
-        self.uploadedbyuser = False
-
-    def shouldBeVisible(self):
-        p = self.parent
-        if p.showType == "all":
-            return True
-        elif p.showType == "ui":
-            return self.isuimod
-        elif p.showType == "sim":
-            return not self.isuimod
-        elif p.showType == "yours":
-            return self.uploadedbyuser
-        elif p.showType == "installed":
-            return self.uid in self.parent.uids
-        else:
-            return True
-
-    def update(self, item_dict):
-        self.name = item_dict["name"]
-        self.description = item_dict["description"]
-        self.version = item_dict["version"]
-        self.author = item_dict["author"]
-        self.rating = item_dict["rating"]
-        self.reviews = item_dict["reviews"]
-        self.date = item_dict['date'][:10]
-        self.isuimod = item_dict["ui"]
-        self.link = item_dict["link"]
-        self.thumbstr = item_dict["thumbnail"]
-        self.uploadedbyuser = (self.author == self.parent.client.login)
-
-        if self.thumbstr == "":
-            self.setItemIcon("games/unknown_map.png")
-        else:
-            name = os.path.basename(urllib.parse.unquote(self.thumbstr))
-            img = utils.getIcon(name)
-            if img:
-                self.setItemIcon(img, False)
-            else:
-                self.parent.client.mod_downloader.download_preview(
-                    name[:-4], self._item_dl_request, self.thumbstr,
-                )
-
-        VaultItem.update(self)
-
-    def updateVisibility(self):
-        if self.isuimod:
-            self.itemType_ = "UI mod"
-        if self.uid in self.parent.uids:
-            self.color = "green"
-        else:
-            self.color = "white"
-
-        self.setText(
-            self.formatterItem.format(
-                color=self.color,
-                version=self.version,
-                title=self.name,
-                description=self.trimmedDescription,
-                rating=self.rating,
-                reviews=self.reviews,
-                date=self.date,
-                modtype=self.itemType_,
-                author=self.author,
-            ),
-        )
-
-        VaultItem.updateVisibility(self)
+            self.update_visibilities()

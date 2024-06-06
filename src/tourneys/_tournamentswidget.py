@@ -1,9 +1,11 @@
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 import secondaryServer
 import util
-from tourneys.tourneyitem import TourneyItem, TourneyItemDelegate
+from tourneys.tourneyitem import TourneyItem
+from tourneys.tourneyitem import TourneyItemDelegate
 
 FormClass, BaseClass = util.THEME.loadUiType("tournaments/tournaments.ui")
 
@@ -62,9 +64,9 @@ class TournamentsWidget(FormClass, BaseClass):
                 self.client,
                 "Register",
                 "Do you want to register to this tournament ?",
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
             )
-            if reply == QtWidgets.QMessageBox.Yes:
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.tourneyServer.send(
                     dict(
                         command="add_participant",
@@ -78,9 +80,9 @@ class TournamentsWidget(FormClass, BaseClass):
                 self.client,
                 "Register",
                 "Do you want to leave this tournament ?",
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
             )
-            if reply == QtWidgets.QMessageBox.Yes:
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 self.tourneyServer.send(
                     dict(
                         command="remove_participant",

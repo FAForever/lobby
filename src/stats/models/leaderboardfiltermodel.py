@@ -1,6 +1,6 @@
 import re
 
-from PyQt5 import QtCore
+from PyQt6 import QtCore
 
 
 class LeaderboardFilterModel(QtCore.QSortFilterProxyModel):

@@ -12,8 +12,9 @@ else:
 default_values = {
     'display_name': 'Main Server (recommended)',
     'api': 'https://api.{host}',
-    'chat/host': 'irc.{host}',
-    'chat/port': 6697,
+    'user_api': 'https://user.{host}',
+    'chat/host': 'chat.{host}',
+    'chat/port': 443,
     'client/data_path': APPDATA_DIR,
     'client/logs/path': join(APPDATA_DIR, 'logs'),
     'client/logs/level': logging.INFO,
@@ -27,6 +28,8 @@ default_values = {
     'game/logs/path': join(APPDATA_DIR, 'logs'),
     'game/mods/path': join(join(APPDATA_DIR, 'repo'), 'mods'),
     'game/maps/path': join(join(APPDATA_DIR, 'repo'), 'maps'),
+    'game/exe-url': 'https://content.{host}/faf/updaterNew/updates_faf_files/ForgedAlliance.exe',
+    'game/exe-name': "ForgedAlliance.exe",
     'host': 'faforever.com',
     'proxy/host': 'proxy.{host}',
     'proxy/port': 9124,
@@ -42,33 +45,26 @@ default_values = {
     'oauth/redirect_uri': "http://localhost",
     'oauth/scope': ["openid", "offline", "public_profile", "lobby"],
     'oauth/token': None,
+    'oauth/auth_endpoint': '/oauth2/auth',
+    'oauth/token_endpoint': '/oauth2/token',
     'replay_vault/host': 'https://replay.{host}',
     'replay_server/host': 'lobby.{host}',
     'replay_server/port': 15000,
     'relay_server/host': 'lobby.{host}',
     'relay_server/port': 8000,
+    'vault/map_preview_url': 'https://content.{host}/maps/previews/{size}/{name}.png',
+    'vault/map_download_url': "https://content.{host}/maps/{name}.zip",
     'FORUMS_URL': 'https://forums.faforever.com/',
     'WEBSITE_URL': 'https://www.{host}',
     # FIXME - temporary address below
     # The base64 settings string disables expensive loading of all previews
-    'UNITDB_URL': (
-        'https://unitdb.faforever.com?'
-        'settings64=eyJwcmV2aWV3Q29ybmVyIjoiTm9uZSJ9'
-    ),
+    'UNITDB_URL': 'https://unitdb.faforever.com?settings64=eyJwcmV2aWV3Q29ybmVyIjoiTm9uZSJ9',
     'UNITDB_SPOOKY_URL': 'https://spooky.github.io/unitdb/',
-    'MAPPOOL_URL': (
-        'https://forum.faforever.com/topic/148/matchmaker-pools-thread'
-    ),
+    'MAPPOOL_URL': 'https://forum.faforever.com/topic/148/matchmaker-pools-thread',
     'GITHUB_URL': 'https://www.github.com/FAForever',
     'WIKI_URL': 'https://wiki.faforever.com',
-    'SUPPORT_URL': (
-        'https://forum.faforever.com/category/9/'
-        'faf-support-client-and-account-issues'
-    ),
-    'TICKET_URL': (
-        'https://forum.faforever.com/category/9/'
-        'faf-support-client-and-account-issues'
-    ),
+    'SUPPORT_URL': 'https://forum.faforever.com/category/9/faf-support-client-and-account-issues',
+    'TICKET_URL': 'https://forum.faforever.com/category/9/faf-support-client-and-account-issues',
     'CREATE_ACCOUNT_URL': 'https://faforever.com/account/register',
     'STEAMLINK_URL': 'https://faforever.com/account/link',
     'PASSWORD_RECOVERY_URL': 'https://faforever.com/account/password/reset',
