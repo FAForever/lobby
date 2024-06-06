@@ -4,7 +4,6 @@ The UI popup of the notification system
 import time
 
 from PyQt6 import QtCore
-from PyQt6 import QtWidgets
 from PyQt6.QtMultimedia import QSoundEffect
 
 import util
@@ -98,8 +97,8 @@ class NotificationDialog(FormClass, BaseClass):
         if event.button() == QtCore.Qt.MouseButton.RightButton:
             self.hide()
 
-    def updatePosition(self):
-        screen_size = QtWidgets.QApplication.primaryScreen().geometry()
+    def updatePosition(self) -> None:
+        screen_size = self.screen().availableGeometry()
         dialog_size = self.geometry()
         # self.client.notificationSystem.settings.popup_position
         position = self.settings.popup_position
