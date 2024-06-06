@@ -38,6 +38,8 @@ class WebSocketToSocket(QObject):
         self.message_received.emit()
 
     def read(self, size: int) -> bytes:
+        if self.socket.state() != QAbstractSocket.SocketState.ConnectedState:
+            raise OSError
         ans, self.buffer = self.buffer[:size], self.buffer[size:]
         return ans
 
@@ -49,7 +51,9 @@ class WebSocketToSocket(QObject):
         self.socket.deleteLater()
 
     def write(self, message: bytes) -> None:
-        self.socket.sendBinaryMessage(message.strip())
+        sent = self.socket.sendBinaryMessage(message.strip())
+        if sent == 0:
+            raise OSError
 
     def send(self, message: bytes) -> None:
         """ Alias for write, just in case """
