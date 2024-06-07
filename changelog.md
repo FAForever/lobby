@@ -1,6 +1,45 @@
 0.x.x
 =====
 
+0.21.0
+=====
+### Make it operational again
+* Port the client to PyQt6 and python3.12
+
+  Qt stopped providing 32-bit packages several years ago,
+  therefore we have to move to 64-bit too.
+
+  The previous port added QtWebEngine with the hope to eliminate
+  it in the future, and the future has come. This port removes
+  QtWebEngine and allows real web browsers to do their job.
+  But unfortunately this change hasn't slimmed down the client,
+  as previous maintainers had hoped, because java-ice-adapter
+  has become about **11  times larger**, not to mention jre and Qt itself
+
+* Fixes:
+  - Fix constant reconnect while in game
+  - Fix parsing Game.prefs file
+  - Fix sim mod downloads for coop games
+  - Fix updater not being able to download game files (#1133)
+  - Fix notifications being shown over taskbar
+  - Fix replay decompression
+  - Fix ice adapter usage
+  - Fix movies and sounds unpacking
+  - Fix maximizing/resizing window
+  - Fix updating MapGenerator
+* Other:
+  - Connect to lobby and chat with websockets
+  - Move updater's work into its own thread and don't block UI
+  - Finally use the UpdaterProgressDialog and give the user more
+    information about what's going on
+  - Restore coop leaderboards
+  - Move from jsonschema to pydantic (also speeds up loading the replay tab)
+  - Log in with browser
+  - Add option to change application style
+  - Fetch coop missions from API and don't rely on lobby server
+  - Patch FA version by ourselves if the one in the downloaded file
+    is incorrect
+
 0.20.2
 =====
 * Fix updater
