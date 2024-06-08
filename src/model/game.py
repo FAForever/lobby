@@ -1,10 +1,16 @@
-from PyQt5.QtCore import QObject, pyqtSignal, QUrl, QUrlQuery, QTimer
-
-from enum import Enum
-from decorators import with_logger
-import time
-
+import html
 import string
+import time
+from enum import Enum
+
+from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import pyqtSignal
+
+from decorators import with_logger
+from model.modelitem import ModelItem
+from model.transaction import transactional
+from util.gameurl import GameUrl
+from util.gameurl import GameUrlType
 
 
 class GameState(Enum):
@@ -20,7 +26,7 @@ class GameVisibility(Enum):
 
 
 @with_logger
-class Game(QObject):
+class Game(ModelItem):
     """
     Represents a game happening on the server. Updates for the game state are
     sent from the server, identified by game uid. Updates are propagated with
@@ -31,11 +37,8 @@ class Game(QObject):
     shouldn't be updated or ended again. Update and game end are propagated
     with signals.
     """
-    gameUpdated = pyqtSignal(object, object)
+    before_replay_available = pyqtSignal(object, object)
     liveReplayAvailable = pyqtSignal(object)
-
-    connectedPlayerAdded = pyqtSignal(object, object)
-    connectedPlayerRemoved = pyqtSignal(object, object)
 
     ingamePlayerAdded = pyqtSignal(object, object)
     ingamePlayerRemoved = pyqtSignal(object, object)
@@ -43,45 +46,44 @@ class Game(QObject):
     OBSERVER_TEAMS = ['-1', 'null']
     LIVE_REPLAY_DELAY_SECS = 60 * 5
 
-    SENTINEL = object()
+    def __init__(
+        self,
+        playerset,
+        uid,
+        state,
+        launched_at,
+        num_players,
+        max_players,
+        title,
+        host,
+        mapname,
+        map_file_path,
+        teams,
+        featured_mod,
+        sim_mods,
+        password_protected,
+        visibility,
+        **kwargs,
+    ):
 
-    def __init__(self,
-                 playerset,
-                 uid,
-                 state,
-                 launched_at,
-                 num_players,
-                 max_players,
-                 title,
-                 host,
-                 mapname,
-                 map_file_path,
-                 teams,
-                 featured_mod,
-                 featured_mod_versions,
-                 sim_mods,
-                 password_protected,
-                 visibility):
-
-        QObject.__init__(self)
+        ModelItem.__init__(self)
 
         self._playerset = playerset
 
         self.uid = uid
-        self.state = None
-        self.launched_at = None
-        self.num_players = None
-        self.max_players = None
-        self.title = None
-        self.host = None
-        self.mapname = None
-        self.map_file_path = None
-        self.teams = None
-        self.featured_mod = None
-        self.featured_mod_versions = None
-        self.sim_mods = None
-        self.password_protected = None
-        self.visibility = None
+        self.add_field("state", state)
+        self.add_field("launched_at", launched_at)
+        self.add_field("num_players", num_players)
+        self.add_field("max_players", max_players)
+        self.add_field("title", title)
+        self.add_field("host", host)
+        self.add_field("mapname", mapname)
+        self.add_field("map_file_path", map_file_path)
+        self.add_field("teams", teams)
+        self.add_field("featured_mod", featured_mod)
+        self.add_field("sim_mods", sim_mods)
+        self.add_field("password_protected", password_protected)
+        self.add_field("visibility", visibility)
         self._aborted = False
 
         self._live_replay_timer = QTimer()
@@ -89,159 +91,83 @@ class Game(QObject):
         self._live_replay_timer.setInterval(self.LIVE_REPLAY_DELAY_SECS * 1000)
         self._live_replay_timer.timeout.connect(self._emit_live_replay)
         self.has_live_replay = False
-
-        self._update(state, launched_at, num_players, max_players, title,
-                     host, mapname, map_file_path, teams, featured_mod,
-                     featured_mod_versions, sim_mods, password_protected,
-                     visibility)
-
-    def copy(self):
-        s = self
-        return Game(s._playerset, s.uid, s.state, s.launched_at, s.num_players,
-                    s.max_players, s.title, s.host, s.mapname, s.map_file_path,
-                    s.teams, s.featured_mod, s.featured_mod_versions,
-                    s.sim_mods, s.password_protected, s.visibility)
-
-    def update(self, *args, **kwargs):
-        if self._aborted:
-            return
-        old = self.copy()
-        self._update(*args, **kwargs)
-        self.gameUpdated.emit(self, old)
-
-    def _update(self,
-                state=SENTINEL,
-                launched_at=SENTINEL,
-                num_players=SENTINEL,
-                max_players=SENTINEL,
-                title=SENTINEL,
-                host=SENTINEL,
-                mapname=SENTINEL,
-                map_file_path=SENTINEL,
-                teams=SENTINEL,
-                featured_mod=SENTINEL,
-                featured_mod_versions=SENTINEL,
-                sim_mods=SENTINEL,
-                password_protected=SENTINEL,
-                visibility=SENTINEL,
-                uid=SENTINEL,   # For convenience
-                ):
-
-        def changed(item):
-            return item is not self.SENTINEL
-
-        if changed(launched_at):
-            self.launched_at = launched_at
-        if changed(state):
-            self.state = state
-        if changed(num_players):
-            self.num_players = num_players
-        if changed(max_players):
-            self.max_players = max_players
-        if changed(title):
-            self.title = title
-        if changed(host):
-            self.host = host
-        if changed(mapname):
-            self.mapname = mapname
-        if changed(map_file_path):
-            self.map_file_path = map_file_path
-
-        # Dict of <teamname> : [list of player names]
-        if changed(teams):
-            self.teams = teams
-
-        # Actually a game mode like faf, coop, ladder etc.
-        if changed(featured_mod):
-            self.featured_mod = featured_mod
-
-        # Featured mod versions for this game used to update FA before joining
-        # TODO - investigate if this is actually necessary
-        if changed(featured_mod_versions):
-            self.featured_mod_versions = featured_mod_versions
-
-        # Dict of mod uid: mod version for each mod used by the game
-        if changed(sim_mods):
-            self.sim_mods = sim_mods
-        if changed(password_protected):
-            self.password_protected = password_protected
-        if changed(visibility):
-            self.visibility = visibility
-
         self._check_live_replay_timer()
 
-    def _check_live_replay_timer(self):
-        if (self.state != GameState.PLAYING or
-           self._live_replay_timer.isActive() or
-           self.launched_at is None):
+    @property
+    def id_key(self):
+        return self.uid
+
+    def copy(self):
+        old = Game(self._playerset, self.uid, **self.field_dict)
+        old._aborted = self._aborted
+        old.has_live_replay = self.has_live_replay
+        return old
+
+    @transactional
+    def update(self, **kwargs):
+        if self._aborted:
+            return
+
+        _transaction = kwargs.pop("_transaction")
+        old = self.copy()
+        ModelItem.update(self, **kwargs)
+        self._check_live_replay_timer()
+        self.emit_update(old, _transaction)
+
+    def _check_live_replay_timer(self) -> None:
+        if (
+            self.state != GameState.PLAYING
+            or self._live_replay_timer.isActive()
+            or self.launched_at is None
+        ):
             return
 
         if self.has_live_replay:
             return
 
-        time_elapsed = time.time() - self.launched_at
+        time_elapsed = round(time.time() - self.launched_at, 0)
         time_to_replay = max(self.LIVE_REPLAY_DELAY_SECS - time_elapsed, 0)
-        self._live_replay_timer.start(time_to_replay * 1000)
+        self._live_replay_timer.start(int(time_to_replay * 1000))
 
-    def _emit_live_replay(self):
+    @transactional
+    def _emit_live_replay(self, _transaction=None):
         if self.state != GameState.PLAYING:
             return
         self.has_live_replay = True
-        self.liveReplayAvailable.emit(self)
+        _transaction.emit(self.liveReplayAvailable, self)
+        self.before_replay_available.emit(self, _transaction)
 
     def closed(self):
         return self.state == GameState.CLOSED or self._aborted
 
     # Used when the server confuses us whether the game is valid anymore.
-    def abort_game(self):
+    @transactional
+    def abort_game(self, _transaction=None):
         if self.closed():
             return
 
         old = self.copy()
         self.state = GameState.CLOSED
         self._aborted = True
-        self.gameUpdated.emit(self, old)
+        self.emit_update(old, _transaction)
 
     def to_dict(self):
-        return {
-                "uid": self.uid,
-                "state": self.state.name,
-                "launched_at": self.launched_at,
-                "num_players": self.num_players,
-                "max_players": self.max_players,
-                "title": self.title,
-                "host": self.host,
-                "mapname": self.mapname,
-                "map_file_path": self.map_file_path,
-                "teams": self.teams,
-                "featured_mod": self.featured_mod,
-                "featured_mod_versions": self.featured_mod_versions,
-                "sim_mods": self.sim_mods,
-                "password_protected": self.password_protected,
-                "visibility": self.visibility.name,
-                "command": "game_info"  # For compatibility
-            }
+        data = self.field_dict
+        data["uid"] = self.uid
+        data["state"] = data["state"].name
+        data["visibility"] = data["visibility"].name
+        data["command"] = "game_info"   # For compatibility
+        return data
 
     def url(self, player_id):
         if self.state == GameState.CLOSED:
             return None
-
-        url = QUrl()
-        url.setHost("lobby.faforever.com")
-        query = QUrlQuery()
-        query.addQueryItem("map", self.mapname)
-        query.addQueryItem("mod", self.featured_mod)
-
         if self.state == GameState.OPEN:
-            url.setScheme("fafgame")
-            url.setPath("/" + str(player_id))
-            query.addQueryItem("uid", str(self.uid))
+            gtype = GameUrlType.OPEN_GAME
         else:
-            url.setScheme("faflive")
-            url.setPath("/" + str(self.uid) + "/" + str(player_id) + ".SCFAreplay")
+            gtype = GameUrlType.LIVE_REPLAY
 
-        url.setQuery(query)
-        return url
+        return GameUrl(gtype, self.mapname, self.featured_mod, self.uid, player_id, self.sim_mods)
 
     # Utility functions start here.
 
@@ -249,9 +175,11 @@ class Game(QObject):
         return name in self._playerset
 
     def is_ingame(self, name):
-        return (not self.closed()
-                and self.is_connected(name)
-                and self._playerset[name].currentGame == self)
+        return (
+            not self.closed()
+            and self.is_connected(name)
+            and self._playerset[name].currentGame == self
+        )
 
     def to_player(self, name):
         if not self.is_connected(name):
@@ -268,16 +196,22 @@ class Game(QObject):
     def observers(self):
         if self.teams is None:
             return []
-        return [name for tname, team in self.teams.items()
-                if tname in self.OBSERVER_TEAMS
-                for name in team]
+        return [
+            name
+            for tname, team in self.teams.items()
+            if tname in self.OBSERVER_TEAMS
+            for name in team
+        ]
 
     @property
     def playing_teams(self):
         if self.teams is None:
             return {}
-        return {n: t for n, t in self.teams.items()
-                if n not in self.OBSERVER_TEAMS}
+        return {
+            n: t
+            for n, t in self.teams.items()
+            if n not in self.OBSERVER_TEAMS
+        }
 
     @property
     def playing_players(self):
@@ -290,16 +224,30 @@ class Game(QObject):
         except KeyError:
             return None
 
+    @transactional
+    def ingame_player_added(self, player, _transaction=None):
+        _transaction.emit(self.ingamePlayerAdded, self, player)
+
+    @transactional
+    def ingame_player_removed(self, player, _transaction=None):
+        _transaction.emit(self.ingamePlayerRemoved, self, player)
+
     @property
     def average_rating(self):
-        players = [name for team in self.playing_teams.values()
-                   for name in team]
-        players = [self.to_player(name) for name in players
-                   if self.is_connected(name)]
+        players = [
+            name
+            for team in self.playing_teams.values()
+            for name in team
+        ]
+        players = [
+            self.to_player(name)
+            for name in players
+            if self.is_connected(name)
+        ]
         if not players:
             return 0
         else:
-            return sum([p.rating_estimate() for p in players]) / len(players)
+            return sum([p.global_estimate for p in players]) / len(players)
 
     @property
     def mapdisplayname(self):
@@ -325,6 +273,8 @@ def message_to_game_args(m):
     try:
         m['state'] = GameState(m['state'])
         m['visibility'] = GameVisibility(m['visibility'])
+        # Server sends HTML-escaped names, which is needlessly confusing
+        m['title'] = html.unescape(m['title'])
     except (KeyError, ValueError):
         return False
 

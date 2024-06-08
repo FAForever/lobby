@@ -1,11 +1,15 @@
-from PyQt5 import QtCore, QtWidgets
-import util
-import time
-from .ns_settings import NotificationPosition
-
 """
 The UI popup of the notification system
 """
+import time
+
+from PyQt6 import QtCore
+from PyQt6.QtMultimedia import QSoundEffect
+
+import util
+
+from .ns_settings import NotificationPosition
+
 FormClass, BaseClass = util.THEME.loadUiType("notification_system/dialog.ui")
 
 
@@ -17,20 +21,43 @@ class NotificationDialog(FormClass, BaseClass):
         self.setupUi(self)
         self.client = client
 
-        self.labelIcon.setPixmap(util.THEME.icon("client/tray_icon.png", pix=True).scaled(32, 32))
+        self.labelIcon.setPixmap(
+            util.THEME.icon("client/tray_icon.png", pix=True).scaled(32, 32),
+        )
         self.standardIcon = util.THEME.icon("client/comment.png", pix=True)
 
         self.settings = settings
         self.updatePosition()
 
         # Frameless, always on top, steal no focus & no entry at the taskbar
-        self.setWindowFlags(QtCore.Qt.ToolTip)
+        self.setWindowFlags(QtCore.Qt.WindowType.ToolTip)
+        self.labelEvent.setOpenExternalLinks(True)
 
+        self.baseHeight = 165
+        self.baseWidth = 375
+
+        self.sender_id = None
+        self.acceptButton.clicked.connect(
+            lambda: self.acceptPartyInvite(sender_id=self.sender_id),
+        )
+
+        self.sound_effect = QSoundEffect()
+        self.sound_effect.setSource(util.THEME.sound("chat/sfx/query.wav"))
         # TODO: integrate into client.css
         # self.setStyleSheet(self.client.styleSheet())
 
     @QtCore.pyqtSlot()
-    def newEvent(self, pixmap, text, lifetime, sound):
+    def newEvent(
+        self,
+        pixmap,
+        text,
+        lifetime,
+        sound,
+        height=None,
+        width=None,
+        hide_accept_button=True,
+        sender_id=None,
+    ):
         """ Called to display a new popup
         Keyword arguments:
         pixmap -- Icon for the event (displayed left)
@@ -43,10 +70,18 @@ class NotificationDialog(FormClass, BaseClass):
             pixmap = self.standardIcon
         self.labelImage.setPixmap(pixmap)
 
-        self.labelTime.setText(time.strftime("%H:%M:%S", time.gmtime()))
+        self.labelTime.setText(time.strftime("%H:%M:%S", time.localtime()))
         QtCore.QTimer.singleShot(lifetime * 1000, self.hide)
         if sound:
-            util.THEME.sound("chat/sfx/query.wav")
+            self.sound_effect.play()
+        self.setFixedHeight(height or self.baseHeight)
+        self.setFixedWidth(width or self.baseWidth)
+
+        if hide_accept_button:
+            self.acceptButton.hide()
+        else:
+            self.sender_id = sender_id
+            self.acceptButton.show()
 
         self.updatePosition()
         self.show()
@@ -59,19 +94,28 @@ class NotificationDialog(FormClass, BaseClass):
 
     # mouseReleaseEvent sometimes not fired
     def mousePressEvent(self, event):
-        if event.button() == QtCore.Qt.RightButton:
+        if event.button() == QtCore.Qt.MouseButton.RightButton:
             self.hide()
 
-    def updatePosition(self):
-        screen = QtWidgets.QDesktopWidget().screenGeometry()
+    def updatePosition(self) -> None:
+        screen_size = self.screen().availableGeometry()
         dialog_size = self.geometry()
-        position = self.settings.popup_position  # self.client.notificationSystem.settings.popup_position
+        # self.client.notificationSystem.settings.popup_position
+        position = self.settings.popup_position
 
         if position == NotificationPosition.TOP_LEFT:
             self.move(0, 0)
         elif position == NotificationPosition.TOP_RIGHT:
-            self.move(screen.width() - dialog_size.width(), 0)
+            self.move(screen_size.width() - dialog_size.width(), 0)
         elif position == NotificationPosition.BOTTOM_LEFT:
-            self.move(0, screen.height() - dialog_size.height())
+            self.move(0, screen_size.height() - dialog_size.height())
         else:
-            self.move(screen.width() - dialog_size.width(), screen.height() - dialog_size.height())
+            self.move(
+                screen_size.width() - dialog_size.width(),
+                screen_size.height() - dialog_size.height(),
+            )
+
+    @QtCore.pyqtSlot()
+    def acceptPartyInvite(self, sender_id):
+        self.client.games.accept_party_invite(sender_id)
+        self.hide()

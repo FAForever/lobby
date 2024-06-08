@@ -1,33 +1,29 @@
 # system imports
 import logging
-import string
-import sys
-from urllib.error import HTTPError
-from PyQt5 import QtCore, QtGui
-import io
-import util
 import os
-import stat
-import struct
 import shutil
-import urllib.request, urllib.error, urllib.parse
-import zipfile
+import stat
+import string
+import struct
+import sys
 import tempfile
-import re
+import zipfile
+from typing import Callable
+
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+
 # module imports
-import fa
+import util
 # local imports
 from config import Settings
-from vault.dialogs import downloadVaultAssetNoMsg
+from mapGenerator.mapgenUtils import isGeneratedMap
+from model.game import OFFICIAL_MAPS as maps
+from vaults.dialogs import downloadVaultAssetNoMsg
 
 logger = logging.getLogger(__name__)
 
 route = Settings.get('content/host')
-VAULT_PREVIEW_ROOT = "{}/faf/vault/map_previews/small/".format(route)
-VAULT_DOWNLOAD_ROOT = "{}/faf/vault/".format(route)
-VAULT_COUNTER_ROOT = "{}/faf/vault/map_vault/inc_downloads.php".format(route)
-
-from model.game import OFFICIAL_MAPS as maps
 
 __exist_maps = None
 
@@ -42,14 +38,15 @@ def isBase(mapname):
 def getUserMaps():
     maps = []
     if os.path.isdir(getUserMapsFolder()):
-        maps = os.listdir(getUserMapsFolder())
+        for _dir in os.listdir(getUserMapsFolder()):
+            maps.append(_dir.lower())
     return maps
 
 
 def getDisplayName(filename):
     """
-    Tries to return a pretty name for the map (for official maps, it looks up the name)
-    For nonofficial maps, it tries to clean up the filename
+    Tries to return a pretty name for the map (for official maps, it looks up
+    the name) For nonofficial maps, it tries to clean up the filename
     """
     if str(filename) in maps:
         return maps[filename][0]
@@ -61,19 +58,19 @@ def getDisplayName(filename):
         return pretty
 
 
-def name2link(name):
+def name2link(name: str) -> str:
     """
     Returns a quoted link for use with the VAULT_xxxx Urls
     TODO: This could be cleaned up a little later.
     """
-    return urllib.parse.quote("maps/" + name + ".zip")
+    return Settings.get("vault/map_download_url").format(name=name)
 
 
 def link2name(link):
     """
     Takes a link and tries to turn it into a local mapname
     """
-    name = link.rsplit("/")[1].rsplit(".zip")[0]
+    name = link.rsplit("/", 1)[1].rsplit(".zip")[0]
     logger.info("Converted link '" + link + "' to name '" + name + "'")
     return name
 
@@ -107,7 +104,7 @@ def isMapFolderValid(folder):
         baseName + ".scmap",
         baseName + "_save.lua",
         baseName + "_scenario.lua",
-        baseName + "_script.lua"
+        baseName + "_script.lua",
     }
     files_present = set(os.listdir(folder))
 
@@ -166,7 +163,8 @@ def getBaseMapsFolder():
     if gamepath:
         return os.path.join(gamepath, "maps")
     else:
-        return "maps"  # This most likely isn't the valid maps folder, but it's the best guess.
+        # This most likely isn't the valid maps folder, but it's the best guess
+        return "maps"
 
 
 def getUserMapsFolder():
@@ -178,10 +176,11 @@ def getUserMapsFolder():
         "My Games",
         "Gas Powered Games",
         "Supreme Commander Forged Alliance",
-        "Maps")
+        "Maps",
+    )
 
 
-def genPrevFromDDS(sourcename, destname, small=False):
+def genPrevFromDDS(sourcename: str, destname: str, small: bool = False) -> None:
     """
     this opens supcom's dds file (format: bgra8888) and saves to png
     """
@@ -194,29 +193,35 @@ def genPrevFromDDS(sourcename, destname, small=False):
             img += buf[:3] + buf[4:7] + buf[8:11] + buf[12:15]
         file.close()
 
-        size = int((len(img)/3) ** (1.0/2))
+        size = int((len(img) / 3) ** (1.0 / 2))
         if small:
             imageFile = QtGui.QImage(
                 img,
                 size,
                 size,
-                QtGui.QImage.Format_RGB888).rgbSwapped().scaled(
-                    100,
-                    100,
-                    transformMode=QtCore.Qt.SmoothTransformation)
+                QtGui.QImage.Format.Format_RGB888,
+            ).rgbSwapped().scaled(
+                100,
+                100,
+                transformMode=QtCore.Qt.TransformationMode.SmoothTransformation,
+            )
         else:
             imageFile = QtGui.QImage(
                 img,
                 size,
                 size,
-                QtGui.QImage.Format_RGB888).rgbSwapped()
+                QtGui.QImage.Format.Format_RGB888,
+            ).rgbSwapped()
         imageFile.save(destname)
     except IOError:
         logger.debug('IOError exception in genPrevFromDDS', exc_info=True)
         raise
 
 
-def __exportPreviewFromMap(mapname, positions=None):
+def export_preview_from_map(
+        mapname: str | None,
+        positions: dict | None = None,
+) -> None | dict[str, None | str | list[str]]:
     """
     This method auto-upgrades the maps to have small and large preview images
     """
@@ -238,7 +243,11 @@ def __exportPreviewFromMap(mapname, positions=None):
         return previews
 
     mapname = os.path.basename(mapdir).lower()
-    mapfilename = os.path.join(mapdir, mapname.split(".")[0]+".scmap")
+    mapname_no_version, *_ = mapname.partition(".")
+    if isGeneratedMap(mapname):
+        mapfilename = os.path.join(mapdir, mapname + ".scmap")
+    else:
+        mapfilename = os.path.join(mapdir, f"{mapname_no_version}.scmap")
 
     mode = os.stat(mapdir)[0]
     if not (mode and stat.S_IWRITE):
@@ -248,10 +257,21 @@ def __exportPreviewFromMap(mapname, positions=None):
         if not os.path.isdir(mapdir):
             os.mkdir(mapdir)
 
-    previewsmallname = os.path.join(mapdir, mapname + ".small.png")
-    previewlargename = os.path.join(mapdir, mapname + ".large.png")
-    previewddsname = os.path.join(mapdir, mapname + ".dds")
-    cachepngname = os.path.join(util.MAP_PREVIEW_DIR, mapname + ".png")
+    def plausible_mapname_preview_name(suffix: str) -> str:
+        casefold_names = (
+            f"{mapname}{suffix}".casefold(),
+            f"{mapname_no_version}{suffix}".casefold(),
+        )
+        for entry in os.listdir(mapdir):
+            plausible_preview = os.path.join(mapdir, entry)
+            if os.path.isfile(plausible_preview) and entry.casefold() in casefold_names:
+                return plausible_preview
+        return suffix
+
+    previewsmallname = plausible_mapname_preview_name(".small.png")
+    previewlargename = plausible_mapname_preview_name(".large.png")
+    previewddsname = plausible_mapname_preview_name(".dds")
+    cachepngname = os.path.join(util.MAP_PREVIEW_SMALL_DIR, mapname + ".png")
 
     logger.debug("Generating preview from user maps for: " + mapname)
     logger.debug("Using directory: " + mapdir)
@@ -259,9 +279,9 @@ def __exportPreviewFromMap(mapname, positions=None):
     # Unknown / Unavailable mapname?
     if not os.path.isfile(mapfilename):
         logger.warning(
-            "Unable to find the .scmap for: {}, was looking here: {}".format(
-                mapname, mapfilename
-                ))
+            "Unable to find the .scmap for: {}, was looking here: "
+            "{}".format(mapname, mapfilename),
+        )
         return previews
 
     # Small preview already exists?
@@ -303,12 +323,15 @@ def __exportPreviewFromMap(mapname, positions=None):
         unk_32 = struct.unpack('i', mapfile.read(4))[0]
         unk_16 = struct.unpack('h', mapfile.read(2))[0]
         """
-        mapfile.seek(30)  # Shortcut. Maybe want to clean out some of the magic numbers some day
+        # Shortcut. Maybe want to clean out some of the magic numbers some day
+        mapfile.seek(30)
+
         size = struct.unpack('i', mapfile.read(4))[0]
         data = mapfile.read(size)
         # version_minor = struct.unpack('i', mapfile.read(4))[0]
         mapfile.close()
-        # logger.debug("SCMAP version %i.%i" % (version_major, version_minor))
+        # logger.debug("SCMAP version {}.{}".format(version_major,
+        #                                           version_minor))
 
         try:
             with open(previewddsname, "wb") as previewfile:
@@ -318,33 +341,41 @@ def __exportPreviewFromMap(mapname, positions=None):
                 if os.path.isfile(previewddsname):
                     previews["tozip"].append(previewddsname)
                 else:
-                    logger.debug("Failed to make DDS for: " + mapname)
+                    logger.debug("Failed to make DDS for: {}".format(mapname))
                     return previews
         except IOError:
             pass
 
     if not smallExists:
-        logger.debug("Making small preview from DDS for: " + mapname)
+        logger.debug("Making small preview from DDS for: {}".format(mapname))
         try:
             genPrevFromDDS(previewddsname, previewsmallname, small=True)
             previews["tozip"].append(previewsmallname)
             shutil.copyfile(previewsmallname, cachepngname)
             previews["cache"] = cachepngname
         except IOError:
-            logger.debug("Failed to make small preview for: " + mapname)
+            logger.debug(
+                "Failed to make small preview for: {}".format(mapname),
+            )
             return previews
 
     if not largeExists:
-        logger.debug("Making large preview from DDS for: " + mapname)
+        logger.debug("Making large preview from DDS for: {}".format(mapname))
         if not isinstance(positions, dict):
-            logger.debug("Icon positions were not passed or they were wrong for: " + mapname)
+            logger.debug(
+                "Icon positions were not passed or they were wrong "
+                "for: {}".format(mapname),
+            )
             return previews
         try:
             genPrevFromDDS(previewddsname, previewlargename, small=False)
             mapimage = util.THEME.pixmap(previewlargename)
-            armyicon = util.THEME.pixmap("vault/map_icons/army.png").scaled(8, 9, 1, 1)
-            massicon = util.THEME.pixmap("vault/map_icons/mass.png").scaled(8, 8, 1, 1)
-            hydroicon = util.THEME.pixmap("vault/map_icons/hydro.png").scaled(10, 10, 1, 1)
+            armypixmap = util.THEME.pixmap("vaults/map_icons/army.png")
+            masspixmap = util.THEME.pixmap("vaults/map_icons/mass.png")
+            hydropixmap = util.THEME.pixmap("vaults/map_icons/hydro.png")
+            massicon = masspixmap.scaled(8, 8, 1, 1)
+            armyicon = armypixmap.scaled(8, 9, 1, 1)
+            hydroicon = hydropixmap.scaled(10, 10, 1, 1)
 
             painter = QtGui.QPainter()
 
@@ -355,22 +386,25 @@ def __exportPreviewFromMap(mapname, positions=None):
             if "hydro" in positions:
                 for pos in positions["hydro"]:
                     target = QtCore.QRectF(
-                        positions["hydro"][pos][0]-5,
-                        positions["hydro"][pos][1]-5, 10, 10)
+                        positions["hydro"][pos][0] - 5,
+                        positions["hydro"][pos][1] - 5, 10, 10,
+                    )
                     source = QtCore.QRectF(0.0, 0.0, 10.0, 10.0)
                     painter.drawPixmap(target, hydroicon, source)
             if "mass" in positions:
                 for pos in positions["mass"]:
                     target = QtCore.QRectF(
-                        positions["mass"][pos][0]-4,
-                        positions["mass"][pos][1]-4, 8, 8)
+                        positions["mass"][pos][0] - 4,
+                        positions["mass"][pos][1] - 4, 8, 8,
+                    )
                     source = QtCore.QRectF(0.0, 0.0, 8.0, 8.0)
                     painter.drawPixmap(target, massicon, source)
             if "army" in positions:
                 for pos in positions["army"]:
                     target = QtCore.QRectF(
-                        positions["army"][pos][0]-4,
-                        positions["army"][pos][1]-4, 8, 9)
+                        positions["army"][pos][0] - 4,
+                        positions["army"][pos][1] - 4, 8, 9,
+                    )
                     source = QtCore.QRectF(0.0, 0.0, 8.0, 9.0)
                     painter.drawPixmap(target, armyicon, source)
             painter.end()
@@ -382,63 +416,69 @@ def __exportPreviewFromMap(mapname, positions=None):
 
     return previews
 
-iconExtensions = ["png"]  # "jpg" removed to have fewer of those costly 404 misses.
+
+# "jpg" removed to have fewer of those costly 404 misses.
+iconExtensions = ["png"]
 
 
 def preview(mapname, pixmap=False):
     try:
         # Try to load directly from cache
         for extension in iconExtensions:
-            img = os.path.join(util.MAP_PREVIEW_DIR, mapname + "." + extension)
+            img = os.path.join(
+                util.MAP_PREVIEW_SMALL_DIR,
+                mapname + "." + extension,
+            )
             if os.path.isfile(img):
                 logger.log(5, "Using cached preview image for: " + mapname)
                 return util.THEME.icon(img, False, pixmap)
 
         # Try to find in local map folder
-        img = __exportPreviewFromMap(mapname)
+        img = export_preview_from_map(mapname)
 
-        if img and 'cache' in img and img['cache'] and os.path.isfile(img['cache']):
+        if (
+            img
+            and 'cache' in img
+            and img['cache']
+            and os.path.isfile(img['cache'])
+        ):
             logger.debug("Using fresh preview image for: " + mapname)
             return util.THEME.icon(img['cache'], False, pixmap)
 
+        if isGeneratedMap(mapname):
+            return util.THEME.icon("games/generated_map.png")
+
         return None
-    except:
-        logger.error("Error raised in maps.preview(...) for " + mapname)
-        logger.error("Map Preview Exception", exc_info=sys.exc_info())
+    except BaseException:
+        logger.debug("Error raised in maps.preview(...) for " + mapname)
+        logger.debug("Map Preview Exception", exc_info=sys.exc_info())
 
 
-def downloadMap(name, silent=False):
+def downloadMap(name: str, silent: bool = False) -> bool:
     """
     Download a map from the vault with the given name
     """
     link = name2link(name)
     ret, msg = _doDownloadMap(name, link, silent)
-    if not ret:
+    if not ret and msg is None:
         name = name.replace(" ", "_")
         link = name2link(name)
         ret, msg = _doDownloadMap(name, link, silent)
-        if not ret:
-            msg()
-            return ret
-
-    # Count the map downloads
-    try:
-        url = VAULT_COUNTER_ROOT + "?map=" + urllib.parse.quote(link)
-        req = urllib.request.Request(url, headers={'User-Agent': "FAF Client"})
-        urllib.request.urlopen(req)
-        logger.debug("Successfully sent download counter request for: " + url)
-    except:
-        logger.warning("Request to map download counter failed for: " + url)
-        logger.error("Download Count Exception", exc_info=sys.exc_info())
-
-    return True
+    if not ret and msg is not None:
+        msg()
+    return ret
 
 
-def _doDownloadMap(name, link, silent):
-    url = VAULT_DOWNLOAD_ROOT + link
-    logger.debug("Getting map from: " + url)
-    return downloadVaultAssetNoMsg(url, getUserMapsFolder(), lambda m, d: True,
-                                   name, "map", silent)
+def _doDownloadMap(name: str, link: str, silent: bool) -> tuple[bool, Callable[[], None] | None]:
+    logger.debug(f"Getting map from: {link}")
+    return downloadVaultAssetNoMsg(
+        url=link,
+        target_dir=getUserMapsFolder(),
+        exist_handler=lambda m, d: True,
+        name=name,
+        category="map",
+        silent=silent,
+    )
 
 
 def processMapFolderForUpload(mapDir, positions):
@@ -446,7 +486,7 @@ def processMapFolderForUpload(mapDir, positions):
     Zipping the file and creating thumbnails
     """
     # creating thumbnail
-    files = __exportPreviewFromMap(mapDir, positions)["tozip"]
+    files = export_preview_from_map(mapDir, positions)["tozip"]
     # abort zipping if there is insufficient previews
     if len(files) != 3:
         logger.debug("Insufficient previews for making an archive.")
@@ -467,7 +507,10 @@ def processMapFolderForUpload(mapDir, positions):
     zipped = zipfile.ZipFile(temp, "w", zipfile.ZIP_DEFLATED)
 
     for filename in files:
-        zipped.write(filename, os.path.join(os.path.basename(mapDir), os.path.basename(filename)))
+        zipped.write(
+            filename,
+            os.path.join(os.path.basename(mapDir), os.path.basename(filename)),
+        )
 
     temp.flush()
 

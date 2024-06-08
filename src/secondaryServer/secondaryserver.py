@@ -1,9 +1,10 @@
-from PyQt5 import QtCore, QtNetwork
-import time
 import json
 import logging
-from config import Settings
 
+from PyQt6 import QtCore
+from PyQt6 import QtNetwork
+
+from config import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,8 @@ def log(string):
     logger.debug(string)
 
 
-# A set of exceptions we use to see what goes wrong during asynchronous data transfer waits
+# A set of exceptions we use to see what goes wrong during asynchronous data
+# transfer waits
 class Cancellation(Exception):
     pass
 
@@ -47,7 +49,7 @@ class SecondaryServer(QtCore.QObject):
 
         self.name = name
 
-        logger = logging.getLogger("faf.secondaryServer.%s" % self.name)
+        logger = logging.getLogger("faf.secondaryServer.{}".format(self.name))
         logger.info("Instantiating secondary server.")
         self.logger = logger
 
@@ -60,7 +62,7 @@ class SecondaryServer(QtCore.QObject):
         self.blockSize = 0
         self.serverSocket = QtNetwork.QTcpSocket()
 
-        self.serverSocket.error.connect(self.handleServerError)
+        self.serverSocket.errorOccurred.connect(self.handleServerError)
         self.serverSocket.readyRead.connect(self.readDataFromServer)
         self.serverSocket.connected.connect(self.send_pending)
         self.invisible = False
@@ -71,10 +73,21 @@ class SecondaryServer(QtCore.QObject):
 
     def send(self, command, *args, **kwargs):
         """ actually do the settings  """
-        self._requests += [{'command': command, 'args': args, 'kwargs': kwargs}]
+        self._requests.extend([{
+            'command': command,
+            'args': args,
+            'kwargs': kwargs,
+        }])
         self.logger.info("Pending requests: {}".format(len(self._requests)))
-        if not self.serverSocket.state() == QtNetwork.QAbstractSocket.ConnectedState:
-            self.logger.info("Connecting to {} {}:{}".format(self.name, self.HOST, self.socketPort))
+        if not (
+            self.serverSocket.state()
+            == QtNetwork.QAbstractSocket.SocketState.ConnectedState
+        ):
+            self.logger.info(
+                "Connecting to {} {}:{}".format(
+                    self.name, self.HOST, self.socketPort,
+                ),
+            )
             self.serverSocket.connectToHost(self.HOST, self.socketPort)
         else:
             self.send_pending()
@@ -111,19 +124,19 @@ class SecondaryServer(QtCore.QObject):
 
     def writeToServer(self, action, *args, **kw):
         block = QtCore.QByteArray()
-        out = QtCore.QDataStream(block, QtCore.QIODevice.ReadWrite)
+        out = QtCore.QDataStream(block, QtCore.QIODevice.OpenModeFlag.ReadWrite)
         out.setVersion(QtCore.QDataStream.Qt_4_2)
         out.writeUInt32(0)
         out.writeQString(action)
 
         for arg in args:
-            if type(arg) is int:
+            if isinstance(arg, int):
                 out.writeInt(arg)
             elif isinstance(arg, str):
                 out.writeQString(arg)
-            elif type(arg) is float:
+            elif isinstance(arg, float):
                 out.writeFloat(arg)
-            elif type(arg) is list:
+            elif isinstance(arg, list):
                 out.writeQVariantList(arg)
             else:
                 out.writeQString(str(arg))
@@ -148,15 +161,26 @@ class SecondaryServer(QtCore.QObject):
     @QtCore.pyqtSlot('QAbstractSocket::SocketError')
     def handleServerError(self, socketError):
         """
-        Simple error handler that flags the whole operation as failed, not very graceful but what can you do...
+        Simple error handler that flags the whole operation as failed, not
+        very graceful but what can you do...
         """
-        if socketError == QtNetwork.QAbstractSocket.RemoteHostClosedError:
-            log("FA Server down: The server is down for maintenance, please try later.")
+        if socketError == QtNetwork.QAbstractSocket.SocketError.RemoteHostClosedError:
+            log(
+                "FA Server down: The server is down for maintenance, please "
+                "try later.",
+            )
 
-        elif socketError == QtNetwork.QAbstractSocket.HostNotFoundError:
-            log("Connection to Host lost. Please check the host name and port settings.")
+        elif socketError == QtNetwork.QAbstractSocket.SocketError.HostNotFoundError:
+            log(
+                "Connection to Host lost. Please check the host name and port "
+                "settings.",
+            )
 
-        elif socketError == QtNetwork.QAbstractSocket.ConnectionRefusedError:
+        elif socketError == QtNetwork.QAbstractSocket.SocketError.ConnectionRefusedError:
             log("The connection was refused by the peer.")
         else:
-            log("The following error occurred: %s." % self.serverSocket.errorString())
+            log(
+                "The following error occurred: {}.".format(
+                    self.serverSocket.errorString(),
+                ),
+            )

@@ -1,214 +1,311 @@
-from PyQt5 import QtCore, QtWidgets, QtGui
+import logging
+import time
+from functools import partial
+
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
+from PyQt6.QtNetwork import QNetworkAccessManager
 
 import config
-import connectivity
-from connectivity.helper import ConnectivityHelper
-from client import ClientState, LOBBY_HOST, LOBBY_PORT, LOCAL_REPLAY_PORT
+import fa
+import notifications as ns
+import util
+import util.crash
+from chat import ChatMVC
+from chat._avatarWidget import AvatarWidget
+from chat.channel_autojoiner import ChannelAutojoiner
+from chat.chat_announcer import ChatAnnouncer
+from chat.chat_controller import ChatController
+from chat.chat_greeter import ChatGreeter
+from chat.chat_view import ChatView
+from chat.chatter_model import ChatterLayoutElements
+from chat.ircconnection import IrcConnection
+from chat.language_channel_config import LanguageChannelConfig
+from chat.line_restorer import ChatLineRestorer
 from client.aliasviewer import AliasSearchWindow
-from client.connection import LobbyInfo, ServerConnection, \
-        Dispatcher, ConnectionState, ServerReconnecter
+from client.aliasviewer import AliasWindow
+from client.chat_config import ChatConfig
+from client.clientstate import ClientState
+from client.connection import ConnectionState
+from client.connection import Dispatcher
+from client.connection import LobbyInfo
+from client.connection import ServerConnection
+from client.connection import ServerReconnecter
 from client.gameannouncer import GameAnnouncer
-from client.kick_dialog import KickDialog
 from client.login import LoginWidget
 from client.playercolors import PlayerColors
 from client.theme_menu import ThemeMenu
-from client.updater import UpdateChecker, UpdateDialog
-from client.update_settings import UpdateSettingsDialog
 from client.user import User
-from downloadManager import PreviewDownloader, MAP_PREVIEW_ROOT
-import fa
+from client.user import UserRelationController
+from client.user import UserRelationModel
+from client.user import UserRelations
+from client.user import UserRelationTrackers
+from connectivity.ConnectivityDialog import ConnectivityDialog
+from coop import CoopWidget
+from downloadManager import AvatarDownloader
+from downloadManager import MapSmallPreviewDownloader
 from fa.factions import Factions
+from fa.game_runner import GameRunner
+from fa.game_session import GameSession
 from fa.maps import getUserMapsFolder
-from functools import partial
-from games.gamemodel import GameModel
+from games import GamesWidget
 from games.gameitem import GameViewBuilder
+from games.gamemodel import GameModel
 from games.hostgamewidget import build_launcher
-import json
+from mapGenerator.mapgenManager import MapGeneratorManager
+from model.chat.channel import ChannelID
+from model.chat.channel import ChannelType
+from model.chat.chat import Chat
+from model.chat.chatline import ChatLineMetadataBuilder
 from model.gameset import Gameset
+from model.gameset import PlayerGameIndex
 from model.player import Player
 from model.playerset import Playerset
-from modvault.utils import MODFOLDER
-import notifications as ns
+from model.rating import MatchmakerQueueType
+from model.rating import RatingType
+from news import NewsWidget
+from oauth.oauth_flow import OAuth2FlowInstance
+from power import PowerTools
+from replays import ReplaysWidget
 from secondaryServer import SecondaryServer
-import time
-import util
-from ui.status_logo import StatusLogo
+from stats import StatsWidget
 from ui.busy_widget import BusyWidget
+from ui.status_logo import StatusLogo
+from unitdb.unitdbtab import UnitDBTab
+from updater import ClientUpdateTools
+from vaults.mapvault.mapvault import MapVault
+from vaults.modvault.modvault import ModVault
+from vaults.modvault.utils import getModFolder
+from vaults.modvault.utils import setModFolder
 
-'''
-Created on Dec 1, 2011
+from .mouse_position import MousePosition
 
-@author: thygrrr
-'''
-
-import logging
 logger = logging.getLogger(__name__)
 
 FormClass, BaseClass = util.THEME.loadUiType("client/client.ui")
 
 
-class mousePosition(object):
-    def __init__(self, parent):
-        self.parent = parent
-        self.onLeftEdge = False
-        self.onRightEdge = False
-        self.onTopEdge = False
-        self.onBottomEdge = False
-        self.cursorShapeChange = False
-        self.warning_buttons = dict()
-        self.onEdges = False
-
-    def computeMousePosition(self, pos):
-        self.onLeftEdge = pos.x() < 8
-        self.onRightEdge = pos.x() > self.parent.size().width() - 8
-        self.onTopEdge = pos.y() < 8
-        self.onBottomEdge = pos.y() > self.parent.size().height() - 8
-
-        self.onTopLeftEdge = self.onTopEdge and self.onLeftEdge
-        self.onBottomLeftEdge = self.onBottomEdge and self.onLeftEdge
-        self.onTopRightEdge = self.onTopEdge and self.onRightEdge
-        self.onBottomRightEdge = self.onBottomEdge and self.onRightEdge
-
-        self.onEdges = self.onLeftEdge or self.onRightEdge or self.onTopEdge or self.onBottomEdge
-
-    def resetToFalse(self):
-        self.onLeftEdge = False
-        self.onRightEdge = False
-        self.onTopEdge = False
-        self.onBottomEdge = False
-        self.cursorShapeChange = False
-
-    def isOnEdge(self):
-        return self.onEdges
-
-
 class ClientWindow(FormClass, BaseClass):
     """
-    This is the main lobby client that manages the FAF-related connection and data,
-    in particular players, games, ranking, etc.
+    This is the main lobby client that manages the FAF-related connection and
+    data, in particular players, games, ranking, etc.
     Its UI also houses all the other UIs for the sub-modules.
     """
 
     state_changed = QtCore.pyqtSignal(object)
     authorized = QtCore.pyqtSignal(object)
 
-    # These signals notify connected modules of game state changes (i.e. reasons why FA is launched)
-    viewingReplay = QtCore.pyqtSignal(QtCore.QUrl)
+    # These signals notify connected modules of game state changes
+    # (i.e. reasons why FA is launched)
+    viewing_replay = QtCore.pyqtSignal(object)
 
     # Game state controls
-    gameEnter = QtCore.pyqtSignal()
-    gameExit = QtCore.pyqtSignal()
-    gameFull = QtCore.pyqtSignal()
+    game_enter = QtCore.pyqtSignal()
+    game_exit = QtCore.pyqtSignal()
+    game_full = QtCore.pyqtSignal()
 
     # These signals propagate important client state changes to other modules
-    localBroadcast = QtCore.pyqtSignal(str, str)
-    autoJoin = QtCore.pyqtSignal(list)
-    channelsUpdated = QtCore.pyqtSignal(list)
+    local_broadcast = QtCore.pyqtSignal(str, str)
+    auto_join = QtCore.pyqtSignal(list)
+    channels_updated = QtCore.pyqtSignal(list)
+    unofficial_client = QtCore.pyqtSignal(str)
 
-    matchmakerInfo = QtCore.pyqtSignal(dict)
+    matchmaker_info = QtCore.pyqtSignal(dict)
+    party_invite = QtCore.pyqtSignal(dict)
 
-    remember = config.Settings.persisted_property('user/remember', type=bool, default_value=True)
-    login = config.Settings.persisted_property('user/login', persist_if=lambda self: self.remember)
-    password = config.Settings.persisted_property('user/password', persist_if=lambda self: self.remember)
+    remember = config.Settings.persisted_property(
+        'user/remember', type=bool, default_value=True,
+    )
+    refresh_token = config.Settings.persisted_property(
+        'user/refreshToken', persist_if=lambda self: self.remember,
+    )
 
-    gamelogs = config.Settings.persisted_property('game/logs', type=bool, default_value=True)
-    useUPnP = config.Settings.persisted_property('game/upnp', type=bool, default_value=True)
-    gamePort = config.Settings.persisted_property('game/port', type=int, default_value=6112)
+    game_logs = config.Settings.persisted_property(
+        'game/logs', type=bool, default_value=True,
+    )
+
+    use_chat = config.Settings.persisted_property(
+        'chat/enabled', type=bool, default_value=True,
+    )
 
     def __init__(self, *args, **kwargs):
-        BaseClass.__init__(self, *args, **kwargs)
+        super(ClientWindow, self).__init__(*args, **kwargs)
 
         logger.debug("Client instantiating")
 
         # Hook to Qt's application management system
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.cleanup)
+        QtWidgets.QApplication.instance().applicationStateChanged.connect(
+            self.appStateChanged,
+        )
 
-        self.uniqueId = None
+        self._network_access_manager = QNetworkAccessManager(self)
+        self.oauth_flow = OAuth2FlowInstance
+        self.oauth_flow.setParent(self)
+        self.oauth_flow.granted.connect(self.do_connect)
+        self.oauth_flow.granted.connect(self.save_refresh_token)
+        self.oauth_flow.requestFailed.connect(self.show_login_widget)
 
-        self.sendFile = False
+        self.unique_id = None
+        self._chat_config = ChatConfig(util.settings)
+
+        self.send_file = False
         self.warning_buttons = {}
 
         # Tray icon
         self.tray = QtWidgets.QSystemTrayIcon()
         self.tray.setIcon(util.THEME.icon("client/tray_icon.png"))
+        self.tray.setToolTip("FAF Python Client")
+        self.tray.activated.connect(self.handle_tray_icon_activation)
+        tray_menu = QtWidgets.QMenu()
+        tray_menu.addAction("Open Client", self.show_normal)
+        tray_menu.addAction("Quit Client", self.close)
+        self.tray.setContextMenu(tray_menu)
+        # Mouse down on tray icon deactivates the application.
+        # So there is no way to know for sure if the tray icon was clicked from
+        # active application or from inactive application. So we assume that
+        # if the application was deactivated less than 0.5s ago, then the tray
+        # icon click (both left or right button) was made from the active app.
+        self._lastDeactivateTime = None
+        self.keepActiveForTrayIcon = 0.5
         self.tray.show()
 
         self._state = ClientState.NONE
         self.session = None
+        self.game_session = None
 
         # This dictates whether we login automatically in the beginning or
         # after a disconnect. We turn it on if we're sure we have correct
         # credentials and want to use them (if we were remembered or after
         # login) and turn it off if we're getting fresh credentials or
         # encounter a serious server error.
-        self._autorelogin = self.remember
+        self._auto_relogin = self.remember
 
         self.lobby_dispatch = Dispatcher()
-        self.lobby_connection = ServerConnection(LOBBY_HOST, LOBBY_PORT,
-                                                 self.lobby_dispatch.dispatch)
-        self.lobby_connection.state_changed.connect(self.on_connection_state_changed)
-        self.lobby_reconnecter = ServerReconnecter(self.lobby_connection)
+        self.lobby_connection = ServerConnection(
+            config.Settings.get('lobby/host'),
+            config.Settings.get('lobby/port', type=int),
+            self.lobby_dispatch.dispatch,
+        )
+        self.lobby_connection.state_changed.connect(
+            self.on_connection_state_changed,
+        )
+        self.lobby_reconnector = ServerReconnecter(self.lobby_connection)
 
         self.players = Playerset()  # Players known to the client
-
         self.gameset = Gameset(self.players)
-        fa.instance.gameset = self.gameset  # FIXME (needed fa/game_process L81 for self.game = self.gameset[uid])
+        self._player_game_relation = PlayerGameIndex(
+            self.gameset, self.players,
+        )
+
+        # FIXME (needed fa/game_process L81 for self.game = self.gameset[uid])
+        fa.instance.gameset = self.gameset
+
+        self.lobby_info = LobbyInfo(
+            self.lobby_dispatch, self.gameset, self.players,
+        )
 
         # Handy reference to the User object representing the logged-in user.
         self.me = User(self.players)
+        self.login = None
+        self.id = None
 
-        self.map_downloader = PreviewDownloader(util.MAP_PREVIEW_DIR, MAP_PREVIEW_ROOT)
-        self.mod_downloader = PreviewDownloader(util.MOD_PREVIEW_DIR, None)
+        self._chat_model = Chat.build(
+            playerset=self.players,
+            base_channels=['#aeolus'],
+        )
+
+        relation_model = UserRelationModel.build()
+        relation_controller = UserRelationController.build(
+            relation_model,
+            me=self.me,
+            settings=config.Settings,
+            lobby_info=self.lobby_info,
+            lobby_connection=self.lobby_connection,
+        )
+        relation_trackers = UserRelationTrackers.build(
+            relation_model,
+            playerset=self.players,
+            chatterset=self._chat_model.chatters,
+        )
+        self.user_relations = UserRelations(
+            relation_model, relation_controller, relation_trackers,
+        )
+        self.me.relations = self.user_relations
+
+        self.map_preview_downloader = MapSmallPreviewDownloader(util.MAP_PREVIEW_SMALL_DIR)
+        self.avatar_downloader = AvatarDownloader()
+
+        # Map generator
+        self.map_generator = MapGeneratorManager()
 
         # Qt model for displaying active games.
-        self.game_model = GameModel(self.me, self.map_downloader, self.gameset)
+        self.game_model = GameModel(self.me, self.map_preview_downloader, self.gameset)
 
-        self.lobby_info = LobbyInfo(self.lobby_dispatch, self.gameset, self.players)
-        self.gameset.newGame.connect(self.fill_in_session_info)
+        self.gameset.added.connect(self.fill_in_session_info)
 
-        self.lobby_dispatch["session"] = self.handle_session
-        self.lobby_dispatch["registration_response"] = self.handle_registration_response
+        self.lobby_info.serverSession.connect(self.handle_session)
+        self.lobby_dispatch["registration_response"] = (
+            self.handle_registration_response
+        )
         self.lobby_dispatch["game_launch"] = self.handle_game_launch
         self.lobby_dispatch["matchmaker_info"] = self.handle_matchmaker_info
-        self.lobby_dispatch["social"] = self.handle_social
         self.lobby_dispatch["player_info"] = self.handle_player_info
         self.lobby_dispatch["notice"] = self.handle_notice
         self.lobby_dispatch["invalid"] = self.handle_invalid
-        self.lobby_dispatch["update"] = self.handle_update
         self.lobby_dispatch["welcome"] = self.handle_welcome
-        self.lobby_dispatch["authentication_failed"] = self.handle_authentication_failed
+        self.lobby_dispatch["authentication_failed"] = (
+            self.handle_authentication_failed
+        )
+        self.lobby_dispatch["irc_password"] = self.handle_irc_password
+        self.lobby_dispatch["update_party"] = self.handle_update_party
+        self.lobby_dispatch["kicked_from_party"] = (
+            self.handle_kicked_from_party
+        )
+        self.lobby_dispatch["party_invite"] = self.handle_party_invite
+        self.lobby_dispatch["match_found"] = self.handle_match_found_message
+        self.lobby_dispatch["match_cancelled"] = self.handle_match_cancelled
+        self.lobby_dispatch["search_info"] = self.handle_search_info
+        self.lobby_info.social.connect(self.handle_social)
 
         # Process used to run Forged Alliance (managed in module fa)
-        fa.instance.started.connect(self.startedFA)
-        fa.instance.finished.connect(self.finishedFA)
-        fa.instance.error.connect(self.errorFA)
-        self.gameset.newGame.connect(fa.instance.newServerGame)
+        fa.instance.started.connect(self.started_fa)
+        fa.instance.finished.connect(self.finished_fa)
+        fa.instance.errorOccurred.connect(self.error_fa)
+        self.gameset.added.connect(fa.instance.newServerGame)
 
         # Local Replay Server
         self.replayServer = fa.replayserver.ReplayServer(self)
 
-        # GameSession
-        self.game_session = None  # type: fa.GameSession
-
         # ConnectivityTest
-        self.connectivity = None  # type: ConnectivityHelper
+        self.connectivity = None  # type - ConnectivityHelper
 
         # stat server
-        self.statsServer = SecondaryServer("Statistic", 11002, self.lobby_dispatch)
+        self.statsServer = SecondaryServer(
+            "Statistic", 11002, self.lobby_dispatch,
+        )
 
         # create user interface (main window) and load theme
         self.setupUi(self)
-        util.THEME.setStyleSheet(self, "client/client.css")
+        util.THEME.stylesheets_reloaded.connect(self.load_stylesheet)
+        self.load_stylesheet()
 
-        self.setWindowTitle("FA Forever " + util.VERSION_STRING)
+        self.setWindowTitle("FA Forever {}".format(util.VERSION_STRING))
 
         # Frameless
-        self.setWindowFlags(QtCore.Qt.FramelessWindowHint | QtCore.Qt.CustomizeWindowHint)
+        self.setWindowFlags(
+            QtCore.Qt.WindowType.FramelessWindowHint
+            | QtCore.Qt.WindowType.WindowSystemMenuHint
+            | QtCore.Qt.WindowType.WindowMinimizeButtonHint,
+        )
 
-        self.rubberBand = QtWidgets.QRubberBand(QtWidgets.QRubberBand.Rectangle)
+        self.rubber_band = QtWidgets.QRubberBand(
+            QtWidgets.QRubberBand.Shape.Rectangle,
+        )
 
-        self.mousePosition = mousePosition(self)
-        self.installEventFilter(self)
+        self.mouse_position = MousePosition(self)
+        self.installEventFilter(self)  # register events
 
         self.minimize = QtWidgets.QToolButton(self)
         self.minimize.setIcon(util.THEME.icon("client/minimize-button.png"))
@@ -231,87 +328,117 @@ class ClientWindow(FormClass, BaseClass):
         self.maximize.setProperty("windowControlBtn", True)
         self.minimize.setProperty("windowControlBtn", True)
 
-        self.logo = StatusLogo(self)
-        self.logo.disconnect_requested.connect(self.disconnect)
-        self.logo.reconnect_requested.connect(self.reconnect)
-        self.logo.about_dialog_requested.connect(self.linkAbout)
-        self.logo.connectivity_dialog_requested.connect(self.connectivityDialog)
-
         self.menu = self.menuBar()
-        self.topLayout.addWidget(self.logo)
-        titleLabel = QtWidgets.QLabel("FA Forever" if not config.is_beta() else "FA Forever BETA")
-        titleLabel.setProperty('titleLabel', True)
-        self.topLayout.addWidget(titleLabel)
+        title_label = QtWidgets.QLabel(
+            "FA Forever" if not config.is_beta() else "FA Forever BETA",
+        )
+        title_label.setProperty('titleLabel', True)
+        self.topLayout.addWidget(title_label)
         self.topLayout.addStretch(500)
         self.topLayout.addWidget(self.menu)
         self.topLayout.addWidget(self.minimize)
         self.topLayout.addWidget(self.maximize)
         self.topLayout.addWidget(close)
         self.topLayout.setSpacing(0)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        self.maxNormal = False
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Fixed,
+        )
+        self.is_window_maximized = False
 
         close.clicked.connect(self.close)
-        self.minimize.clicked.connect(self.showSmall)
-        self.maximize.clicked.connect(self.showMaxRestore)
+        self.minimize.clicked.connect(self.showMinimized)
+        self.maximize.clicked.connect(self.show_max_restore)
 
         self.moving = False
         self.dragging = False
-        self.draggingHover = False
+        self.dragging_hover = False
         self.offset = None
-        self.curSize = None
+        self.current_geometry = None
 
-        sizeGrip = QtWidgets.QSizeGrip(self)
-        self.mainGridLayout.addWidget(sizeGrip, 2, 2)
+        self.mainGridLayout.addWidget(QtWidgets.QSizeGrip(self), 2, 2)
 
         # Wire all important signals
         self._main_tab = -1
-        self.mainTabs.currentChanged.connect(self.mainTabChanged)
+        self.mainTabs.currentChanged.connect(self.main_tab_changed)
         self._vault_tab = -1
-        self.topTabs.currentChanged.connect(self.vaultTabChanged)
+        self.topTabs.currentChanged.connect(self.vault_tab_changed)
 
-        self.player_colors = PlayerColors(self.me)
+        self.player_colors = PlayerColors(
+            self.me, self.user_relations.model, util.THEME,
+        )
 
-        self.game_announcer = GameAnnouncer(self.gameset, self.me,
-                                            self.player_colors, self)
+        self.game_announcer = GameAnnouncer(
+            self.gameset, self.me, self.player_colors,
+        )
 
         self.power = 0  # current user power
         self.id = 0
         # Initialize the Menu Bar according to settings etc.
+        self._language_channel_config = LanguageChannelConfig(
+            self, config.Settings, util.THEME,
+        )
         self.initMenus()
 
         # Load the icons for the tabs
-        self.mainTabs.setTabIcon(self.mainTabs.indexOf(self.whatNewTab), util.THEME.icon("client/feed.png"))
-        self.mainTabs.setTabIcon(self.mainTabs.indexOf(self.chatTab), util.THEME.icon("client/chat.png"))
-        self.mainTabs.setTabIcon(self.mainTabs.indexOf(self.gamesTab), util.THEME.icon("client/games.png"))
-        self.mainTabs.setTabIcon(self.mainTabs.indexOf(self.coopTab), util.THEME.icon("client/coop.png"))
-        self.mainTabs.setTabIcon(self.mainTabs.indexOf(self.vaultsTab), util.THEME.icon("client/mods.png"))
-        self.mainTabs.setTabIcon(self.mainTabs.indexOf(self.ladderTab), util.THEME.icon("client/ladder.png"))
-        self.mainTabs.setTabIcon(self.mainTabs.indexOf(self.tourneyTab), util.THEME.icon("client/tourney.png"))
-        self.mainTabs.setTabIcon(self.mainTabs.indexOf(self.unitdbTab), util.THEME.icon("client/twitch.png"))
-        self.mainTabs.setTabIcon(self.mainTabs.indexOf(self.replaysTab), util.THEME.icon("client/replays.png"))
-        self.mainTabs.setTabIcon(self.mainTabs.indexOf(self.tutorialsTab), util.THEME.icon("client/tutorials.png"))
+        self.mainTabs.setTabIcon(
+            self.mainTabs.indexOf(self.whatNewTab),
+            util.THEME.icon("client/feed.png"),
+        )
+        self.mainTabs.setTabIcon(
+            self.mainTabs.indexOf(self.chatTab),
+            util.THEME.icon("client/chat.png"),
+        )
+        self.mainTabs.setTabIcon(
+            self.mainTabs.indexOf(self.gamesTab),
+            util.THEME.icon("client/games.png"),
+        )
+        self.mainTabs.setTabIcon(
+            self.mainTabs.indexOf(self.coopTab),
+            util.THEME.icon("client/coop.png"),
+        )
+        self.mainTabs.setTabIcon(
+            self.mainTabs.indexOf(self.vaultsTab),
+            util.THEME.icon("client/mods.png"),
+        )
+        self.mainTabs.setTabIcon(
+            self.mainTabs.indexOf(self.ladderTab),
+            util.THEME.icon("client/ladder.png"),
+        )
+        self.mainTabs.setTabIcon(
+            self.mainTabs.indexOf(self.tourneyTab),
+            util.THEME.icon("client/tourney.png"),
+        )
+        self.mainTabs.setTabIcon(
+            self.mainTabs.indexOf(self.unitdbTab),
+            util.THEME.icon("client/unitdb.png"),
+        )
+        self.mainTabs.setTabIcon(
+            self.mainTabs.indexOf(self.replaysTab),
+            util.THEME.icon("client/replays.png"),
+        )
+        self.mainTabs.setTabIcon(
+            self.mainTabs.indexOf(self.tutorialsTab),
+            util.THEME.icon("client/tutorials.png"),
+        )
 
         # for moderator
-        self.modMenu = None
+        self.mod_menu = None
+        self.power_tools = PowerTools.build(
+            playerset=self.players,
+            lobby_connection=self.lobby_connection,
+            theme=util.THEME,
+            parent_widget=self,
+            settings=config.Settings,
+        )
 
-        self._alias_window = AliasSearchWindow(self)
-        #self.nFrame = NewsFrame()
-        #self.whatsNewLayout.addWidget(self.nFrame)
-        #self.nFrame.collapse()
+        self._alias_viewer = AliasWindow.build(parent_widget=self)
+        self._alias_search_window = AliasSearchWindow(self, self._alias_viewer)
+        self._game_runner = GameRunner(self.gameset, self)
 
-        #self.nFrame = NewsFrame()
-        #self.whatsNewLayout.addWidget(self.nFrame)
+        self.connectivity_dialog = None
 
-        #self.nFrame = NewsFrame()
-        #self.whatsNewLayout.addWidget(self.nFrame)
-
-
-        #self.WPApi = WPAPI(self)
-        #self.WPApi.newsDone.connect(self.on_wpapi_done)
-        #self.WPApi.download()
-
-        #self.controlsContainerLayout.setAlignment(self.pageControlFrame, QtCore.Qt.AlignRight)
+    def load_stylesheet(self):
+        self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
 
     @property
     def state(self):
@@ -337,241 +464,381 @@ class ClientWindow(FormClass, BaseClass):
 
     def on_connected(self):
         # Enable reconnect in case we used to explicitly stay offline
-        self.lobby_reconnecter.enabled = True
-
-        self.lobby_connection.send(dict(command="ask_session",
-                                        version=config.VERSION,
-                                        user_agent="faf-client"))
+        self.lobby_reconnector.enabled = True
+        self.lobby_connection.send(
+            dict(
+                command="ask_session",
+                version=config.VERSION,
+                user_agent="faf-client",
+            ),
+        )
 
     def on_disconnected(self):
         logger.warning("Disconnected from lobby server.")
         self.gameset.clear()
         self.clear_players()
+        self.games.stopSearch()
 
-    @QtCore.pyqtSlot(bool)
-    def on_actionSavegamelogs_toggled(self, value):
-        self.gamelogs = value
-
-    @QtCore.pyqtSlot(bool)
-    def on_actionAutoDownloadMods_toggled(self, value):
-        config.Settings.set('mods/autodownload', value is True)
-
-    @QtCore.pyqtSlot(bool)
-    def on_actionAutoDownloadMaps_toggled(self, value):
-        config.Settings.set('maps/autodownload', value is True)
+    def appStateChanged(self, state):
+        if state == QtCore.Qt.ApplicationState.ApplicationInactive:
+            self._lastDeactivateTime = time.monotonic()
 
     def eventFilter(self, obj, event):
-        if event.type() == QtCore.QEvent.HoverMove:
-            self.draggingHover = self.dragging
+        if event.type() == QtCore.QEvent.Type.HoverMove:
+            self.dragging_hover = self.dragging
             if self.dragging:
-                self.resizeWidget(self.mapToGlobal(event.pos()))
+                self.resize_widget(self.mapToGlobal(event.position()))
             else:
-                if self.maxNormal == False:
-                    self.mousePosition.computeMousePosition(event.pos())
+                if not self.is_window_maximized:
+                    self.mouse_position.update_mouse_position(event.position())
                 else:
-                    self.mousePosition.resetToFalse()
-            self.updateCursorShape(event.pos())
+                    self.mouse_position.reset_to_false()
+            self.update_cursor_shape()
 
         return False
 
-    def updateCursorShape(self, pos):
-        if self.mousePosition.onTopLeftEdge or self.mousePosition.onBottomRightEdge:
-            self.mousePosition.cursorShapeChange = True
-            self.setCursor(QtCore.Qt.SizeFDiagCursor)
-        elif self.mousePosition.onTopRightEdge or self.mousePosition.onBottomLeftEdge:
-            self.setCursor(QtCore.Qt.SizeBDiagCursor)
-            self.mousePosition.cursorShapeChange = True
-        elif self.mousePosition.onLeftEdge or self.mousePosition.onRightEdge:
-            self.setCursor(QtCore.Qt.SizeHorCursor)
-            self.mousePosition.cursorShapeChange = True
-        elif self.mousePosition.onTopEdge or self.mousePosition.onBottomEdge:
-            self.setCursor(QtCore.Qt.SizeVerCursor)
-            self.mousePosition.cursorShapeChange = True
+    def update_cursor_shape(self):
+        if (
+            self.mouse_position.on_top_left_edge
+            or self.mouse_position.on_bottom_right_edge
+        ):
+            self.mouse_position.cursor_shape_change = True
+            self.setCursor(QtCore.Qt.CursorShape.SizeFDiagCursor)
+        elif (
+            self.mouse_position.on_top_right_edge
+            or self.mouse_position.on_bottom_left_edge
+        ):
+            self.setCursor(QtCore.Qt.CursorShape.SizeBDiagCursor)
+            self.mouse_position.cursor_shape_change = True
+        elif (
+            self.mouse_position.on_left_edge
+            or self.mouse_position.on_right_edge
+        ):
+            self.setCursor(QtCore.Qt.CursorShape.SizeHorCursor)
+            self.mouse_position.cursor_shape_change = True
+        elif (
+            self.mouse_position.on_top_edge
+            or self.mouse_position.on_bottom_edge
+        ):
+            self.setCursor(QtCore.Qt.CursorShape.SizeVerCursor)
+            self.mouse_position.cursor_shape_change = True
         else:
-            if self.mousePosition.cursorShapeChange == True:
+            if self.mouse_position.cursor_shape_change:
                 self.unsetCursor()
-                self.mousePosition.cursorShapeChange = False
+                self.mouse_position.cursor_shape_change = False
 
-    def showSmall(self):
-        self.showMinimized()
+    def handle_tray_icon_activation(
+            self,
+            reason: QtWidgets.QSystemTrayIcon.ActivationReason,
+    ) -> None:
+        if reason is QtWidgets.QSystemTrayIcon.ActivationReason.Trigger:
+            if self._lastDeactivateTime is None:
+                self.showMinimized()
+                return
 
-    def showMaxRestore(self):
-        if (self.maxNormal):
-            self.maxNormal = False
-            if self.curSize:
-                self.setGeometry(self.curSize)
+            inactiveTime = time.monotonic() - self._lastDeactivateTime
+            if (
+                self.isMinimized()
+                or inactiveTime >= self.keepActiveForTrayIcon
+            ):
+                self.show_normal()
+            else:
+                self.showMinimized()
+        elif reason is QtWidgets.QSystemTrayIcon.ActivationReason.Context:
+            position = QtGui.QCursor.pos()
+            position.setY(position.y() - self.tray.contextMenu().height())
+            self.tray.contextMenu().popup(position)
+
+    def show_normal(self):
+        self.showNormal()
+        self.activateWindow()
+
+    def show_max_restore(self):
+        if self.is_window_maximized:
+            self.is_window_maximized = False
+            if self.current_geometry:
+                self.setGeometry(self.current_geometry)
 
         else:
-            self.maxNormal = True
-            self.curSize = self.geometry()
-            self.setGeometry(QtWidgets.QDesktopWidget().availableGeometry(self))
+            self.is_window_maximized = True
+            self.current_geometry = self.geometry()
+            self.setGeometry(self.screen().availableGeometry())
 
     def mouseDoubleClickEvent(self, event):
-        self.showMaxRestore()
+        self.show_max_restore()
 
     def mouseReleaseEvent(self, event):
         self.dragging = False
         self.moving = False
-        if self.rubberBand.isVisible():
-            self.maxNormal = True
-            self.curSize = self.geometry()
-            self.setGeometry(self.rubberBand.geometry())
-            self.rubberBand.hide()
-            # self.showMaxRestore()
+        if self.rubber_band.isVisible():
+            self.is_window_maximized = True
+            self.current_geometry = self.geometry()
+            self.setGeometry(self.rubber_band.geometry())
+            self.rubber_band.hide()
+            # self.show_max_restore()
 
     def mousePressEvent(self, event):
-        if event.button() == QtCore.Qt.LeftButton:
-            if self.mousePosition.isOnEdge() and not self.maxNormal:
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            if (
+                self.mouse_position.is_on_edge()
+                and not self.is_window_maximized
+            ):
                 self.dragging = True
                 return
             else:
                 self.dragging = False
 
             self.moving = True
-            self.offset = event.pos()
+            self.offset = event.position()
 
     def mouseMoveEvent(self, event):
-        if self.dragging and self.draggingHover == False:
-            self.resizeWidget(event.globalPos())
+        if self.dragging and not self.dragging_hover:
+            self.resize_widget(event.globalPosition())
 
         elif self.moving and self.offset is not None:
-            desktop = QtWidgets.QDesktopWidget().availableGeometry(self)
-            if event.globalPos().y() == 0:
-                self.rubberBand.setGeometry(desktop)
-                self.rubberBand.show()
-            elif event.globalPos().x() == 0:
+            desktop = self.screen().availableGeometry()
+            if event.globalPosition().y() == 0:
+                self.rubber_band.setGeometry(desktop)
+                self.rubber_band.show()
+            elif event.globalPosition().x() == 0:
                 desktop.setRight(desktop.right() / 2.0)
-                self.rubberBand.setGeometry(desktop)
-                self.rubberBand.show()
-            elif event.globalPos().x() == desktop.right():
+                self.rubber_band.setGeometry(desktop)
+                self.rubber_band.show()
+            elif event.globalPosition().x() == desktop.right():
                 desktop.setRight(desktop.right() / 2.0)
                 desktop.moveLeft(desktop.right())
-                self.rubberBand.setGeometry(desktop)
-                self.rubberBand.show()
+                self.rubber_band.setGeometry(desktop)
+                self.rubber_band.show()
 
             else:
-                self.rubberBand.hide()
-                if self.maxNormal:
-                    self.showMaxRestore()
+                self.rubber_band.hide()
+                if self.is_window_maximized:
+                    self.show_max_restore()
 
-            self.move(event.globalPos() - self.offset)
+            point_f = event.globalPosition() - self.offset
+            self.move(point_f.toPoint())
 
-    def resizeWidget(self, globalMousePos):
-        if globalMousePos.y() == 0:
-            self.rubberBand.setGeometry(QtWidgets.QDesktopWidget().availableGeometry(self))
-            self.rubberBand.show()
+    def resize_widget(self, mouse_position: QtCore.QRectF) -> None:
+        mouse_point = mouse_position.toPoint()
+        if mouse_point.y() == 0:
+            self.rubber_band.setGeometry(self.screen().availableGeometry())
+            self.rubber_band.show()
         else:
-            self.rubberBand.hide()
+            self.rubber_band.hide()
 
-        origRect = self.frameGeometry()
+        orig_rect = self.frameGeometry()
 
-        left, top, right, bottom = origRect.getCoords()
-        minWidth = self.minimumWidth()
-        minHeight = self.minimumHeight()
-        if self.mousePosition.onTopLeftEdge:
-            left = globalMousePos.x()
-            top = globalMousePos.y()
+        left, top, right, bottom = orig_rect.getCoords()
+        min_width = self.minimumWidth()
+        min_height = self.minimumHeight()
+        if self.mouse_position.on_top_left_edge:
+            left = mouse_point.x()
+            top = mouse_point.y()
+        elif self.mouse_position.on_bottom_left_edge:
+            left = mouse_point.x()
+            bottom = mouse_point.y()
+        elif self.mouse_position.on_top_right_edge:
+            right = mouse_point.x()
+            top = mouse_point.y()
+        elif self.mouse_position.on_bottom_right_edge:
+            right = mouse_point.x()
+            bottom = mouse_point.y()
+        elif self.mouse_position.on_left_edge:
+            left = mouse_point.x()
+        elif self.mouse_position.on_right_edge:
+            right = mouse_point.x()
+        elif self.mouse_position.on_top_edge:
+            top = mouse_point.y()
+        elif self.mouse_position.on_bottom_edge:
+            bottom = mouse_point.y()
 
-        elif self.mousePosition.onBottomLeftEdge:
-            left = globalMousePos.x()
-            bottom = globalMousePos.y()
-        elif self.mousePosition.onTopRightEdge:
-            right = globalMousePos.x()
-            top = globalMousePos.y()
-        elif self.mousePosition.onBottomRightEdge:
-            right = globalMousePos.x()
-            bottom = globalMousePos.y()
-        elif self.mousePosition.onLeftEdge:
-            left = globalMousePos.x()
-        elif self.mousePosition.onRightEdge:
-            right = globalMousePos.x()
-        elif self.mousePosition.onTopEdge:
-            top = globalMousePos.y()
-        elif self.mousePosition.onBottomEdge:
-            bottom = globalMousePos.y()
-
-        newRect = QtCore.QRect(QtCore.QPoint(left, top), QtCore.QPoint(right, bottom))
-        if newRect.isValid():
-            if minWidth > newRect.width():
-                if left != origRect.left():
-                    newRect.setLeft(origRect.left())
+        new_rect = QtCore.QRect(
+            QtCore.QPoint(left, top),
+            QtCore.QPoint(right, bottom),
+        )
+        if new_rect.isValid():
+            if min_width > new_rect.width():
+                if left != orig_rect.left():
+                    new_rect.setLeft(orig_rect.left())
                 else:
-                    newRect.setRight(origRect.right())
-            if minHeight > newRect.height():
-                if top != origRect.top():
-                    newRect.setTop(origRect.top())
+                    new_rect.setRight(orig_rect.right())
+            if min_height > new_rect.height():
+                if top != orig_rect.top():
+                    new_rect.setTop(orig_rect.top())
                 else:
-                    newRect.setBottom(origRect.bottom())
+                    new_rect.setBottom(orig_rect.bottom())
 
-            self.setGeometry(newRect)
+            self.setGeometry(new_rect)
 
     def setup(self):
-        from news import NewsWidget
-        from chat import ChatWidget
-        from coop import CoopWidget
-        from games import GamesWidget
-        from tutorials import TutorialsWidget
-        from stats import StatsWidget
-        from tourneys import TournamentsWidget
-        from vault import MapVault
-        from modvault import ModVault
-        from replays import ReplaysWidget
-        from chat._avatarWidget import AvatarWidget
+        self.load_settings()
+        self._chat_config.channel_blink_interval = 500
+        self._chat_config.channel_ping_timeout = 60 * 1000
+        self._chat_config.max_chat_lines = 200
+        self._chat_config.chat_line_trim_count = 50
+        self._chat_config.announcement_channels = ['#aeolus']
+        self._chat_config.channels_to_greet_in = ['#aeolus']
+        self._chat_config.newbie_channel_game_threshold = 50
 
-        self.loadSettings()
+        wiki_link = util.Settings.get("WIKI_URL")
+        wiki_formatter = "Check out the wiki: {} for help with common issues."
+        wiki_msg = wiki_formatter.format(wiki_link)
 
-        self.gameview_builder = GameViewBuilder(self.me,
-                                                self.player_colors)
-        self.game_launcher = build_launcher(self.players, self.me,
-                                            self, self.gameview_builder,
-                                            self.map_downloader)
+        self._chat_config.channel_greeting = [
+            ("Welcome to Forged Alliance Forever!", "red", "+3"),
+            (wiki_msg, "white", "+1"),
+            ("", "black", "+1"),
+            ("", "black", "+1"),
+        ]
+
+        self.gameview_builder = GameViewBuilder(self.me, self.player_colors)
+        self.game_launcher = build_launcher(
+            self.players, self.me,
+            self, self.gameview_builder,
+            self.map_preview_downloader,
+        )
+        self._avatar_widget_builder = AvatarWidget.builder(
+            parent_widget=self,
+            lobby_connection=self.lobby_connection,
+            lobby_info=self.lobby_info,
+            avatar_dler=self.avatar_downloader,
+            theme=util.THEME,
+        )
+
+        chat_connection = IrcConnection.build(settings=config.Settings)
+        line_metadata_builder = ChatLineMetadataBuilder.build(
+            me=self.me,
+            user_relations=self.user_relations.model,
+        )
+
+        chat_controller = ChatController.build(
+            connection=chat_connection,
+            model=self._chat_model,
+            user_relations=self.user_relations.model,
+            chat_config=self._chat_config,
+            me=self.me,
+            line_metadata_builder=line_metadata_builder,
+        )
+
+        target_channel = ChannelID(ChannelType.PUBLIC, '#aeolus')
+        chat_view = ChatView.build(
+            target_viewed_channel=target_channel,
+            model=self._chat_model,
+            controller=chat_controller,
+            parent_widget=self,
+            theme=util.THEME,
+            chat_config=self._chat_config,
+            player_colors=self.player_colors,
+            me=self.me,
+            user_relations=self.user_relations,
+            power_tools=self.power_tools,
+            map_preview_dler=self.map_preview_downloader,
+            avatar_dler=self.avatar_downloader,
+            avatar_widget_builder=self._avatar_widget_builder,
+            alias_viewer=self._alias_viewer,
+            client_window=self,
+            game_runner=self._game_runner,
+        )
+
+        channel_autojoiner = ChannelAutojoiner.build(
+            base_channels=['#aeolus'],
+            model=self._chat_model,
+            controller=chat_controller,
+            settings=config.Settings,
+            lobby_info=self.lobby_info,
+            chat_config=self._chat_config,
+            me=self.me,
+        )
+        chat_greeter = ChatGreeter(
+            model=self._chat_model,
+            theme=util.THEME,
+            chat_config=self._chat_config,
+            line_metadata_builder=line_metadata_builder,
+        )
+        chat_restorer = ChatLineRestorer(self._chat_model)
+        chat_announcer = ChatAnnouncer(
+            model=self._chat_model,
+            chat_config=self._chat_config,
+            game_announcer=self.game_announcer,
+            line_metadata_builder=line_metadata_builder,
+        )
+
+        self._chatMVC = ChatMVC(
+            self._chat_model, line_metadata_builder,
+            chat_connection, chat_controller,
+            channel_autojoiner, chat_greeter,
+            chat_restorer, chat_announcer, chat_view,
+        )
+
+        self.authorized.connect(self._connect_chat)
+
+        self.logo = StatusLogo(self, self._chatMVC.model)
+        self.logo.disconnect_requested.connect(self.disconnect_)
+        self.logo.reconnect_requested.connect(self.reconnect)
+        self.logo.chat_reconnect_requested.connect(self.chat_reconnect)
+        self.logo.about_dialog_requested.connect(self.linkAbout)
+        self.logo.connectivity_dialog_requested.connect(
+            self.connectivityDialog,
+        )
+        self.topLayout.insertWidget(0, self.logo)
 
         # build main window with the now active client
         self.news = NewsWidget(self)
-        self.chat = ChatWidget(self, self.players, self.me)
-        self.coop = CoopWidget(self, self.game_model, self.me,
-                               self.gameview_builder, self.game_launcher)
-        self.games = GamesWidget(self, self.game_model, self.me,
-                                 self.gameview_builder, self.game_launcher)
-        self.tutorials = TutorialsWidget(self)
+        self.coop = CoopWidget(
+            self, self.game_model, self.me,
+            self.gameview_builder, self.game_launcher,
+        )
+        self.games = GamesWidget(
+            self, self.game_model, self.me,
+            self.gameview_builder, self.game_launcher,
+        )
         self.ladder = StatsWidget(self)
-        self.tourneys = TournamentsWidget(self)
-        self.replays = ReplaysWidget(self, self.lobby_dispatch,
-                                     self.gameset, self.players)
+        self.replays = ReplaysWidget(
+            self, self.lobby_dispatch, self.gameset, self.players,
+        )
         self.mapvault = MapVault(self)
         self.modvault = ModVault(self)
-        self.notificationSystem = ns.Notifications(self, self.gameset,
-                                                   self.players, self.me)
+        self.notificationSystem = ns.Notifications(
+            self, self.gameset, self.players, self.me,
+        )
 
-        # TODO: some day when the tabs only do UI we'll have all this in the .ui file
+        self._unitdb = UnitDBTab()
+
+        # TODO: some day when the tabs only do UI we'll have all this in the
+        # .ui file
         self.whatNewTab.layout().addWidget(self.news)
-        self.chatTab.layout().addWidget(self.chat)
+        self.chatTab.layout().addWidget(self._chatMVC.view.widget.base)
         self.coopTab.layout().addWidget(self.coop)
         self.gamesTab.layout().addWidget(self.games)
-        self.tutorialsTab.layout().addWidget(self.tutorials)
         self.ladderTab.layout().addWidget(self.ladder)
-        self.tourneyTab.layout().addWidget(self.tourneys)
         self.replaysTab.layout().addWidget(self.replays)
-        self.mapsTab.layout().addWidget(self.mapvault.ui)
+        self.mapsTab.layout().addWidget(self.mapvault)
+        self.unitdbTab.layout().addWidget(self._unitdb.db_widget)
         self.modsTab.layout().addWidget(self.modvault)
+
+        # TODO: hiding some non-functional tabs. Either prune them or implement
+        # something useful in them.
+        self.mainTabs.removeTab(self.mainTabs.indexOf(self.tutorialsTab))
+        self.mainTabs.removeTab(self.mainTabs.indexOf(self.tourneyTab))
+
+        self.mainTabs.setCurrentIndex(self.mainTabs.indexOf(self.whatNewTab))
+
         # set menu states
-        self.actionNsEnabled.setChecked(self.notificationSystem.settings.enabled)
-
-        # Other windows
-        self.avatarAdmin = self.avatarSelection = AvatarWidget(self, None)
-
-        # units database (ex. live streams)
-        # old unitDB
-        self.unitdbWebView.setUrl(QtCore.QUrl(config.Settings.get("UNITDB_URL")))
+        self.actionNsEnabled.setChecked(
+            self.notificationSystem.settings.enabled,
+        )
 
         # warning setup
+        self.labelAutomatchInfo.hide()
         self.warning = QtWidgets.QHBoxLayout()
 
         self.warnPlayer = QtWidgets.QLabel(self)
         self.warnPlayer.setText(
-            "A player of your skill level is currently searching for a 1v1 game. Click a faction to join them! ")
-        self.warnPlayer.setAlignment(QtCore.Qt.AlignHCenter)
-        self.warnPlayer.setAlignment(QtCore.Qt.AlignVCenter)
+            "A player of your skill level is currently searching for a 1v1 "
+            "game. Click a faction to join them! ",
+        )
+        self.warnPlayer.setAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter)
+        self.warnPlayer.setAlignment(QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.warnPlayer.setProperty("warning", True)
         self.warning.addStretch()
         self.warning.addWidget(self.warnPlayer)
@@ -579,21 +846,36 @@ class ClientWindow(FormClass, BaseClass):
         def add_warning_button(faction):
             button = QtWidgets.QToolButton(self)
             button.setMaximumSize(25, 25)
-            button.setIcon(util.THEME.icon("games/automatch/%s.png" % faction.to_name()))
-            button.clicked.connect(partial(self.games.startSearchRanked, faction))
+            button.setIcon(
+                util.THEME.icon(
+                    "games/automatch/{}.png".format(faction.to_name()),
+                ),
+            )
+            button.clicked.connect(partial(self.ladderWarningClicked, faction))
             self.warning.addWidget(button)
             return button
 
-        self.warning_buttons = {faction: add_warning_button(faction) for faction in Factions}
+        self.warning_buttons = {
+            faction: add_warning_button(faction)
+            for faction in Factions
+        }
 
         self.warning.addStretch()
 
         self.mainGridLayout.addLayout(self.warning, 2, 0)
         self.warningHide()
 
-        self._update_checker = UpdateChecker(self)
-        self._update_checker.finished.connect(self.update_checked)
-        self._update_checker.start()
+        self._update_tools = ClientUpdateTools.build(
+            config.VERSION, self, self._network_access_manager,
+        )
+        self._update_tools.mandatory_update_aborted.connect(self.close)
+        self._update_tools.checker.check()
+
+    def _connect_chat(self, me):
+        if not self.use_chat:
+            return
+        self._chatMVC.connection.set_nick_and_username(me.login, f"{me.login}@FAF")
+        self._chatMVC.connection.begin_connection_process()
 
     def warningHide(self):
         """
@@ -612,26 +894,22 @@ class ClientWindow(FormClass, BaseClass):
             i.show()
 
     def reconnect(self):
-        self._update_checker.start()
+        self.lobby_reconnector.enabled = True
+        self.try_to_auto_login()
 
-        self.lobby_reconnecter.enabled = True
-        self.lobby_connection.doConnect()
+    def disconnect_(self):
+        if self.state != ClientState.DISCONNECTED:
+            # Used when the user explicitly demanded to stay offline.
+            self._auto_relogin = self.remember
+            self.lobby_reconnector.enabled = False
+            self.lobby_connection.disconnect_()
+            self._chatMVC.connection.disconnect_()
+            self.games.onLogOut()
+            self.oauth_flow.stop_checking_expiration()
+            config.Settings.set("oauth/token", None, persist=False)
 
-    def disconnect(self):
-        # Used when the user explicitly demanded to stay offline.
-        self.lobby_reconnecter.enabled = False
-        self.lobby_connection.disconnect()
-        self.chat.disconnect()
-
-    @QtCore.pyqtSlot(list)
-    def update_checked(self, releases):
-        if len(releases) > 0:
-            update_dialog = UpdateDialog(self)
-            update_dialog.setup(releases)
-            update_dialog.show()
-        else:
-            QtWidgets.QMessageBox.information(self,"No updates found",
-                                              "No client updates were found")
+    def chat_reconnect(self):
+        self._connect_chat(self.me)
 
     @QtCore.pyqtSlot()
     def cleanup(self):
@@ -656,15 +934,19 @@ class ClientWindow(FormClass, BaseClass):
             fa.instance.close()
 
         # Terminate Lobby Server connection
-        self.lobby_reconnecter.enabled = False
+        self.lobby_reconnector.enabled = False
         if self.lobby_connection.socket_connected():
             progress.setLabelText("Closing main connection.")
-            self.lobby_connection.disconnect()
+            self.lobby_connection.disconnect_()
 
-        # Clear UPnP Mappings...
-        if self.useUPnP:
-            progress.setLabelText("Removing UPnP port mappings")
-            fa.upnp.removePortMappings()
+        # Close connectivity dialog
+        if self.connectivity_dialog is not None:
+            self.connectivity_dialog.close()
+            self.connectivity_dialog = None
+        # Close game session (and stop faf-ice-adapter.exe)
+        if self.game_session is not None:
+            self.game_session.closeIceAdapter()
+            self.game_session = None
 
         # Terminate local ReplayServer
         if self.replayServer:
@@ -673,16 +955,25 @@ class ClientWindow(FormClass, BaseClass):
             self.replayServer = None
 
         # Clean up Chat
-        if self.chat:
+        if self._chatMVC:
             progress.setLabelText("Disconnecting from IRC")
-            self.chat.disconnect()
-            self.chat = None
+            self._chatMVC.connection.disconnect_()
+            self._chatMVC = None
+
+        # Clear cached game files if needed
+        util.clearGameCache()
+
+        # Get rid of generated maps
+        util.clearGeneratedMaps()
 
         # Get rid of the Tray icon
         if self.tray:
             progress.setLabelText("Removing System Tray icon")
             self.tray.deleteLater()
             self.tray = None
+
+        # Clear qt message handler to avoid crash at exit
+        config.clear_logging_handlers()
 
         # Terminate UI
         if self.isVisible():
@@ -696,10 +987,17 @@ class ClientWindow(FormClass, BaseClass):
         self.saveWindow()
 
         if fa.instance.running():
-            if QtWidgets.QMessageBox.question(self, "Are you sure?", "Seems like you still have Forged Alliance "
-                                                                     "running!<br/><b>Close anyway?</b>",
-                                              QtWidgets.QMessageBox.Yes,
-                                              QtWidgets.QMessageBox.No) == QtWidgets.QMessageBox.No:
+            result = QtWidgets.QMessageBox.question(
+                self,
+                "Are you sure?",
+                (
+                    "Seems like you still have Forged Alliance running!"
+                    "<br/><b>Close anyway?</b>"
+                ),
+                QtWidgets.QMessageBox.StandardButton.Yes,
+                QtWidgets.QMessageBox.StandardButton.No,
+            )
+            if result == QtWidgets.QMessageBox.StandardButton.No:
                 event.ignore()
                 return
 
@@ -708,103 +1006,278 @@ class ClientWindow(FormClass, BaseClass):
     def initMenus(self):
         self.actionCheck_for_Updates.triggered.connect(self.check_for_updates)
         self.actionUpdate_Settings.triggered.connect(self.show_update_settings)
-        self.actionLink_account_to_Steam.triggered.connect(partial(self.open_url, config.Settings.get("STEAMLINK_URL")))
-        self.actionLinkWebsite.triggered.connect(partial(self.open_url, config.Settings.get("WEBSITE_URL")))
-        self.actionLinkWiki.triggered.connect(partial(self.open_url, config.Settings.get("WIKI_URL")))
-        self.actionLinkForums.triggered.connect(partial(self.open_url, config.Settings.get("FORUMS_URL")))
-        self.actionLinkUnitDB.triggered.connect(partial(self.open_url, config.Settings.get("UNITDB_URL")))
-        self.actionLinkMapPool.triggered.connect(partial(self.open_url, config.Settings.get("MAPPOOL_URL")))
-        self.actionLinkGitHub.triggered.connect(partial(self.open_url, config.Settings.get("GITHUB_URL")))
+        self.actionLink_account_to_Steam.triggered.connect(
+            partial(self.open_url, config.Settings.get("STEAMLINK_URL")),
+        )
+        self.actionLinkWebsite.triggered.connect(
+            partial(self.open_url, config.Settings.get("WEBSITE_URL")),
+        )
+        self.actionLinkWiki.triggered.connect(
+            partial(self.open_url, config.Settings.get("WIKI_URL")),
+        )
+        self.actionLinkForums.triggered.connect(
+            partial(self.open_url, config.Settings.get("FORUMS_URL")),
+        )
+        self.actionLinkUnitDB.triggered.connect(
+            partial(self.open_url, config.Settings.get("UNITDB_URL")),
+        )
+        self.actionLinkMapPool.triggered.connect(
+            partial(self.open_url, config.Settings.get("MAPPOOL_URL")),
+        )
+        self.actionLinkGitHub.triggered.connect(
+            partial(self.open_url, config.Settings.get("GITHUB_URL")),
+        )
 
-        self.actionNsSettings.triggered.connect(lambda: self.notificationSystem.on_showSettings())
-        self.actionNsEnabled.triggered.connect(lambda enabled: self.notificationSystem.setNotificationEnabled(enabled))
+        self.actionNsSettings.triggered.connect(
+            lambda: self.notificationSystem.on_showSettings(),
+        )
+        self.actionNsEnabled.triggered.connect(
+            lambda enabled: self.notificationSystem.setNotificationEnabled(
+                enabled,
+            ),
+        )
 
-        self.actionWiki.triggered.connect(partial(self.open_url, config.Settings.get("WIKI_URL")))
-        self.actionReportBug.triggered.connect(partial(self.open_url, config.Settings.get("TICKET_URL")))
+        self.actionWiki.triggered.connect(
+            partial(self.open_url, config.Settings.get("WIKI_URL")),
+        )
+        self.actionReportBug.triggered.connect(
+            partial(self.open_url, config.Settings.get("TICKET_URL")),
+        )
         self.actionShowLogs.triggered.connect(self.linkShowLogs)
-        self.actionTechSupport.triggered.connect(partial(self.open_url, config.Settings.get("SUPPORT_URL")))
+        self.actionTechSupport.triggered.connect(
+            partial(self.open_url, config.Settings.get("SUPPORT_URL")),
+        )
         self.actionAbout.triggered.connect(self.linkAbout)
 
         self.actionClearCache.triggered.connect(self.clearCache)
         self.actionClearSettings.triggered.connect(self.clearSettings)
         self.actionClearGameFiles.triggered.connect(self.clearGameFiles)
+        self.actionClearMapGenerators.triggered.connect(
+            self.clearMapGenerators,
+        )
 
         self.actionSetGamePath.triggered.connect(self.switchPath)
-        self.actionSetGamePort.triggered.connect(self.switchPort)
 
-        self.actionShowMapsDir.triggered.connect(lambda: util.showDirInFileBrowser(getUserMapsFolder()))
-        self.actionShowModsDir.triggered.connect(lambda: util.showDirInFileBrowser(MODFOLDER))
-        self.actionShowReplaysDir.triggered.connect(lambda: util.showDirInFileBrowser(util.REPLAY_DIR))
-        self.actionShowThemesDir.triggered.connect(lambda: util.showDirInFileBrowser(util.THEME_DIR))
-        # if game.prefs doesn't exist: show_dir -> empty folder / show_file -> 'file doesn't exist' message
-        self.actionShowGamePrefs.triggered.connect(lambda: util.showDirInFileBrowser(util.LOCALFOLDER))
-        #self.actionShowGamePrefs.triggered.connect(lambda: util.showFileInFileBrowser(util.PREFSFILENAME))
+        self.actionShowMapsDir.triggered.connect(
+            lambda: util.showDirInFileBrowser(getUserMapsFolder()),
+        )
+        self.actionShowModsDir.triggered.connect(
+            lambda: util.showDirInFileBrowser(getModFolder()),
+        )
+        self.actionShowReplaysDir.triggered.connect(
+            lambda: util.showDirInFileBrowser(util.REPLAY_DIR),
+        )
+        self.actionShowThemesDir.triggered.connect(
+            lambda: util.showDirInFileBrowser(util.THEME_DIR),
+        )
+        self.actionShowGamePrefs.triggered.connect(
+            lambda: util.showDirInFileBrowser(util.LOCALFOLDER),
+        )
+        self.actionShowClientConfigFile.triggered.connect(util.showConfigFile)
 
         # Toggle-Options
-        self.actionSetAutoLogin.triggered.connect(self.updateOptions)
+        self.actionSetAutoLogin.triggered.connect(self.update_options)
         self.actionSetAutoLogin.setChecked(self.remember)
-        self.actionSetAutoDownloadMods.toggled.connect(self.on_actionAutoDownloadMods_toggled)
-        self.actionSetAutoDownloadMods.setChecked(config.Settings.get('mods/autodownload', type=bool, default=False))
-        self.actionSetAutoDownloadMaps.toggled.connect(self.on_actionAutoDownloadMaps_toggled)
-        self.actionSetAutoDownloadMaps.setChecked(config.Settings.get('maps/autodownload', type=bool, default=False))
-        self.actionSetSoundEffects.triggered.connect(self.updateOptions)
-        self.actionSetOpenGames.triggered.connect(self.updateOptions)
-        self.actionSetJoinsParts.triggered.connect(self.updateOptions)
-        self.actionSetNewbiesChannel.triggered.connect(self.updateOptions)
-        self.actionSetAutoJoinChannels.triggered.connect(self.show_autojoin_settings_dialog)
-        self.actionSetLiveReplays.triggered.connect(self.updateOptions)
-        self.actionSetChatMaps.triggered.connect(self.toggleChatMaps)
-        self.actionSaveGamelogs.toggled.connect(self.on_actionSavegamelogs_toggled)
-        self.actionSaveGamelogs.setChecked(self.gamelogs)
-        self.actionColoredNicknames.triggered.connect(self.updateOptions)
-        self.actionFriendsOnTop.triggered.connect(self.updateOptions)
+        self.actionSetAutoDownloadMods.toggled.connect(
+            self.on_action_auto_download_mods_toggled,
+        )
+        self.actionSetAutoDownloadMods.setChecked(
+            config.Settings.get('mods/autodownload', type=bool, default=False),
+        )
+        self.actionSetAutoDownloadMaps.toggled.connect(
+            self.on_action_auto_download_maps_toggled,
+        )
+        self.actionSetAutoDownloadMaps.setChecked(
+            config.Settings.get('maps/autodownload', type=bool, default=False),
+        )
+        self.actionSetAutoGenerateMaps.toggled.connect(
+            self.on_action_auto_generate_maps_toggled,
+        )
+        self.actionSetAutoGenerateMaps.setChecked(
+            config.Settings.get(
+                'mapGenerator/autostart',
+                type=bool,
+                default=False,
+            ),
+        )
+        self.actionSetSoundEffects.triggered.connect(self.update_options)
+        self.actionSetOpenGames.triggered.connect(self.update_options)
+        self.actionSetJoinsParts.triggered.connect(self.update_options)
+        self.actionSetNewbiesChannel.triggered.connect(self.update_options)
+        self.actionIgnoreFoes.triggered.connect(self.update_options)
+        self.actionSetLiveReplays.triggered.connect(self.update_options)
+        self.actionSaveGamelogs.setChecked(self.game_logs)
+        self.actionColoredNicknames.triggered.connect(self.update_options)
+        self.actionFriendsOnTop.triggered.connect(self.update_options)
+        self.actionSetAutoJoinChannels.triggered.connect(
+            self.show_autojoin_settings_dialog,
+        )
+        self.actionSaveGamelogs.toggled.connect(
+            self.on_action_save_game_logs_toggled,
+        )
+        self.actionVaultFallback.toggled.connect(
+            self.on_action_fault_fallback_toggled,
+        )
+        self.actionVaultFallback.setChecked(
+            config.Settings.get('vault/fallback', type=bool, default=False),
+        )
+        self.actionLanguageChannels.triggered.connect(
+            self._language_channel_config.run,
+        )
 
-        self.actionCheckPlayerAliases.triggered.connect(self.checkPlayerAliases)
+        self.actionEnableIceAdapterInfoWindow.triggered.connect(
+            self.on_action_enable_ice_adapter_info_window,
+        )
+        self.actionEnableIceAdapterInfoWindow.setChecked(
+            config.Settings.get(
+                'iceadapter/info_window',
+                type=bool,
+                default=False,
+            ),
+        )
+        self.actionSetIceAdapterWindowLaunchDelay.triggered.connect(
+            self.set_ice_adapter_window_launch_delay,
+        )
+
+        self.actionDoNotKeep.setChecked(
+            config.Settings.get('cache/do_not_keep', type=bool, default=True),
+        )
+        self.actionForever.setChecked(
+            config.Settings.get('cache/forever', type=bool, default=False),
+        )
+        self.actionSetYourOwnTimeInterval.setChecked(
+            config.Settings.get(
+                'cache/own_settings', type=bool, default=False,
+            ),
+        )
+        self.actionKeepCacheWhileInSession.setChecked(
+            config.Settings.get('cache/in_session', type=bool, default=False),
+        )
+        self.actionKeepCacheWhileInSession.setVisible(
+            config.Settings.get('cache/do_not_keep', type=bool, default=True),
+        )
+        self.actionDoNotKeep.triggered.connect(self.saveCacheSettings)
+        self.actionForever.triggered.connect(
+            lambda: self.saveCacheSettings(own=False, forever=True),
+        )
+        self.actionSetYourOwnTimeInterval.triggered.connect(
+            lambda: self.saveCacheSettings(own=True, forever=False),
+        )
+        self.actionKeepCacheWhileInSession.toggled.connect(self.inSessionCache)
+
+        self.actionCheckPlayerAliases.triggered.connect(
+            self.checkPlayerAliases,
+        )
 
         self._menuThemeHandler = ThemeMenu(self.menuTheme)
         self._menuThemeHandler.setup(util.THEME.listThemes())
-        self._menuThemeHandler.themeSelected.connect(lambda theme: util.THEME.setTheme(theme, True))
+        self._menuThemeHandler.themeSelected.connect(
+            lambda theme: util.THEME.setTheme(theme, True),
+        )
+
+        self._chat_vis_actions = {
+            ChatterLayoutElements.RANK: self.actionHideChatterRank,
+            ChatterLayoutElements.AVATAR: self.actionHideChatterAvatar,
+            ChatterLayoutElements.COUNTRY: self.actionHideChatterCountry,
+            ChatterLayoutElements.NICK: self.actionHideChatterNick,
+            ChatterLayoutElements.STATUS: self.actionHideChatterStatus,
+            ChatterLayoutElements.MAP: self.actionHideChatterMap,
+        }
+        for action in self._chat_vis_actions.values():
+            action.triggered.connect(self.update_options)
 
     @QtCore.pyqtSlot()
-    def updateOptions(self):
-        self.remember = self.actionSetAutoLogin.isChecked()
-        self.soundeffects = self.actionSetSoundEffects.isChecked()
-        self.game_announcer.announce_games = self.actionSetOpenGames.isChecked()
-        self.joinsparts = self.actionSetJoinsParts.isChecked()
-        self.useNewbiesChannel = self.actionSetNewbiesChannel.isChecked()
-        self.chatmaps = self.actionSetChatMaps.isChecked()
-        self.game_announcer.announce_replays = self.actionSetLiveReplays.isChecked()
+    def update_options(self):
+        chat_config = self._chat_config
 
-        self.gamelogs = self.actionSaveGamelogs.isChecked()
-        self.player_colors.coloredNicknames = self.actionColoredNicknames.isChecked()
-        if self.friendsontop != self.actionFriendsOnTop.isChecked():
-            self.friendsontop = self.actionFriendsOnTop.isChecked()
-            self.chat.sort_channels()
+        self.remember = self.actionSetAutoLogin.isChecked()
+        if self.remember and self.refresh_token:
+            config.Settings.set('user/refreshToken', self.refresh_token)
+        chat_config.soundeffects = self.actionSetSoundEffects.isChecked()
+        chat_config.joinsparts = self.actionSetJoinsParts.isChecked()
+        chat_config.newbies_channel = self.actionSetNewbiesChannel.isChecked()
+        chat_config.ignore_foes = self.actionIgnoreFoes.isChecked()
+        chat_config.friendsontop = self.actionFriendsOnTop.isChecked()
+
+        invisible_items = [
+            i for i, a in self._chat_vis_actions.items() if a.isChecked()
+        ]
+        chat_config.hide_chatter_items.clear()
+        chat_config.hide_chatter_items |= invisible_items
+
+        announce_games = self.actionSetOpenGames.isChecked()
+        self.game_announcer.announce_games = announce_games
+        announce_replays = self.actionSetLiveReplays.isChecked()
+        self.game_announcer.announce_replays = announce_replays
+
+        self.game_logs = self.actionSaveGamelogs.isChecked()
+        colored_nicknames = self.actionColoredNicknames.isChecked()
+        self.player_colors.colored_nicknames = colored_nicknames
 
         self.saveChat()
 
-    def toggleChatMaps(self):
-        self.updateOptions()
-        self.chat.update_channels()
+    @QtCore.pyqtSlot(bool)
+    def on_action_save_game_logs_toggled(self, value):
+        self.game_logs = value
+
+    @QtCore.pyqtSlot(bool)
+    def on_action_auto_download_mods_toggled(self, value):
+        config.Settings.set('mods/autodownload', value is True)
+
+    @QtCore.pyqtSlot(bool)
+    def on_action_auto_download_maps_toggled(self, value):
+        config.Settings.set('maps/autodownload', value is True)
+
+    @QtCore.pyqtSlot(bool)
+    def on_action_auto_generate_maps_toggled(self, value):
+        config.Settings.set('mapGenerator/autostart', value is True)
+
+    @QtCore.pyqtSlot(bool)
+    def on_action_fault_fallback_toggled(self, value):
+        config.Settings.set('vault/fallback', value is True)
+        util.setPersonalDir()
+        setModFolder()
+
+    @QtCore.pyqtSlot(bool)
+    def on_action_enable_ice_adapter_info_window(self, value):
+        config.Settings.set('iceadapter/info_window', value is True)
+
+    @QtCore.pyqtSlot()
+    def set_ice_adapter_window_launch_delay(self):
+        seconds, ok = QtWidgets.QInputDialog().getInt(
+            self,
+            'Set time interval',
+            'Delay the launch of the info window by seconds:',
+            config.Settings.get(
+                'iceadapter/delay_ui_seconds', type=int, default=10,
+            ),
+            min=0,
+            max=2147483647,
+            step=1,
+        )
+        if ok and seconds:
+            config.Settings.set('iceadapter/delay_ui_seconds', seconds)
 
     @QtCore.pyqtSlot()
     def switchPath(self):
-        fa.wizards.Wizard(self).exec_()
-
-    @QtCore.pyqtSlot()
-    def switchPort(self):
-        from . import loginwizards
-        loginwizards.gameSettingsWizard(self).exec_()
+        fa.wizards.Wizard(self).exec()
 
     @QtCore.pyqtSlot()
     def clearSettings(self):
-        result = QtWidgets.QMessageBox.question(None, "Clear Settings", "Are you sure you wish to clear all settings, "
-                                                                        "login info, etc. used by this program?",
-                                                QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
-        if result == QtWidgets.QMessageBox.Yes:
+        result = QtWidgets.QMessageBox.question(
+            self,
+            "Clear Settings",
+            "Are you sure you wish to clear all settings, "
+            "login info, etc. used by this program?",
+            QtWidgets.QMessageBox.StandardButton.Yes,
+            QtWidgets.QMessageBox.StandardButton.No,
+        )
+        if result == QtWidgets.QMessageBox.StandardButton.Yes:
             util.settings.clear()
             util.settings.sync()
-            QtWidgets.QMessageBox.information(None, "Restart Needed", "FAF will quit now.")
+            QtWidgets.QMessageBox.information(
+                self, "Restart Needed", "FAF will quit now.",
+            )
             QtWidgets.QApplication.quit()
 
     @QtCore.pyqtSlot()
@@ -816,8 +1289,14 @@ class ClientWindow(FormClass, BaseClass):
     def clearCache(self):
         changed = util.clearDirectory(util.CACHE_DIR)
         if changed:
-            QtWidgets.QMessageBox.information(None, "Restart Needed", "FAF will quit now.")
+            QtWidgets.QMessageBox.information(
+                self, "Restart Needed", "FAF will quit now.",
+            )
             QtWidgets.QApplication.quit()
+
+    @QtCore.pyqtSlot()
+    def clearMapGenerators(self):
+        util.clearDirectory(util.MAPGEN_DIR)
 
     # Clear the online users lists
     def clear_players(self):
@@ -833,194 +1312,325 @@ class ClientWindow(FormClass, BaseClass):
 
     @QtCore.pyqtSlot()
     def connectivityDialog(self):
-        dialog = connectivity.ConnectivityDialog(self.connectivity)
-        dialog.exec_()
+        if (
+            self.game_session is not None
+            and self.game_session.ice_adapter_client is not None
+        ):
+            self.connectivity_dialog = ConnectivityDialog(
+                self.game_session.ice_adapter_client,
+            )
+            self.connectivity_dialog.show()
+        else:
+            QtWidgets.QMessageBox().information(
+                self,
+                "No game",
+                "The connectivity window is only available during the game.",
+            )
 
     @QtCore.pyqtSlot()
     def linkAbout(self):
         dialog = util.THEME.loadUi("client/about.ui")
         dialog.version_label.setText("Version: {}".format(util.VERSION_STRING))
-        dialog.exec_()
+        dialog.exec()
 
     @QtCore.pyqtSlot()
     def check_for_updates(self):
-        self._update_checker.respect_notify = False
-        self._update_checker.start(reset_server=False)
+        self._update_tools.checker.check(always_notify=True)
 
     @QtCore.pyqtSlot()
     def show_update_settings(self):
-        dialog = UpdateSettingsDialog(self)
-        dialog.setup()
+        dialog = self._update_tools.settings_dialog()
         dialog.show()
 
     def checkPlayerAliases(self):
-        self._alias_window.run()
+        self._alias_search_window.run()
 
     def saveWindow(self):
         util.settings.beginGroup("window")
         util.settings.setValue("geometry", self.saveGeometry())
+        util.settings.setValue("maximized", self.is_window_maximized)
         util.settings.endGroup()
 
     def show_autojoin_settings_dialog(self):
-        autojoin_channels_list = config.Settings.get('chat/auto_join_channels', [])
+        autojoin_channels_list = config.Settings.get(
+            'chat/auto_join_channels',
+            default=[],
+        )
         text_of_autojoin_settings_dialog = """
-        Enter the list of channels you want to autojoin at startup, separated by ;
-        For example: #poker;#newbie
-        To disable autojoining channels, leave the box empty and press OK.
+        Enter the list of channels you want to autojoin at startup, separated
+        by ; For example: #poker;#newbie To disable autojoining channels,
+        leave the box empty and press OK.
         """
-        channels_input_of_user, ok = QtWidgets.QInputDialog.getText(self, 'Set autojoin channels',
-            text_of_autojoin_settings_dialog, QtWidgets.QLineEdit.Normal, ';'.join(autojoin_channels_list))
+        channels_input_of_user, ok = QtWidgets.QInputDialog.getText(
+            self,
+            'Set autojoin channels',
+            text_of_autojoin_settings_dialog,
+            QtWidgets.QLineEdit.Normal,
+            ';'.join(autojoin_channels_list),
+        )
         if ok:
-            config.Settings.set('chat/auto_join_channels', list(map(str.strip, channels_input_of_user.split(';'))))
+            channels = [
+                c.strip()
+                for c in channels_input_of_user.split(';')
+                if c
+            ]
+            config.Settings.set('chat/auto_join_channels', channels)
+
+    @QtCore.pyqtSlot(bool)
+    def inSessionCache(self, value):
+        config.Settings.set('cache/in_session', value is True)
+
+    @QtCore.pyqtSlot()
+    def saveCacheSettings(self, own=False, forever=False):
+        if forever:
+            util.settings.beginGroup('cache')
+            util.settings.setValue('do_not_keep', False)
+            util.settings.setValue('forever', True)
+            util.settings.setValue('own_settings', False)
+            util.settings.setValue('number_of_days', -1)
+            util.settings.endGroup()
+            self.actionKeepCacheWhileInSession.setChecked(False)
+        elif own:
+            days, ok = QtWidgets.QInputDialog().getInt(
+                self,
+                'Set time interval',
+                'Keep game files in cache for this number of days:',
+                config.Settings.get(
+                    'cache/number_of_days', type=int, default=30,
+                ),
+                min=1,
+                max=2147483647,
+                step=10,
+            )
+            if ok and days:
+                util.settings.beginGroup('cache')
+                util.settings.setValue('do_not_keep', False)
+                util.settings.setValue('forever', False)
+                util.settings.setValue('own_settings', True)
+                util.settings.setValue('number_of_days', days)
+                util.settings.endGroup()
+                self.actionKeepCacheWhileInSession.setChecked(False)
+        else:
+            util.settings.beginGroup('cache')
+            util.settings.setValue('do_not_keep', True)
+            util.settings.setValue('forever', False)
+            util.settings.setValue('own_settings', False)
+            util.settings.setValue('number_of_days', 0)
+            util.settings.endGroup()
+        self.actionDoNotKeep.setChecked(
+            config.Settings.get('cache/do_not_keep', type=bool, default=True),
+        )
+        self.actionForever.setChecked(
+            config.Settings.get('cache/forever', type=bool, default=False),
+        )
+        self.actionSetYourOwnTimeInterval.setChecked(
+            config.Settings.get(
+                'cache/own_settings', type=bool, default=False,
+            ),
+        )
+        self.actionKeepCacheWhileInSession.setVisible(
+            config.Settings.get('cache/do_not_keep', type=bool, default=True),
+        )
 
     def saveChat(self):
         util.settings.beginGroup("chat")
-        util.settings.setValue("soundeffects", self.soundeffects)
-        util.settings.setValue("livereplays", self.game_announcer.announce_replays)
+        util.settings.setValue(
+            "livereplays", self.game_announcer.announce_replays,
+        )
         util.settings.setValue("opengames", self.game_announcer.announce_games)
-        util.settings.setValue("joinsparts", self.joinsparts)
-        util.settings.setValue("newbiesChannel", self.useNewbiesChannel)
-        util.settings.setValue("chatmaps", self.chatmaps)
-        util.settings.setValue("coloredNicknames", self.player_colors.coloredNicknames)
-        util.settings.setValue("friendsontop", self.friendsontop)
+        util.settings.setValue(
+            "coloredNicknames", self.player_colors.colored_nicknames,
+        )
         util.settings.endGroup()
+        self._chat_config.save_settings()
 
-    def loadSettings(self):
-        self.loadChat()
+    def load_settings(self):
+        self.load_chat()
         # Load settings
         util.settings.beginGroup("window")
         geometry = util.settings.value("geometry", None)
-        if geometry:
+        # FIXME: looks like bug in Qt: restoring from maximized geometry doesn't work
+        # see https://bugreports.qt.io/browse/QTBUG-123335 (?)
+        maximized = util.settings.value("maximized", defaultValue=False, type=bool)
+        util.settings.endGroup()
+        if maximized:
+            self.setGeometry(self.screen().availableGeometry())
+        elif geometry:
             self.restoreGeometry(geometry)
-        util.settings.endGroup()
 
-        util.settings.beginGroup("ForgedAlliance")
-        util.settings.endGroup()
-
-    def loadChat(self):
+    def load_chat(self):
+        cc = self._chat_config
         try:
             util.settings.beginGroup("chat")
-            self.soundeffects = (util.settings.value("soundeffects", "true") == "true")
-            self.game_announcer.announce_games = (util.settings.value("opengames", "true") == "true")
-            self.joinsparts = (util.settings.value("joinsparts", "false") == "true")
-            self.chatmaps = (util.settings.value("chatmaps", "false") == "true")
-            self.game_announcer.announce_replays = (util.settings.value("livereplays", "true") == "true")
-            self.player_colors.coloredNicknames = (util.settings.value("coloredNicknames", "false") == "true")
-            self.friendsontop = (util.settings.value("friendsontop", "false") == "true")
-            self.useNewbiesChannel = (util.settings.value("newbiesChannel","true") == "true")
-
+            self.game_announcer.announce_games = (
+                util.settings.value("opengames", "true") == "true"
+            )
+            self.game_announcer.announce_replays = (
+                util.settings.value("livereplays", "true") == "true"
+            )
+            self.player_colors.colored_nicknames = (
+                util.settings.value("coloredNicknames", "false") == "true"
+            )
             util.settings.endGroup()
-            self.actionColoredNicknames.setChecked(self.player_colors.coloredNicknames)
-            self.actionFriendsOnTop.setChecked(self.friendsontop)
-            self.actionSetSoundEffects.setChecked(self.soundeffects)
-            self.actionSetLiveReplays.setChecked(self.game_announcer.announce_replays)
-            self.actionSetOpenGames.setChecked(self.game_announcer.announce_games)
-            self.actionSetJoinsParts.setChecked(self.joinsparts)
-            self.actionSetChatMaps.setChecked(self.chatmaps)
-            self.actionSetNewbiesChannel.setChecked(self.useNewbiesChannel)
-        except:
+            cc.load_settings()
+            self.actionColoredNicknames.setChecked(
+                self.player_colors.colored_nicknames,
+            )
+            self.actionFriendsOnTop.setChecked(cc.friendsontop)
+
+            for item in ChatterLayoutElements:
+                self._chat_vis_actions[item].setChecked(
+                    item in cc.hide_chatter_items,
+                )
+            self.actionSetSoundEffects.setChecked(cc.soundeffects)
+            self.actionSetLiveReplays.setChecked(
+                self.game_announcer.announce_replays,
+            )
+            self.actionSetOpenGames.setChecked(
+                self.game_announcer.announce_games,
+            )
+            self.actionSetJoinsParts.setChecked(cc.joinsparts)
+            self.actionSetNewbiesChannel.setChecked(cc.newbies_channel)
+            self.actionIgnoreFoes.setChecked(cc.ignore_foes)
+        except BaseException:
             pass
 
-    def doConnect(self):
-        if not self.replayServer.doListen(LOCAL_REPLAY_PORT):
+    def save_refresh_token(self) -> None:
+        self.refresh_token = self.oauth_flow.refreshToken()
+
+    def do_connect(self) -> bool:
+        if self.state in (ClientState.CONNECTING, ClientState.CONNECTED, ClientState.LOGGED_IN):
+            return True
+
+        if not self.replayServer.doListen():
             return False
 
-        self.lobby_connection.doConnect()
+        self.lobby_connection.do_connect()
         return True
 
     def set_remember(self, remember):
         self.remember = remember
-        self.actionSetAutoLogin.setChecked(self.remember)  # FIXME - option updating is silly
+        # FIXME - option updating is silly
+        self.actionSetAutoLogin.setChecked(self.remember)
 
-    def get_creds_and_login(self):
-        # Try to autologin, or show login widget if we fail or can't do that.
-        if self._autorelogin and self.password and self.login:
-            if self.send_login(self.login, self.password):
-                return
+    def try_to_auto_login(self) -> None:
+        if (
+            self._auto_relogin
+            and self.refresh_token
+        ):
+            self.oauth_flow.setRefreshToken(self.refresh_token)
+            self.oauth_flow.refreshAccessToken()
+        else:
+            self.show_login_widget()
 
+    def get_creds_and_login(self) -> None:
+        if self.send_token(self.oauth_flow.token()):
+            return
+        QtWidgets.QMessageBox.warning(
+            self, "Log In", "OAuth token verification failed, please relogin",
+        )
         self.show_login_widget()
 
     def show_login_widget(self):
-        login_widget = LoginWidget(self.login, self.remember)
+        login_widget = LoginWidget(self.remember)
         login_widget.finished.connect(self.on_widget_login_data)
         login_widget.rejected.connect(self.on_widget_no_login)
-        login_widget.request_quit.connect(self.on_login_widget_quit)
+        login_widget.request_quit.connect(
+            self.on_login_widget_quit, QtCore.Qt.ConnectionType.QueuedConnection,
+        )
         login_widget.remember.connect(self.set_remember)
-        login_widget.exec_()
+        login_widget.exec()
 
-    def on_widget_login_data(self, login, password):
-        self.login = login
-        self.password = password
+    def on_widget_login_data(self, api_changed):
+        self.lobby_connection.setHostFromConfig()
+        self.lobby_connection.setPortFromConfig()
+        self._chatMVC.connection.setHostFromConfig()
+        self._chatMVC.connection.setPortFromConfig()
+        if api_changed:
+            self.ladder.refreshLeaderboards()
+            self.games.refreshMods()
 
-        if self.send_login(login, password):
-            return
-        self.show_login_widget()
+        self.oauth_flow.setup_credentials()
+        self.oauth_flow.grant()
 
     def on_widget_no_login(self):
-        self.disconnect()
+        self.state = ClientState.DISCONNECTED
 
     def on_login_widget_quit(self):
         QtWidgets.QApplication.quit()
 
-    def send_login(self, login, password):
-        # Send login data once we have the creds.
-        self._autorelogin = False # Fresh credentials
-        if config.is_beta():  # Replace for develop here to not clobber the real pass
-            password = util.password_hash("foo")
-        self.uniqueId = util.uniqueID(self.login, self.session)
-        if not self.uniqueId:
-            QtWidgets.QMessageBox.critical(self,
-                                           "Failed to calculate UID",
-                                           "Failed to calculate your unique ID"
-                                           " (a part of our smurf prevention system).\n"
-                                           "Please report this to the tech support forum!")
+    def send_token(self, token):
+        # Send data once we have the creds.
+        self._autorelogin = False  # Fresh credentials
+        self.unique_id = util.uniqueID(self.session)
+        if not self.unique_id:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Failed to calculate UID",
+                "Failed to calculate your unique ID"
+                " (a part of our smurf prevention system).\n"
+                "It is very likely this happens due to your antivirus software"
+                " deleting the faf-uid.exe file. If this has happened, please "
+                "add an exception and restore the file. The file "
+                "can also be restored by installing the client again.",
+            )
             return False
-        self.lobby_connection.send(dict(command="hello",
-                                        login=login,
-                                        password=password,
-                                        unique_id=self.uniqueId,
-                                        session=self.session))
+        self.lobby_connection.send(
+            dict(
+                command="auth",
+                token=token,
+                unique_id=self.unique_id,
+                session=self.session,
+            ),
+        )
         return True
 
     @QtCore.pyqtSlot()
-    def startedFA(self):
+    def started_fa(self):
         """
         Slot hooked up to fa.instance when the process has launched.
         It will notify other modules through the signal gameEnter().
         """
         logger.info("FA has launched in an attached process.")
-        self.gameEnter.emit()
+        self.game_enter.emit()
 
     @QtCore.pyqtSlot(int)
-    def finishedFA(self, exit_code):
+    def finished_fa(self, exit_code):
         """
         Slot hooked up to fa.instance when the process has ended.
         It will notify other modules through the signal gameExit().
         """
         if not exit_code:
-            logger.info("FA has finished with exit code: " + str(exit_code))
+            logger.info("FA has finished with exit code: {}".format(exit_code))
         else:
-            logger.warning("FA has finished with exit code: " + str(exit_code))
-        self.gameExit.emit()
+            logger.warning(
+                "FA has finished with exit code: {}".format(exit_code),
+            )
+        self.game_exit.emit()
 
     @QtCore.pyqtSlot(QtCore.QProcess.ProcessError)
-    def errorFA(self, error_code):
+    def error_fa(self, error_code):
         """
         Slot hooked up to fa.instance when the process has failed to start.
         """
         logger.error("FA has died with error: " + fa.instance.errorString())
         if error_code == 0:
             logger.error("FA has failed to start")
-            QtWidgets.QMessageBox.critical(self, "Error from FA", "FA has failed to start.")
+            QtWidgets.QMessageBox.critical(
+                self, "Error from FA", "FA has failed to start.",
+            )
         elif error_code == 1:
             logger.error("FA has crashed or killed after starting")
         else:
-            text = "FA has failed to start with error code: " + str(error_code)
+            text = (
+                "FA has failed to start with error code: {}"
+                .format(error_code)
+            )
             logger.error(text)
             QtWidgets.QMessageBox.critical(self, "Error from FA", text)
-        self.gameExit.emit()
+        self.game_exit.emit()
 
-    def _tabChanged(self, tab, curr, prev):
+    def tab_changed(self, tab, curr, prev):
         """
         The main visible tab (module) of the client's UI has changed.
         In this case, other modules may want to load some data or cease
@@ -1037,158 +1647,101 @@ class ClientWindow(FormClass, BaseClass):
             tab = new_tab.layout().itemAt(0).widget()
             if isinstance(tab, BusyWidget):
                 tab.busy_entered()
+        # FIXME - special concession for chat tab. In the future we should
+        # separate widgets from controlling classes, just like chat tab does -
+        # then we'll refactor this part.
+        if new_tab is self.chatTab:
+            self._chatMVC.view.entered()
 
     @QtCore.pyqtSlot(int)
-    def mainTabChanged(self, curr):
-        self._tabChanged(self.mainTabs, curr, self._main_tab)
+    def main_tab_changed(self, curr):
+        self.tab_changed(self.mainTabs, curr, self._main_tab)
         self._main_tab = curr
 
     @QtCore.pyqtSlot(int)
-    def vaultTabChanged(self, curr):
-        self._tabChanged(self.topTabs, curr, self._vault_tab)
+    def vault_tab_changed(self, curr):
+        self.tab_changed(self.topTabs, curr, self._vault_tab)
         self._vault_tab = curr
 
-    @QtCore.pyqtSlot()
-    def joinGameFromURL(self, url):
-        """
-        Tries to join the game at the given URL
-        """
-        logger.debug("joinGameFromURL: " + url.toString())
-        if fa.instance.available():
-            add_mods = []
-            try:
-                modstr = QtCore.QUrlQuery(url).queryItemValue("mods")
-                add_mods = json.loads(modstr)  # should be a list
-            except:
-                logger.info("Couldn't load urlquery value 'mods'")
-            if fa.check.game(self):
-                uid, mod, map = QtCore.QUrlQuery(url).queryItemValue('uid'), \
-                                QtCore.QUrlQuery(url).queryItemValue('mod'), \
-                                QtCore.QUrlQuery(url).queryItemValue('map')
-                if fa.check.check(mod, map, sim_mods=add_mods):
-                    self.join_game(int(uid))
-
-    @QtCore.pyqtSlot()
-    def searchUserReplays(self, name):
-        self.replays.set_player(name)
+    def view_replays(self, name, leaderboardName=None):
+        self.replays.set_player(name, leaderboardName)
         self.mainTabs.setCurrentIndex(self.mainTabs.indexOf(self.replaysTab))
 
-    @QtCore.pyqtSlot()
-    def viewUserLeaderboards(self, user):
-        self.ladder.set_player(user)
+    def view_in_leaderboards(self, user):
+        self.ladder.setCurrentIndex(
+            self.ladder.indexOf(self.ladder.leaderboardsTab),
+        )
+        self.ladder.leaderboards.widget(0).searchPlayerInLeaderboard(user)
+        self.ladder.leaderboards.widget(1).searchPlayerInLeaderboard(user)
+        self.ladder.leaderboards.widget(2).searchPlayerInLeaderboard(user)
+        self.ladder.leaderboards.setCurrentIndex(1)
         self.mainTabs.setCurrentIndex(self.mainTabs.indexOf(self.ladderTab))
-
-    @QtCore.pyqtSlot()
-    def forwardLocalBroadcast(self, source, message):
-        self.localBroadcast.emit(source, message)
 
     def manage_power(self):
         """ update the interface accordingly to the power of the user """
-        if self.power >= 1:
-            if self.modMenu is None:
-                self.modMenu = self.menu.addMenu("Administration")
+        if self.power_tools.power >= 1:
+            if self.mod_menu is None:
+                self.mod_menu = self.menu.addMenu("Administration")
 
-            actionAvatar = QtWidgets.QAction("Avatar manager", self.modMenu)
-            actionAvatar.triggered.connect(self.avatarManager)
-            self.modMenu.addAction(actionAvatar)
+            action_lobby_kick = QtWidgets.QAction(
+                "Close player's FAF Client...", self.mod_menu,
+            )
+            action_lobby_kick.triggered.connect(self._on_lobby_kick_triggered)
+            self.mod_menu.addAction(action_lobby_kick)
 
-            self.modMenu.addSeparator()
+            action_close_fa = QtWidgets.QAction(
+                "Close Player's Game...",
+                self.mod_menu,
+            )
+            action_close_fa.triggered.connect(self._close_game_dialog)
+            self.mod_menu.addAction(action_close_fa)
 
-            actionLobbyKick = QtWidgets.QAction("Close player's FAF Client...", self.modMenu)
-            actionLobbyKick.triggered.connect(lambda: self.closeLobby())
-            self.modMenu.addAction(actionLobbyKick)
+    def _close_game_dialog(self):
+        self.power_tools.view.close_game_dialog.show()
 
-            actionCloseFA = QtWidgets.QAction("Close Player's Game...", self.modMenu)
-            actionCloseFA.triggered.connect(lambda: util.userNameAction(self, 'Player to close FA (do not typo!)',
-                                                                        lambda name: self.closeFA(name)))
-            self.modMenu.addAction(actionCloseFA)
+    # Needed so that we ignore the bool from the triggered() signal
+    def _on_lobby_kick_triggered(self):
+        self.power_tools.view.kick_dialog()
 
-    def requestAvatars(self, personal):
-        if personal:
-            self.lobby_connection.send(dict(command="avatar", action="list_avatar"))
-        else:
-            self.lobby_connection.send(dict(command="admin", action="requestavatars"))
-
-    def joinChannel(self, username, channel):
-        """ Join users to a channel """
-        self.lobby_connection.send(dict(command="admin", action="join_channel",
-                                        user_ids=[self.players.getID(username)], channel=channel))
-
-    def closeFA(self, username):
-        """ Close FA remotely """
-        logger.info('closeFA for {}'.format(username))
-        user_id = self.players.getID(username)
-        if user_id != -1:
-            self.lobby_connection.send(dict(command="admin", action="closeFA", user_id=user_id))
-
-    def closeLobby(self, username=""):
-        """ Close lobby remotely """
-        logger.info('Opening kick dialog for {}'.format(username))
-        kick_dialog = KickDialog(self)
-        kick_dialog.reset(username)
-        kick_dialog.show()
-
-    def addFriend(self, friend_id):
-        if friend_id in self.players:
-            self.me.addFriend(int(friend_id))
-            self.lobby_connection.send(dict(command="social_add", friend=friend_id))
-
-    def addFoe(self, foe_id):
-        if foe_id in self.players:
-            self.me.addFoe(int(foe_id))
-            self.lobby_connection.send(dict(command="social_add", foe=foe_id))
-
-    def remFriend(self, friend_id):
-        if friend_id in self.players:
-            self.me.remFriend(int(friend_id))
-            self.lobby_connection.send(dict(command="social_remove", friend=friend_id))
-
-    def remFoe(self, foe_id):
-        if foe_id in self.players:
-            self.me.remFoe(int(foe_id))
-            self.lobby_connection.send(dict(command="social_remove", foe=foe_id))
+    def close_fa(self, username):
+        self.power_tools.actions.close_fa(username)
 
     def handle_session(self, message):
-        self._update_checker.server_session()
-
         self.session = str(message['session'])
         self.get_creds_and_login()
 
-    def handle_update(self, message):
-        # Remove geometry settings prior to updating
-        # could be incompatible with an updated client.
-        config.Settings.remove('window/geometry')
-
-        logger.warning("Server says we need an update")
-        self._update_checker.server_update(message)
-
     def handle_welcome(self, message):
         self.state = ClientState.LOGGED_IN
-        self._autorelogin = True
-        self.id = message["id"]
-        self.login = message["login"]
+        self._auto_relogin = True
+        self.id = message["me"]["id"]
+        self.login = message["me"]["login"]
 
-        self.me.onLogin(message["login"], message["id"])
-        logger.debug("Login success")
+        self.me.onLogin(self.login, self.id)
+        logger.info("Login success")
 
         util.crash.CRASH_REPORT_USER = self.login
 
-        if self.useUPnP:
-            self.lobby_connection.set_upnp(self.gamePort)
-
-        self.updateOptions()
+        self.update_options()
 
         self.authorized.emit(self.me)
 
-        # Run an initial connectivity test and initialize a gamesession object
-        # when done
-        self.connectivity = ConnectivityHelper(self, self.gamePort)
-        self.connectivity.connectivity_status_established.connect(self.initialize_game_session)
-        self.connectivity.start_test()
+        if self.game_session is None or self.game_session.game_uid is None:
+            self.game_session = GameSession(
+                player_id=self.id,
+                player_login=self.login,
+            )
+        elif self.game_session.game_uid is not None:
+            self.lobby_connection.send({
+                'command': 'restore_game_session',
+                'game_id': self.game_session.game_uid,
+            })
 
-    def initialize_game_session(self):
-        self.game_session = fa.GameSession(self, self.connectivity)
-        self.game_session.gameFullSignal.connect(self.game_full)
+        self.game_session.gameFullSignal.connect(self.emit_game_full)
+
+    def handle_irc_password(self, message: dict) -> None:
+        # DEPRECATED: this command is meaningless and can be removed at any time
+        # see https://github.com/FAForever/server/issues/977
+        ...
 
     def handle_registration_response(self, message):
         if message["result"] == "SUCCESS":
@@ -1196,98 +1749,136 @@ class ClientWindow(FormClass, BaseClass):
 
         self.handle_notice({"style": "notice", "text": message["error"]})
 
-    def search_ranked(self, faction):
-        def request_launch():
-            msg = {
-                'command': 'game_matchmaking',
-                'mod': 'ladder1v1',
-                'state': 'start',
-                'gameport': self.gamePort,
-                'faction': faction
-            }
-            if self.connectivity.state == 'STUN':
-                msg['relay_address'] = self.connectivity.relay_address
-            self.lobby_connection.send(msg)
-            self.game_session.ready.disconnect(request_launch)
-        if self.game_session:
-            self.game_session.ready.connect(request_launch)
-            self.game_session.listen()
+    def ladderWarningClicked(self, faction=Factions.RANDOM):
+        subFactions = [False] * 4
+        if faction != Factions.RANDOM:
+            subFactions[faction.value - 1] = True
+        config.Settings.set(
+            "play/{}Factions".format(MatchmakerQueueType.LADDER.value),
+            subFactions,
+        )
+        try:
+            self.games.matchmakerQueues.widget(0).subFactions = subFactions
+            self.games.matchmakerQueues.widget(0).setFactionIcons(subFactions)
+            self.games.matchmakerQueues.widget(0).startSearchRanked()
+        except BaseException:
+            QtWidgets.QMessageBox.information(
+                self, "Starting search failed",
+                "Something went wrong, please retry",
+            )
 
-    def host_game(self, title, mod, visibility, mapname, password, is_rehost=False):
-        def request_launch():
-            msg = {
-                'command': 'game_host',
-                'title': title,
-                'mod': mod,
-                'visibility': visibility,
-                'mapname': mapname,
-                'password': password,
-                'is_rehost': is_rehost
-            }
-            if self.connectivity.state == 'STUN':
-                msg['relay_address'] = self.connectivity.relay_address
-            self.lobby_connection.send(msg)
-            self.game_session.ready.disconnect(request_launch)
-        if self.game_session:
-            self.game_session.game_password = password
-            self.game_session.ready.connect(request_launch)
-            self.game_session.listen()
+    def search_ranked(self, queue_name):
+        msg = {
+            'command': 'game_matchmaking',
+            'queue_name': queue_name,
+            'state': 'start',
+        }
+        self.lobby_connection.send(msg)
+
+    def handle_match_found_message(self, message):
+        logger.info("Handling match_found via JSON {}".format(message))
+        self.warningHide()
+        self.labelAutomatchInfo.setText("Match found! Pending game launch...")
+        self.labelAutomatchInfo.show()
+        self.games.handleMatchFound(message)
+        self.lobby_connection.send(dict(command="match_ready"))
+
+    def handle_match_cancelled(self, message):
+        logger.info("Received match_cancelled via JSON {}".format(message))
+        self.labelAutomatchInfo.setText("")
+        self.labelAutomatchInfo.hide()
+        self.games.handleMatchCancelled(message)
+
+    def host_game(
+        self,
+        title,
+        mod,
+        visibility,
+        mapname,
+        password,
+        is_rehost=False,
+    ):
+        msg = {
+            'command': 'game_host',
+            'title': title,
+            'mod': mod,
+            'visibility': visibility,
+            'mapname': mapname,
+            'password': password,
+            'is_rehost': is_rehost,
+        }
+        self.lobby_connection.send(msg)
 
     def join_game(self, uid, password=None):
-        def request_launch():
-            msg = {
-                'command': 'game_join',
-                'uid': uid,
-                'gameport': self.gamePort
-            }
-            if password:
-                msg['password'] = password
-            if self.connectivity.state == "STUN":
-                msg['relay_address'] = self.connectivity.relay_address
-            self.lobby_connection.send(msg)
-            self.game_session.ready.disconnect(request_launch)
-        if self.game_session:
-            self.game_session.game_password = password
-            self.game_session.ready.connect(request_launch)
-            self.game_session.listen()
+        msg = {
+            'command': 'game_join',
+            'uid': uid,
+            'gameport': 0,
+        }
+        if password:
+            msg['password'] = password
+        self.lobby_connection.send(msg)
 
     def handle_game_launch(self, message):
-        if not self.game_session or not self.connectivity.is_ready:
-            logger.error("Not ready for game launch")
+        self.game_session.game_uid = message['uid']
+        self.game_session.startIceAdapter()
 
-        logger.info("Handling game_launch via JSON " + str(message))
+        logger.info("Handling game_launch via JSON {}".format(message))
 
         silent = False
         # Do some special things depending of the reason of the game launch.
-        rank = False
 
-        # HACK: Ideally, this comes from the server, too. LATER: search_ranked message
+        # HACK: Ideally, this comes from the server, too.
+        # LATER: search_ranked message
         arguments = []
-        if message["mod"] == "ladder1v1":
-            arguments.append('/' + Factions.to_name(self.games.race))
-            # Player 1v1 rating
+        if self.games.matchFoundQueueName:
+            self.labelAutomatchInfo.setText("Launching the game...")
+            ratingType = message.get("rating_type", RatingType.GLOBAL.value)
+            factionSubset = config.Settings.get(
+                "play/{}Factions".format(self.games.matchFoundQueueName),
+                default=[False] * 4,
+                type=bool,
+            )
+            faction = Factions.set_faction(factionSubset)
+            arguments.append('/' + Factions.to_name(faction))
+            # Player rating
             arguments.append('/mean')
-            arguments.append(str(self.me.player.ladder_rating_mean))
+            arguments.append(
+                str(self.me.player.rating_mean(ratingType)),
+            )
             arguments.append('/deviation')
-            arguments.append(str(self.me.player.ladder_rating_deviation))
-            arguments.append('/players 2')  # Always 2 players in 1v1 ladder
-            arguments.append('/team 1')     # Always FFA team
+            arguments.append(
+                str(self.me.player.rating_deviation(ratingType)),
+            )
+
+            arguments.append('/players')
+            arguments.append(str(message["expected_players"]))
+            arguments.append('/team')
+            arguments.append(str(message["team"]))
+            arguments.append('/startspot')
+            arguments.append(str(message["map_position"]))
+            if message.get("game_options"):
+                arguments.append('/gameoptions')
+                for key, value in message["game_options"].items():
+                    arguments.append('{}:{}'.format(key, value))
 
             # Launch the auto lobby
-            self.game_session.init_mode = 1
-
+            self.game_session.setLobbyInitMode("auto")
         else:
             # Player global rating
             arguments.append('/mean')
-            arguments.append(str(self.me.player.rating_mean))
+            arguments.append(str(self.me.player.global_rating_mean))
             arguments.append('/deviation')
-            arguments.append(str(self.me.player.rating_deviation))
+            arguments.append(str(self.me.player.global_rating_deviation))
             if self.me.player.country is not None:
                 arguments.append('/country ')
                 arguments.append(self.me.player.country)
 
             # Launch the normal lobby
-            self.game_session.init_mode = 0
+            self.game_session.setLobbyInitMode("normal")
+
+        arguments.append('/numgames')
+        arguments.append(str(message["args"][1]))
 
         if self.me.player.clan is not None:
             arguments.append('/clan')
@@ -1300,18 +1891,21 @@ class ClientWindow(FormClass, BaseClass):
         if "sim_mods" in message:
             fa.mods.checkMods(message['sim_mods'])
 
-        # UPnP Mapper - mappings are removed on app exit
-        if self.useUPnP:
-            self.lobby_connection.set_upnp(self.gamePort)
+        info = dict(
+            uid=message['uid'],
+            recorder=self.login,
+            featured_mod=message['mod'],
+            launched_at=time.time(),
+        )
 
-        info = dict(uid=message['uid'], recorder=self.login, featured_mod=message['mod'], launched_at=time.time())
-
-        self.game_session.game_uid = message['uid']
-
-        fa.run(info, self.game_session.relay_port, arguments, self.game_session.game_uid)
+        fa.run(
+            info, self.game_session.relay_port, self.replayServer.serverPort(),
+            arguments, self.game_session.game_uid,
+        )
 
     def fill_in_session_info(self, game):
-        # sometimes we get the game_info message before a game session was created
+        # sometimes we get the game_info message before a game session was
+        # created
         if self.game_session and game.uid == self.game_session.game_uid:
             self.game_session.game_map = game.mapname
             self.game_session.game_mod = game.featured_mod
@@ -1319,43 +1913,44 @@ class ClientWindow(FormClass, BaseClass):
             self.game_session.game_visibility = game.visibility.value
 
     def handle_matchmaker_info(self, message):
+        logger.debug(
+            "Handling matchmaker info with message {}".format(message),
+        )
         if not self.me.player:
             return
-        if "action" in message:
-            self.matchmakerInfo.emit(message)
-        elif "queues" in message:
-            if self.me.player.ladder_rating_deviation > 200 or self.games.searching:
-                return
-            key = 'boundary_80s' if self.me.player.ladder_rating_deviation < 100 else 'boundary_75s'
-            show = False
+        self.matchmaker_info.emit(message)
+        if "queues" in message:
+            show = None
             for q in message['queues']:
                 if q['queue_name'] == 'ladder1v1':
+                    show = False
                     mu = self.me.player.ladder_rating_mean
+                    if self.me.player.ladder_rating_deviation < 100:
+                        key = 'boundary_80s'
+                    else:
+                        key = 'boundary_75s'
                     for min, max in q[key]:
                         if min < mu < max:
                             show = True
-            if show:
-                self.warningShow()
-            else:
-                self.warningHide()
+            if (
+                self.me.player.ladder_rating_deviation > 200
+                or self.games.searching.get("ladder1v1", False)
+            ):
+                return
+            if show is not None:
+                if show and not self.games.matchFoundQueueName:
+                    self.warningShow()
+                else:
+                    self.warningHide()
 
     def handle_social(self, message):
-        if "friends" in message:
-            self.me.setFriends(set([int(u) for u in message["friends"]]))
-
-        if "foes" in message:
-            self.me.setFoes(set([int(u) for u in message["foes"]]))
-
         if "channels" in message:
             # Add a delay to the notification system (insane cargo cult)
             self.notificationSystem.disabledStartup = False
-            self.channelsUpdated.emit(message["channels"])
-
-        if "autojoin" in message:
-            self.autoJoin.emit(message["autojoin"])
+            self.channels_updated.emit(message["channels"])
 
         if "power" in message:
-            self.power = message["power"]
+            self.power_tools.power = message["power"]
             self.manage_power()
 
     def handle_player_info(self, message):
@@ -1368,32 +1963,50 @@ class ClientWindow(FormClass, BaseClass):
 
         for player in players:
             id_ = int(player["id_"])
+            logger.debug('Received update about player {}'.format(id_))
             if id_ in self.players:
                 self.players[id_].update(**player)
             else:
                 self.players[id_] = Player(**player)
 
-    def avatarManager(self):
-        self.requestAvatars(0)
-        self.avatarSelection.show()
-
     def handle_authentication_failed(self, message):
-        QtWidgets.QMessageBox.warning(self, "Authentication failed", message["text"])
-        self._autorelogin = False
-        self.get_creds_and_login()
+        QtWidgets.QMessageBox.warning(
+            self, "Authentication failed", message["text"],
+        )
+        self._auto_relogin = False
+        self.disconnect_()
+        self.show_login_widget()
 
     def handle_notice(self, message):
         if "text" in message:
             style = message.get('style', None)
             if style == "error":
-                QtWidgets.QMessageBox.critical(self, "Error from Server", message["text"])
+                logger.error(
+                    "Received an error message from server: {}"
+                    .format(message),
+                )
+                QtWidgets.QMessageBox.critical(
+                    self, "Error from Server", message["text"],
+                )
             elif style == "warning":
-                QtWidgets.QMessageBox.warning(self, "Warning from Server", message["text"])
+                logger.warning(
+                    "Received warning message from server: {}".format(message),
+                )
+                QtWidgets.QMessageBox.warning(
+                    self, "Warning from Server", message["text"],
+                )
             elif style == "scores":
-                self.tray.showMessage("Scores", message["text"], QtWidgets.QSystemTrayIcon.Information, 3500)
-                self.localBroadcast.emit("Scores", message["text"])
+                self.tray.showMessage(
+                    "Scores", message["text"],
+                    QtWidgets.QSystemTrayIcon.Information, 3500,
+                )
+                self.local_broadcast.emit("Scores", message["text"])
+            elif "You are using an unofficial client" in message["text"]:
+                self.unofficial_client.emit(message["text"])
             else:
-                QtWidgets.QMessageBox.information(self, "Notice from Server", message["text"])
+                QtWidgets.QMessageBox.information(
+                    self, "Notice from Server", message["text"],
+                )
 
         if message["style"] == "kill":
             logger.info("Server has killed your Forged Alliance Process.")
@@ -1402,15 +2015,60 @@ class ClientWindow(FormClass, BaseClass):
         if message["style"] == "kick":
             logger.info("Server has kicked you from the Lobby.")
 
-        # This is part of the protocol - in this case we should not relogin automatically.
+        # This is part of the protocol - in this case we should not relogin
+        # automatically.
         if message["style"] in ["error", "kick"]:
-            self._autorelogin = False
+            self._auto_relogin = False
 
     def handle_invalid(self, message):
         # We did something wrong and the server will disconnect, let's not
         # reconnect and potentially cause the same error again and again
-        self.lobby_reconnecter.enabled = False
+        self.lobby_reconnector.enabled = False
         raise Exception(message)
 
-    def game_full(self):
-        self.gameFull.emit()
+    def emit_game_full(self):
+        self.game_full.emit()
+
+    def invite_to_party(self, recipient_id):
+        self.games.stopSearch()
+        msg = {
+            'command': 'invite_to_party',
+            'recipient_id': recipient_id,
+        }
+        self.lobby_connection.send(msg)
+
+    def handle_party_invite(self, message):
+        logger.info("Handling party_invite via JSON {}".format(message))
+        self.party_invite.emit(message)
+
+    def handle_update_party(self, message):
+        logger.info("Handling update_party via JSON {}".format(message))
+        self.games.updateParty(message)
+
+    def handle_kicked_from_party(self, message):
+        if self.me.player and self.me.player.currentGame is None:
+            QtWidgets.QMessageBox.information(
+                self, "Kicked", "You were kicked from party",
+            )
+        msg = {
+            "owner": self.me.id,
+            "members": [
+                {
+                    "player": self.me.id,
+                    "factions": ["uef", "cybran", "aeon", "seraphim"],
+                },
+            ],
+        }
+        self.games.updateParty(msg)
+
+    def set_faction(self, faction):
+        logger.info("Setting party factions to {}".format(faction))
+        msg = {
+            'command': 'set_party_factions',
+            'factions': faction,
+        }
+        self.lobby_connection.send(msg)
+
+    def handle_search_info(self, message):
+        logger.info("Handling search_info via JSON: {}".format(message))
+        self.games.handleMatchmakerSearchInfo(message)

@@ -1,17 +1,21 @@
-from PyQt5.QtCore import QTimer
-from model.game import GameState
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import pyqtSignal
 
 from fa import maps
+from model.game import GameState
 
 
-class GameAnnouncer:
+class GameAnnouncer(QObject):
+    announce = pyqtSignal(str, str)
+
     ANNOUNCE_DELAY_SECS = 35
 
-    def __init__(self, gameset, me, colors, client):
+    def __init__(self, gameset, me, colors):
+        QObject.__init__(self)
         self._gameset = gameset
         self._me = me
         self._colors = colors
-        self._client = client
 
         self._gameset.newLobby.connect(self._announce_hosting)
         self._gameset.newLiveReplay.connect(self._announce_replay)
@@ -21,8 +25,10 @@ class GameAnnouncer:
         self._delayed_host_list = []
 
     def _is_friend_host(self, game):
-        return (game.host_player is not None
-                and self._me.isFriend(game.host_player.id))
+        return (
+            game.host_player is not None
+            and self._me.relations.model.is_friend(game.host_player.id)
+        )
 
     def _announce_hosting(self, game):
         if not self._is_friend_host(game) or not self.announce_games:
@@ -37,9 +43,11 @@ class GameAnnouncer:
     def _delayed_announce_hosting(self):
         timer, game = self._delayed_host_list.pop(0)
 
-        if (not self._is_friend_host(game) or
-           not self.announce_games or
-           game.state != GameState.OPEN):
+        if (
+            not self._is_friend_host(game)
+            or not self.announce_games
+            or game.state != GameState.OPEN
+        ):
             return
         self._announce(game, "hosting")
 
@@ -49,13 +57,14 @@ class GameAnnouncer:
         self._announce(game, "playing live")
 
     def _announce(self, game, activity):
-        url = game.url(game.host_player.id).toString()
-        url_color = self._colors.getColor("url")
+        if game.host_player is None:
+            return
+        url = game.url(game.host_player.id).to_url().toString()
         mapname = maps.getDisplayName(game.mapname)
-        fmt = 'is {} {}<a style="color:{}" href="{}">{}</a> (on {})'
+        fmt = 'is {} {}<a class=game_link href="{}">{}</a> (on {})'
         if game.featured_mod == "faf":
             modname = ""
         else:
             modname = game.featured_mod + " "
-        msg = fmt.format(activity, modname, url_color, url, game.title, mapname)
-        self._client.forwardLocalBroadcast(game.host, msg)
+        msg = fmt.format(activity, modname, url, game.title, mapname)
+        self.announce.emit(msg, game.host)

@@ -1,6 +1,12 @@
+import html
 import os
+
+import jinja2
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
+
 import util
-from PyQt5 import QtCore, QtWidgets, QtGui
 from fa import maps
 
 
@@ -70,52 +76,66 @@ class GameItemDelegate(QtWidgets.QStyledItemDelegate):
     def _draw_clear_option(self, painter, option):
         option.icon = QtGui.QIcon()
         option.text = ""
-        option.widget.style().drawControl(QtWidgets.QStyle.CE_ItemViewItem,
-                                          option, painter, option.widget)
+        option.widget.style().drawControl(
+            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
+        )
 
     def _draw_icon_shadow(self, painter, option):
-        painter.fillRect(option.rect.left() + self.ICON_SHADOW_OFFSET,
-                         option.rect.top() + self.ICON_SHADOW_OFFSET,
-                         self.ICON_RECT,
-                         self.ICON_RECT,
-                         self.SHADOW_COLOR)
+        painter.fillRect(
+            option.rect.left() + self.ICON_SHADOW_OFFSET,
+            option.rect.top() + self.ICON_SHADOW_OFFSET,
+            self.ICON_RECT,
+            self.ICON_RECT,
+            self.SHADOW_COLOR,
+        )
 
     def _draw_icon(self, painter, option, icon):
-        rect = option.rect.adjusted(self.ICON_CLIP_TOP_LEFT,
-                                    self.ICON_CLIP_TOP_LEFT,
-                                    self.ICON_CLIP_BOTTOM_RIGHT,
-                                    self.ICON_CLIP_BOTTOM_RIGHT)
-        icon.paint(painter, rect, QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+        rect = option.rect.adjusted(
+            self.ICON_CLIP_TOP_LEFT,
+            self.ICON_CLIP_TOP_LEFT,
+            self.ICON_CLIP_BOTTOM_RIGHT,
+            self.ICON_CLIP_BOTTOM_RIGHT,
+        )
+        alignment_flags = QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignTop
+        icon.paint(painter, rect, alignment_flags)
 
     def _draw_frame(self, painter, option):
         pen = QtGui.QPen()
         pen.setWidth(self.FRAME_THICKNESS)
         pen.setBrush(self.FRAME_COLOR)
-        pen.setCapStyle(QtCore.Qt.RoundCap)
+        pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
         painter.setPen(pen)
-        painter.drawRect(option.rect.left() + self.ICON_CLIP_TOP_LEFT,
-                         option.rect.top() + self.ICON_CLIP_TOP_LEFT,
-                         self.ICON_RECT,
-                         self.ICON_RECT)
+        painter.drawRect(
+            option.rect.left() + self.ICON_CLIP_TOP_LEFT,
+            option.rect.top() + self.ICON_CLIP_TOP_LEFT,
+            self.ICON_RECT,
+            self.ICON_RECT,
+        )
 
     def _draw_text(self, painter, option, text):
         left_off = self.ICON_RECT + self.TEXT_OFFSET
         top_off = self.TEXT_OFFSET
         right_off = self.TEXT_RIGHT_MARGIN
         bottom_off = 0
-        painter.translate(option.rect.left() + left_off,
-                          option.rect.top() + top_off)
-        clip = QtCore.QRectF(0,
-                             0,
-                             option.rect.width() - left_off - right_off,
-                             option.rect.height() - top_off - bottom_off)
+        painter.translate(
+            option.rect.left() + left_off,
+            option.rect.top() + top_off,
+        )
+        clip = QtCore.QRectF(
+            0,
+            0,
+            option.rect.width() - left_off - right_off,
+            option.rect.height() - top_off - bottom_off,
+        )
         html = QtGui.QTextDocument()
         html.setHtml(text)
         html.drawContents(painter, clip)
 
     def sizeHint(self, option, index):
-        return QtCore.QSize(self.ICON_SIZE + self.TEXT_WIDTH + self.PADDING,
-                            self.ICON_SIZE)
+        return QtCore.QSize(
+            self.ICON_SIZE + self.TEXT_WIDTH + self.PADDING,
+            self.ICON_SIZE,
+        )
 
 
 class GameTooltipFilter(QtCore.QObject):
@@ -124,7 +144,7 @@ class GameTooltipFilter(QtCore.QObject):
         self._formatter = formatter
 
     def eventFilter(self, obj, event):
-        if event.type() == QtCore.QEvent.ToolTip:
+        if event.type() == QtCore.QEvent.Type.ToolTip:
             return self._handle_tooltip(obj, event)
         else:
             return super().eventFilter(obj, event)
@@ -154,24 +174,25 @@ class GameItemFormatter:
 
     def _host_color(self, game):
         hostid = game.host_player.id if game.host_player is not None else -1
-        return self._colors.getUserColor(hostid)
+        return self._colors.get_user_color(hostid)
 
     def text(self, data):
         game = data.game
+        players = game.num_players - len(game.observers)
         formatting = {
             "color": self._host_color(game),
             "mapslots": game.max_players,
-            "mapdisplayname": game.mapdisplayname,
-            "title": game.title,
-            "host": game.host,
-            "players": game.num_players,
-            "playerstring": "player" if game.num_players == 1 else "players",
-            "avgrating": int(game.average_rating)
+            "mapdisplayname": html.escape(game.mapdisplayname),
+            "title": html.escape(game.title),
+            "host": html.escape(game.host),
+            "players": players,
+            "playerstring": "player" if players == 1 else "players",
+            "avgrating": int(game.average_rating),
         }
         if self._featured_mod(game):
             return self.FORMATTER_FAF.format(**formatting)
         else:
-            formatting["mod"] = game.featured_mod
+            formatting["mod"] = html.escape(game.featured_mod)
             return self.FORMATTER_MOD.format(**formatting)
 
     def icon(self, data):
@@ -194,122 +215,60 @@ class GameItemFormatter:
         return name
 
     def _game_teams(self, game):
-        teams = {index: [game.to_player(name) if game.is_connected(name)
-                         else name for name in team]
-                 for index, team in game.playing_teams.items()}
+        teams = {
+            index: [
+                game.to_player(name)
+                if game.is_connected(name)
+                else name
+                for name in team
+            ]
+            for index, team in game.playing_teams.items()
+        }
 
         # Sort teams into a list
         # TODO - I believe there's a convention where team 1 is 'no team'
-        teamlist = [indexed_team for indexed_team in teams.items()]
-        teamlist.sort()
+        teamlist = sorted([indexed_team for indexed_team in teams.items()])
         teamlist = [team for index, team in teamlist]
         return teamlist
 
     def _game_observers(self, game):
-        return [game.to_player(name) for name in game.observers
-                if game.is_connected(name)]
+        return [
+            game.to_player(name)
+            for name in game.observers
+            if game.is_connected(name)
+        ]
 
     def tooltip(self, data):
         game = data.game
         teams = self._game_teams(game)
         observers = self._game_observers(game)
-        return self._tooltip_formatter.format(teams, observers, game.sim_mods)
+        title = game.title
+        title = title.replace("<", "&lt;")
+        title = title.replace(">", "&gt;")
+        return self._tooltip_formatter.format(
+            title, teams, observers, game.sim_mods,
+        )
 
 
 class GameTooltipFormatter:
-    TIP_FORMAT = str(util.THEME.readfile("games/formatters/tool.qthtml"))
 
     def __init__(self, me):
         self._me = me
+        template_abs_path = os.path.join(
+            util.COMMON_DIR, "games", "gameitem.qthtml",
+        )
+        with open(template_abs_path, "r") as templatefile:
+            self._template = jinja2.Template(templatefile.read())
 
-    def _teams_tooltip(self, teams):
-        versus_string = (
-            "<td valign='middle' height='100%'>"
-            "<font color='black' size='+5'>VS</font>"
-            "</td>")
-
-        def alignment(teams):
-            for i, team in enumerate(teams):
-                if i == 0:
-                    yield 'left', team
-                elif i == len(teams) - 1:
-                    yield 'right', team
-                else:
-                    yield 'middle', team
-
-        team_tables = [self._team_table(team, align)
-                       for align, team in alignment(teams)]
-        return versus_string.join(team_tables)
-
-    def _team_table(self, team, align):
-        team_table_start = "<td><table>"
-        team_table_end = "</table></td>"
-        rows = [self._player_table_row(player, align) for player in team]
-        return team_table_start + "".join(rows) + team_table_end
-
-    def _player_table_row(self, player, align):
-        if isinstance(player, str):
-            country = "<td></td>"
-        else:
-            country = "<td>{country_icon}</td>"
-        pname = ("<td align='{alignment}' valign='middle' width='135'>"
-                 "{player}"
-                 "</td>")
-        order = [pname, country] if align == 'right' else [country, pname]
-        player_row = "<tr>{}{}</tr>".format(*order)
-
-        if isinstance(player, str):
-            return player_row.format(alignment=align, player=player)
-        else:
-            return player_row.format(
-                country_icon=self._country_icon_fmt(player),
-                alignment=align,
-                player=self._player_fmt(player))
-
-    def _country_icon_fmt(self, player):
-        icon_path_fmt = os.path.join("chat", "countries", "{}.png")
-        icon_path = icon_path_fmt.format(player.country.lower())
+    def format(self, title, teams, observers, mods):
+        icon_path = os.path.join("chat", "countries/")
         icon_abs_path = os.path.join(util.COMMON_DIR, icon_path)
-        return "<img src='{}'>".format(icon_abs_path)
-
-    def _player_fmt(self, player):
-        if player == self._me.player:
-            pformat = "<b><i>{}</b></i>"
-        else:
-            pformat = "{}"
-        player_string = pformat.format(player.login)
-        if player.rating_deviation < 200:   # FIXME: magic number
-            player_string += " ({})".format(player.rating_estimate())
-        return player_string
-
-    def _observers_tooltip(self, observers):
-        if not observers:
-            return ""
-
-        observer_fmt = "{country_icon} {observer}"
-
-        observer_strings = [observer_fmt.format(
-            country_icon=self._country_icon_fmt(observer),
-            observer=observer.login)
-            for observer in observers]
-        return "Observers: " + ", ".join(observer_strings)
-
-    def _mods_tooltip(self, mods):
-        if not mods:
-            return ""
-        return "<br/>With: " + "<br/>".join(mods.values())
-
-    def format(self, teams, observers, mods):
-        teamtip = self._teams_tooltip(teams)
-        obstip = self._observers_tooltip(observers)
-        modtip = self._mods_tooltip(mods)
-
-        if modtip:
-            modtip = "<br/>" + modtip
-
-        return self.TIP_FORMAT.format(teams=teamtip,
-                                      observers=obstip,
-                                      mods=modtip)
+        return self._template.render(
+            title=title, teams=teams,
+            mods=mods.values(), observers=observers,
+            me=self._me.player,
+            iconpath=icon_abs_path,
+        )
 
 
 class GameViewBuilder:

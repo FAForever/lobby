@@ -1,7 +1,11 @@
-from PyQt5 import QtWidgets, QtGui
-import util
-import client
 import os
+
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
+
+import client
+import util
+from api.models.FeaturedMod import FeaturedMod
 
 # Maps names of featured mods to ModItem objects.
 mods = {}
@@ -15,27 +19,26 @@ mod_favourites = {}  # LATER: Make these saveable and load them from settings
 
 
 class ModItem(QtWidgets.QListWidgetItem):
-    def __init__(self, message, *args, **kwargs):
-        QtWidgets.QListWidgetItem.__init__(self, *args, **kwargs)
+    def __init__(self, mod_info: FeaturedMod, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
-        self.mod = message["name"]
-        self.order = message.get("order", 0)
-        self.name = message["fullname"]
+        self.mod = mod_info.name
+        self.order = mod_info.order
+        self.name = mod_info.fullname
         # Load Icon and Tooltip
 
-        tip = message["desc"]      
-        self.setToolTip(tip)
+        self.setToolTip(mod_info.description)
 
-        icon = util.THEME.icon(os.path.join("games/mods/", self.mod + ".png"))
+        icon = util.THEME.icon(os.path.join("games/mods/", f"{self.mod}.png"))
         if icon.isNull():
             icon = util.THEME.icon("games/mods/default.png")
         self.setIcon(icon)
 
         if self.mod in mod_crucial:
-            color = client.instance.player_colors.getColor("self")
+            color = client.instance.player_colors.get_color("self")
         else:
-            color = client.instance.player_colors.getColor("player")
-            
+            color = client.instance.player_colors.get_color("player")
+
         self.setForeground(QtGui.QColor(color))
         self.setText(self.name)
 
@@ -53,6 +56,6 @@ class ModItem(QtWidgets.QListWidgetItem):
 
         if self.order == other.order:
             # Default: Alphabetical
-            return self.name.lower() < other.mod.lower()
+            return self.name.lower() < other.name.lower()
 
         return self.order < other.order

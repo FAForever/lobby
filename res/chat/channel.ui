@@ -17,7 +17,16 @@
    <string notr="true"/>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <property name="margin">
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
     <number>0</number>
    </property>
    <item row="0" column="0">
@@ -36,8 +45,8 @@
      </property>
      <widget class="QFrame" name="chatFrame">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-        <horstretch>0</horstretch>
+       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+        <horstretch>4</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
@@ -45,7 +54,16 @@
        <property name="spacing">
         <number>6</number>
        </property>
-       <property name="margin">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
         <number>0</number>
        </property>
        <item>
@@ -86,6 +104,12 @@
        </item>
        <item>
         <widget class="QTextBrowser" name="chatArea">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="font">
           <font>
            <family>Segoe UI</family>
@@ -105,20 +129,10 @@
           <set>QTextEdit::AutoNone</set>
          </property>
          <property name="lineWrapMode">
-          <enum>QTextEdit::FixedPixelWidth</enum>
-         </property>
-         <property name="lineWrapColumnOrWidth">
-          <number>800</number>
+          <enum>QTextEdit::WidgetWidth</enum>
          </property>
          <property name="readOnly">
           <bool>true</bool>
-         </property>
-         <property name="html">
-          <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Segoe UI'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'MS Shell Dlg 2'; font-size:8pt;&quot;&gt;&lt;br /&gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="textInteractionFlags">
           <set>Qt::TextBrowserInteraction</set>
@@ -152,9 +166,18 @@ p, li { white-space: pre-wrap; }
       </layout>
      </widget>
      <widget class="QFrame" name="nickFrame">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+        <horstretch>1</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="maximumSize">
        <size>
-        <width>300</width>
+        <width>16777215</width>
         <height>16777215</height>
        </size>
       </property>
@@ -162,14 +185,23 @@ p, li { white-space: pre-wrap; }
        <number>0</number>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <property name="horizontalSpacing">
         <number>0</number>
        </property>
        <property name="verticalSpacing">
         <number>4</number>
-       </property>
-       <property name="margin">
-        <number>0</number>
        </property>
        <item row="0" column="0">
         <widget class="QLineEdit" name="nickFilter">
@@ -194,9 +226,9 @@ p, li { white-space: pre-wrap; }
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QTableWidget" name="nickList">
+        <widget class="ChatterListView" name="nickList">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -248,61 +280,9 @@ p, li { white-space: pre-wrap; }
          <property name="horizontalScrollMode">
           <enum>QAbstractItemView::ScrollPerItem</enum>
          </property>
-         <property name="showGrid">
-          <bool>false</bool>
-         </property>
-         <property name="gridStyle">
-          <enum>Qt::NoPen</enum>
-         </property>
-         <property name="sortingEnabled">
+         <property name="uniformItemSizes">
           <bool>true</bool>
          </property>
-         <property name="wordWrap">
-          <bool>false</bool>
-         </property>
-         <property name="cornerButtonEnabled">
-          <bool>false</bool>
-         </property>
-         <property name="columnCount">
-          <number>5</number>
-         </property>
-         <attribute name="horizontalHeaderVisible">
-          <bool>false</bool>
-         </attribute>
-         <attribute name="horizontalHeaderCascadingSectionResizes">
-          <bool>true</bool>
-         </attribute>
-         <attribute name="horizontalHeaderDefaultSectionSize">
-          <number>40</number>
-         </attribute>
-         <attribute name="horizontalHeaderHighlightSections">
-          <bool>false</bool>
-         </attribute>
-         <attribute name="horizontalHeaderMinimumSectionSize">
-          <number>0</number>
-         </attribute>
-         <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
-          <bool>false</bool>
-         </attribute>
-         <attribute name="verticalHeaderVisible">
-          <bool>false</bool>
-         </attribute>
-         <attribute name="verticalHeaderCascadingSectionResizes">
-          <bool>true</bool>
-         </attribute>
-         <attribute name="verticalHeaderDefaultSectionSize">
-          <number>20</number>
-         </attribute>
-         <attribute name="verticalHeaderHighlightSections">
-          <bool>false</bool>
-         </attribute>
-         <attribute name="verticalHeaderMinimumSectionSize">
-          <number>0</number>
-         </attribute>
-         <column/>
-         <column/>
-         <column/>
-         <column/>
         </widget>
        </item>
       </layout>
@@ -316,6 +296,11 @@ p, li { white-space: pre-wrap; }
    <class>ChatLineEdit</class>
    <extends>QLineEdit</extends>
    <header location="global">chat.chatlineedit</header>
+  </customwidget>
+  <customwidget>
+   <class>ChatterListView</class>
+   <extends>QListView</extends>
+   <header location="global">chat.chatterlistview</header>
   </customwidget>
  </customwidgets>
  <tabstops>

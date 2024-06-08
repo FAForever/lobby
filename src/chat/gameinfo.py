@@ -1,4 +1,5 @@
-from PyQt5.QtCore import QObject
+from PyQt6.QtCore import QObject
+
 from model.game import GameState
 
 
@@ -6,6 +7,10 @@ class SensitiveMapInfoChecker(QObject):
     def __init__(self, me):
         QObject.__init__(self)
         self._me = me
+
+    @classmethod
+    def build(cls, me, **kwargs):
+        return cls(me)
 
     def has_sensitive_data(self, game):
         if game is None or game.closed():

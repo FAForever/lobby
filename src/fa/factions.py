@@ -5,7 +5,8 @@ from enum import Enum, unique
 @unique
 class Factions(Enum):
     """
-    Enum to represent factions. Numbers match up with faction identification ids from the game.
+    Enum to represent factions. Numbers match up with faction identification
+    ids from the game.
     """
     UEF = 1
     AEON = 2
@@ -25,6 +26,17 @@ class Factions(Enum):
         return random.choice(possibilities)
 
     @staticmethod
+    def set_faction(sub_factions=[]):
+        if any(sub_factions):
+            possibilities = []
+            for faction, selected in zip(list(Factions)[:-1], sub_factions):
+                if selected:
+                    possibilities.append(faction)
+        else:
+            possibilities = list(Factions)[:-1]
+        return random.choice(possibilities)
+
+    @staticmethod
     def from_name(name):
         name = name.lower()
         if name == "uef":
@@ -38,7 +50,7 @@ class Factions(Enum):
         elif name == "random":
             return Factions.RANDOM
 
-        raise ValueError("Invalid faction name provided: %s" % name)
+        raise ValueError("Invalid faction name provided: {}".format(name))
 
     def to_name(self):
         if self == Factions.UEF:
@@ -52,4 +64,4 @@ class Factions(Enum):
         elif self == Factions.RANDOM:
             return "random"
 
-        raise ValueError("Invalid faction id provided: %i" % self)
+        raise ValueError("Invalid faction id provided: {}".format(self))

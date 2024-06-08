@@ -1,6 +1,13 @@
 import logging
-from fa import factions
-logger = logging.getLogger(__name__)
+
+from coop.cooptableview import CoopLeaderboardTableView
 
 # For use by other modules
 from ._coopwidget import CoopWidget
+
+__all__ = (
+    "CoopLeaderboardTableView",
+    "CoopWidget",
+)
+
+logger = logging.getLogger(__name__)

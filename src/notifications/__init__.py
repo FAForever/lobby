@@ -1,20 +1,23 @@
-from PyQt5 import QtCore
-
-import util
-from fa import maps
-from notifications.ns_dialog import NotificationDialog
-from notifications.ns_settings import NsSettingsDialog, IngameNotification
-
 """
 The Notification Systems reacts on events and displays a popup.
 Each event_type has a NsHook to customize it.
 """
+from PyQt6 import QtCore
+
+import util
+from config import Settings
+from fa import maps
+from notifications.ns_dialog import NotificationDialog
+from notifications.ns_settings import IngameNotification
+from notifications.ns_settings import NsSettingsDialog
 
 
 class Notifications:
     USER_ONLINE = 'user_online'
     NEW_GAME = 'new_game'
     GAME_FULL = 'game_full'
+    UNOFFICIAL_CLIENT = 'unofficial_client'
+    PARTY_INVITE = 'party_invite'
 
     def __init__(self, client, gameset, playerset, me):
         self.client = client
@@ -25,24 +28,35 @@ class Notifications:
         self.events = []
         self.disabledStartup = True
         self.game_running = False
+        self.unofficialClientDate = Settings.get(
+            'notifications/unofficialClientDate', 0, type=int,
+        )
 
-        client.gameEnter.connect(self.gameEnter)
-        client.gameExit.connect(self.gameExit)
-        client.gameFull.connect(self._gamefull)
+        client.game_enter.connect(self.gameEnter)
+        client.game_exit.connect(self.gameExit)
+        client.game_full.connect(self._gamefull)
+        client.unofficial_client.connect(self.unofficialClient)
+        client.party_invite.connect(self.partyInvite)
         gameset.newLobby.connect(self._newLobby)
-        playerset.playerAdded.connect(self._newPlayer)
+        playerset.added.connect(self._newPlayer)
 
         self.user = util.THEME.icon("client/user.png", pix=True)
 
     def _newPlayer(self, player):
-        if self.isDisabled() or not self.settings.popupEnabled(self.USER_ONLINE):
+        if (
+            self.isDisabled()
+            or not self.settings.popupEnabled(self.USER_ONLINE)
+        ):
             return
 
         if self.me.player is not None and self.me.player == player:
             return
 
         notify_mode = self.settings.getCustomSetting(self.USER_ONLINE, 'mode')
-        if notify_mode != 'all' and not self.me.isFriend(player.id):
+        if (
+            notify_mode != 'all'
+            and not self.me.relations.model.is_friend(player.id)
+        ):
             return
 
         self.events.append((self.USER_ONLINE, player.copy()))
@@ -55,7 +69,7 @@ class Notifications:
         host = game.host_player
         notify_mode = self.settings.getCustomSetting(self.NEW_GAME, 'mode')
         if notify_mode != 'all':
-            if host is None or not self.me.isFriend(host):
+            if host is None or not self.me.relations.model.is_friend(host):
                 return
 
         self.events.append((self.NEW_GAME, game.copy()))
@@ -64,7 +78,30 @@ class Notifications:
     def _gamefull(self):
         if self.isDisabled() or not self.settings.popupEnabled(self.GAME_FULL):
             return
-        self.events.append((self.GAME_FULL, None))
+        if (self.GAME_FULL, None) not in self.events:
+            self.events.append((self.GAME_FULL, None))
+        self.checkEvent()
+
+    def unofficialClient(self, msg):
+        date = QtCore.QDate.currentDate().dayOfYear()
+        if date == self.unofficialClientDate:  # Show once per day
+            return
+
+        self.unofficialClientDate = date
+        Settings.set(
+            'notifications/unofficialClientDate', self.unofficialClientDate,
+        )
+        self.events.append((self.UNOFFICIAL_CLIENT, msg))
+        self.checkEvent()
+
+    def partyInvite(self, message):
+        notify_mode = self.settings.getCustomSetting(self.PARTY_INVITE, 'mode')
+        if (
+            notify_mode != 'all'
+            and not self.me.relations.model.is_friend(message["sender"])
+        ):
+            return
+        self.events.append((self.PARTY_INVITE, message))
         self.checkEvent()
 
     def gameEnter(self):
@@ -79,7 +116,13 @@ class Notifications:
     def isDisabled(self):
         return (
             self.disabledStartup
-            or self.game_running and self.settings.ingame_notifications == IngameNotification.DISABLE
+            or (
+                self.game_running
+                and (
+                    self.settings.ingame_notifications
+                    == IngameNotification.DISABLE
+                )
+            )
             or not self.settings.enabled
         )
 
@@ -89,7 +132,9 @@ class Notifications:
 
     @QtCore.pyqtSlot()
     def on_showSettings(self):
-        """ Shows a Settings Dialg with all registered notifications modules  """
+        """
+        Shows a Settings Dialg with all registered notifications modules
+        """
         self.settings.show()
 
     def showEvent(self):
@@ -97,7 +142,8 @@ class Notifications:
         Display the next event in the queue as popup
 
         Pops event from queue and checks if it is showable as per settings
-        If event is showable, process event data and then feed it into notification dialog
+        If event is showable, process event data and then feed it into
+        notification dialog
 
         Returns True if showable event found, False otherwise
         """
@@ -111,8 +157,10 @@ class Notifications:
         if eventType == self.USER_ONLINE:
             player = data
             pixmap = self.user
-            text = '<html>%s<br><font color="silver" size="-2">is online</font></html>' % \
-                   (player.login)
+            text = (
+                '<html>{}<br><font color="silver" size="-2">is online'
+                '</font></html>'.format(player.login)
+            )
         elif eventType == self.NEW_GAME:
             game = data
             preview = maps.preview(game.mapname, pixmap=True)
@@ -134,13 +182,55 @@ class Notifications:
                     if len(modstr) > 20:
                         modstr = modstr[:15] + "..."
 
-            modhtml = '' if (modstr == '') else '<br><font size="-4"><font color="red">mods</font> %s</font>' % modstr
-            text = '<html>%s<br><font color="silver" size="-2">on</font> %s%s</html>' % \
-                   (game.title, maps.getDisplayName(game.mapname), modhtml)
+            if modstr == '':
+                modhtml = ''
+            else:
+                modhtml = (
+                    '<br><font size="-4"><font color="red">mods</font> '
+                    '{}</font>'.format(modstr)
+                )
+            text = (
+                '<html>{}<br><font color="silver" size="-2">on</font> '
+                '{}{}</html>'.format(
+                    game.title,
+                    maps.getDisplayName(game.mapname),
+                    modhtml,
+                )
+            )
         elif eventType == self.GAME_FULL:
             pixmap = self.user
-            text = '<html><br><font color="silver" size="-2">Game is full.</font></html>'
-        self.dialog.newEvent(pixmap, text, self.settings.popup_lifetime, self.settings.soundEnabled(eventType))
+            text = (
+                '<html><br><font color="silver" size="-2">Game is full.'
+                '</font></html>'
+            )
+        elif eventType == self.UNOFFICIAL_CLIENT:
+            pixmap = self.user
+            text = (
+                '<html><br><font color="silver" size="-2">{}</font></html>'
+                .format(data)
+            )
+            self.dialog.newEvent(pixmap, text, 10, False, 200)
+            return
+        elif eventType == self.PARTY_INVITE:
+            pixmap = self.user
+
+            text = (
+                '<html>{}<br><font color="silver" size="-2">invites you to'
+                ' their party</font></html>'
+                .format(str(self.client.players[data["sender"]].login))
+            )
+            self.dialog.newEvent(
+                pixmap, text, 15,
+                self.settings.soundEnabled(eventType),
+                hide_accept_button=False,
+                sender_id=data["sender"],
+            )
+            return
+
+        self.dialog.newEvent(
+            pixmap, text, self.settings.popup_lifetime,
+            self.settings.soundEnabled(eventType),
+        )
 
     def checkEvent(self):
         """
@@ -148,10 +238,20 @@ class Notifications:
 
         This means:
             * There need to be events pending
-            * There must be no notification showing right now (i.e. notification dialog hidden)
+            * There must be no notification showing right now
+              (i.e. notification dialog hidden)
             * Game isn't running, or ingame notifications are enabled
 
         """
-        if (len(self.events) > 0 and self.dialog.isHidden() and
-                (not self.game_running or self.settings.ingame_notifications == IngameNotification.ENABLE)):
+        if (
+            len(self.events) > 0
+            and self.dialog.isHidden()
+            and (
+                not self.game_running
+                or (
+                    self.settings.ingame_notifications
+                    == IngameNotification.ENABLE
+                )
+            )
+        ):
             self.showEvent()

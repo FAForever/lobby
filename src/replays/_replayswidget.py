@@ -1,21 +1,31 @@
-from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
-from fa.replay import replay
-from config import Settings
-import util
-import os
-import fa
-import time
-import client
 import json
-import jsonschema
-
-from replays.replayitem import ReplayItem, ReplayItemDelegate
-from model.game import GameState
-from replays.connection import ReplaysConnection
-from downloadManager import PreviewDownloadRequest
-
 import logging
+import os
+import time
+
+from pydantic import ValidationError
+from PyQt6 import QtCore
+from PyQt6 import QtGui
+from PyQt6 import QtWidgets
+from PyQt6.QtNetwork import QNetworkAccessManager
+from PyQt6.QtNetwork import QNetworkReply
+from PyQt6.QtNetwork import QNetworkRequest
+
+import client
+import fa
+import util
+from api.replaysapi import ReplaysApiConnector
+from config import Settings
+from downloadManager import DownloadRequest
+from fa.replay import replay
+from model.game import GameState
+from replays.models import MetadataModel
+from replays.replayitem import ReplayItem
+from replays.replayitem import ReplayItemDelegate
+from replays.replayToolbox import ReplayToolboxHandler
+from util.gameurl import GameUrl
+from util.gameurl import GameUrlType
+
 logger = logging.getLogger(__name__)
 
 # Replays uses the new Inheritance Based UI creation pattern
@@ -34,10 +44,10 @@ class LiveReplayItem(QtWidgets.QTreeWidgetItem):
             self.launch_time = game.launched_at
         else:
             self.launch_time = time.time()
-        self._map_dl_request = PreviewDownloadRequest()
+        self._map_dl_request = DownloadRequest()
         self._map_dl_request.done.connect(self._map_preview_downloaded)
 
-        self._game.gameUpdated.connect(self._update_game)
+        self._game.updated.connect(self._update_game)
         self._set_show_delay()
         self._update_game(self._game)
 
@@ -47,7 +57,7 @@ class LiveReplayItem(QtWidgets.QTreeWidgetItem):
             # Wait until the replayserver makes the replay available
             elapsed_time = time.time() - self.launch_time
             delay_time = self.LIVEREPLAY_DELAY - elapsed_time
-            QtCore.QTimer.singleShot(1000 * delay_time, self._show_item)
+            QtCore.QTimer.singleShot(int(1000 * delay_time), self._show_item)
 
     def _show_item(self):
         self.setHidden(False)
@@ -74,7 +84,7 @@ class LiveReplayItem(QtWidgets.QTreeWidgetItem):
         info = game.to_dict()
         tip = ""
         for key in list(info.keys()):
-            tip += "'" + str(key) + "' : '" + str(info[key]) + "'<br/>"
+            tip += "'{}' : '{}'<br/>".format(key, info[key])
         self.setToolTip(1, tip)
 
     def _set_game_map_icon(self, game):
@@ -83,7 +93,7 @@ class LiveReplayItem(QtWidgets.QTreeWidgetItem):
         else:
             icon = fa.maps.preview(game.mapname)
             if not icon:
-                dler = client.instance.map_downloader
+                dler = client.instance.map_preview_downloader
                 dler.download_preview(game.mapname, self._map_dl_request)
                 icon = util.THEME.icon("games/unknown_map.png")
         self.setIcon(0, icon)
@@ -96,21 +106,21 @@ class LiveReplayItem(QtWidgets.QTreeWidgetItem):
         self.setText(0, launch_time)
 
         colors = client.instance.player_colors
-        self.setForeground(0, QtGui.QColor(colors.getColor("default")))
+        self.setForeground(0, QtGui.QColor(colors.get_color("default")))
         if game.featured_mod == "ladder1v1":
             self.setText(1, game.title)
         else:
             self.setText(1, game.title + "    -    [host: " + game.host + "]")
-        self.setForeground(1, QtGui.QColor(colors.getColor("player")))
+        self.setForeground(1, QtGui.QColor(colors.get_color("player")))
         self.setText(2, game.featured_mod)
-        self.setTextAlignment(2, QtCore.Qt.AlignCenter)
+        self.setTextAlignment(2, QtCore.Qt.AlignmentFlag.AlignCenter)
 
     def _is_me(self, name):
         return client.instance.login == name
 
     def _is_friend(self, name):
         playerid = client.instance.players.getID(name)
-        return client.instance.me.isFriend(playerid)
+        return client.instance.me.relations.model.is_friend(playerid)
 
     def _is_online(self, name):
         return name in client.instance.players
@@ -125,7 +135,7 @@ class LiveReplayItem(QtWidgets.QTreeWidgetItem):
         else:
             my_color = "player"
         colors = client.instance.player_colors
-        self.setForeground(1, QtGui.QColor(colors.getColor(my_color)))
+        self.setForeground(1, QtGui.QColor(colors.get_color(my_color)))
 
     def _generate_player_subitems(self, game):
         if not game.teams:
@@ -148,26 +158,21 @@ class LiveReplayItem(QtWidgets.QTreeWidgetItem):
         else:
             player_color = "default"
         colors = client.instance.player_colors
-        item.setForeground(0, QtGui.QColor(colors.getColor(player_color)))
+        item.setForeground(0, QtGui.QColor(colors.get_color(player_color)))
 
         if self._is_online(name):
-            item.url = self._generate_livereplay_link(game, name)
-            item.setToolTip(0, item.url.toString())
+            item.gurl = self._generate_livereplay_link(game, name)
+            item.setToolTip(0, item.gurl.to_url().toString())
             item.setIcon(0, util.THEME.icon("replays/replay.png"))
         else:
             item.setDisabled(True)
         return item
 
     def _generate_livereplay_link(self, game, name):
-        url = QtCore.QUrl()
-        url.setScheme("faflive")
-        url.setHost("lobby.faforever.com")
-        url.setPath("/" + str(game.uid) + "/" + name + ".SCFAreplay")
-        query = QtCore.QUrlQuery()
-        query.addQueryItem("map", game.mapname)
-        query.addQueryItem("mod", game.featured_mod)
-        url.setQuery(query)
-        return url
+        return GameUrl(
+            GameUrlType.LIVE_REPLAY, game.mapname,
+            game.featured_mod, game.uid, name,
+        )
 
     def __lt__(self, other):
         return self.launch_time < other.launch_time
@@ -187,9 +192,15 @@ class LiveReplaysWidgetHandler(object):
         self.liveTree = liveTree
         self.liveTree.itemDoubleClicked.connect(self.liveTreeDoubleClicked)
         self.liveTree.itemPressed.connect(self.liveTreePressed)
-        self.liveTree.header().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
-        self.liveTree.header().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
-        self.liveTree.header().setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)
+        self.liveTree.header().setSectionResizeMode(
+            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents,
+        )
+        self.liveTree.header().setSectionResizeMode(
+            1, QtWidgets.QHeaderView.ResizeMode.Stretch,
+        )
+        self.liveTree.header().setSectionResizeMode(
+            2, QtWidgets.QHeaderView.ResizeMode.ResizeToContents,
+        )
 
         self.client = client
         self.gameset = gameset
@@ -199,7 +210,7 @@ class LiveReplaysWidgetHandler(object):
         self.games = {}
 
     def liveTreePressed(self, item):
-        if QtWidgets.QApplication.mouseButtons() != QtCore.Qt.RightButton:
+        if QtWidgets.QApplication.mouseButtons() != QtCore.Qt.MouseButton.RightButton:
             return
 
         if self.liveTree.indexOfTopLevelItem(item) != -1:
@@ -217,8 +228,14 @@ class LiveReplaysWidgetHandler(object):
         menu.addAction(actionLink)
 
         # Triggers
-        actionReplay.triggered.connect(lambda: self.liveTreeDoubleClicked(item))
-        actionLink.triggered.connect(lambda: QtWidgets.QApplication.clipboard().setText(item.toolTip(0)))
+        actionReplay.triggered.connect(
+            lambda: self.liveTreeDoubleClicked(item),
+        )
+        actionLink.triggered.connect(
+            lambda: QtWidgets.QApplication.clipboard().setText(
+                item.toolTip(0),
+            ),
+        )
 
         # Adding to menu
         menu.addAction(actionReplay)
@@ -228,15 +245,24 @@ class LiveReplaysWidgetHandler(object):
         menu.popup(QtGui.QCursor.pos())
 
     def liveTreeDoubleClicked(self, item):
-        """ This slot launches a live replay from eligible items in liveTree """
+        """
+        This slot launches a live replay from eligible items in liveTree
+        """
 
         if item.isDisabled():
             return
 
+        if (
+            self.client.games.party
+            and self.client.games.party.memberCount > 1
+        ):
+            if not self.client.games.leave_party():
+                return
+
         if self.liveTree.indexOfTopLevelItem(item) == -1:
             # Notify other modules that we're watching a replay
-            self.client.viewingReplay.emit(item.url)
-            replay(item.url)
+            self.client.viewing_replay.emit(item.gurl)
+            replay(item.gurl)
 
     def _addExistingGames(self, gameset):
         for game in gameset.values():
@@ -247,80 +273,47 @@ class LiveReplaysWidgetHandler(object):
         item = LiveReplayItem(game)
         self.games[game] = item
         self.liveTree.insertTopLevelItem(0, item)
-        game.gameUpdated.connect(self._check_game_closed)
+        game.updated.connect(self._check_game_closed)
 
     def _check_game_closed(self, game):
         if game.state == GameState.CLOSED:
-            game.gameUpdated.disconnect(self._check_game_closed)
+            game.updated.disconnect(self._check_game_closed)
             self._removeGame(game)
 
     def _removeGame(self, game):
-        self.liveTree.takeTopLevelItem(self.liveTree.indexOfTopLevelItem(self.games[game]))
+        self.liveTree.takeTopLevelItem(
+            self.liveTree.indexOfTopLevelItem(self.games[game]),
+        )
         del self.games[game]
 
 
 class ReplayMetadata:
-    def __init__(self, data):
+    def __init__(self, data: str) -> None:
         self.raw_data = data
-        self.data = None
         self.is_broken = False
-        self.is_incomplete = False
+        self.model: MetadataModel | None = None
 
         try:
-            self.data = json.loads(data)
+            json_data = json.loads(data)
         except json.decoder.JSONDecodeError:
             self.is_broken = True
             return
 
-        self._validate_data()
-
-    # FIXME - this is what the widget uses so far, we should define this
-    # schema precisely in the future
-    def _validate_data(self):
-        if not isinstance(self.data, dict):
-            self.is_broken = True
-            return
-        if not self.data.get('complete', False):
-            self.is_incomplete = True
-            return
-
-        replay_schema = {
-            "type": "object",
-            "properties": {
-                "num_players": {"type": "number"},
-                "launched_at": {"type": "number"},
-                "game_time": {
-                    "type": "number",
-                    "minimum": 0
-                },
-                "mapname": {"type": "string"},
-                "title": {"type": "string"},
-                "teams": {
-                    "type": "object",
-                    "patternProperties": {
-                        ".*": {
-                            "type": "array",
-                            "items": {"type": "string"}
-                            }
-                        }
-                    },
-                "featured_mod": {"type": "string"}
-                },
-            "required": ["num_players", "mapname", "title", "teams",
-                         "featured_mod"]
-        }
         try:
-            jsonschema.validate(self.data, replay_schema)
-        except jsonschema.ValidationError:
+            self.model = MetadataModel(**json_data)
+        except ValidationError:
             self.is_broken = True
 
-    def launch_time(self):
-        if 'launched_at' in self.data:
-            return self.data['launched_at']
-        elif 'game_time' in self.data:
-            return self.data['game_time']
-        else:
-            return time.time()  # FIXME
+    @property
+    def is_incomplete(self) -> bool:
+        if self.model is None:
+            return True
+        return not self.model.complete
+
+    def launch_time(self) -> float:
+        if self.model.launched_at > 0:
+            return self.model.launched_at
+        return self.model.game_time
 
 
 class LocalReplayItem(QtWidgets.QTreeWidgetItem):
@@ -328,7 +321,7 @@ class LocalReplayItem(QtWidgets.QTreeWidgetItem):
         QtWidgets.QTreeWidgetItem.__init__(self)
         self._replay_file = replay_file
         self._metadata = metadata
-        self._map_dl_request = PreviewDownloadRequest()
+        self._map_dl_request = DownloadRequest()
         self._map_dl_request.done.connect(self._map_preview_downloaded)
         self._setup_appearance()
 
@@ -349,51 +342,57 @@ class LocalReplayItem(QtWidgets.QTreeWidgetItem):
         self.setText(1, self._replay_file)
         self.setIcon(0, util.THEME.icon("replays/replay.png"))
         colors = client.instance.player_colors
-        self.setForeground(0, QtGui.QColor(colors.getColor("default")))
+        self.setForeground(0, QtGui.QColor(colors.get_color("default")))
 
     def _setup_broken_appearance(self):
         self.setIcon(0, util.THEME.icon("replays/broken.png"))
         self.setText(1, self._replay_file)
-        self.setForeground(1, QtGui.QColor("red"))   # FIXME: Needs to come from theme
+        # FIXME: Needs to come from theme
+        self.setForeground(1, QtGui.QColor("red"))
+        self.setForeground(2, QtGui.QColor("gray"))
+
         self.setText(2, "(replay parse error)")
-        self.setForeground(2, QtGui.QColor("gray"))  # FIXME: Needs to come from theme
 
     def _setup_incomplete_appearance(self):
         self.setIcon(0, util.THEME.icon("replays/replay.png"))
         self.setText(1, self._replay_file)
         self.setText(2, "(replay doesn't have complete metadata)")
-        self.setForeground(1, QtGui.QColor("yellow"))  # FIXME: Needs to come from theme
+        # FIXME: Needs to come from theme
+        self.setForeground(1, QtGui.QColor("yellow"))
 
-    def _setup_complete_appearance(self):
-        data = self._metadata.data
+    def _setup_complete_appearance(self) -> None:
+        data = self._metadata.model
         launch_time = time.localtime(self._metadata.launch_time())
         try:
             game_time = time.strftime("%H:%M", launch_time)
         except ValueError:
             game_time = "Unknown"
 
-        icon = fa.maps.preview(data['mapname'])
+        icon = fa.maps.preview(data.mapname)
         if icon:
             self.setIcon(0, icon)
         else:
-            dler = client.instance.map_downloader
-            dler.download_preview(data['mapname'], self._map_dl_request)
+            dler = client.instance.map_preview_downloader
+            dler.download_preview(data.mapname, self._map_dl_request)
             self.setIcon(0, util.THEME.icon("games/unknown_map.png"))
 
-        self.setToolTip(0, fa.maps.getDisplayName(data['mapname']))
+        self.setToolTip(0, fa.maps.getDisplayName(data.mapname))
         self.setText(0, game_time)
-        self.setForeground(0, QtGui.QColor(client.instance.player_colors.getColor("default")))
-        self.setText(1, data['title'])
+        self.setForeground(
+            0,
+            QtGui.QColor(client.instance.player_colors.get_color("default")),
+        )
+        self.setText(1, data.title)
         self.setToolTip(1, self._replay_file)
 
         playerlist = []
-        for players in list(data['teams'].values()):
+        for players in data.teams.values():
             playerlist.extend(players)
         self.setText(2, ", ".join(playerlist))
         self.setToolTip(2, ", ".join(playerlist))
 
-        self.setText(3, data['featured_mod'])
-        self.setTextAlignment(3, QtCore.Qt.AlignCenter)
+        self.setText(3, data.featured_mod)
+        self.setTextAlignment(3, QtCore.Qt.AlignmentFlag.AlignCenter)
 
     def replay_bucket(self):
         if self._metadata is None:
@@ -430,28 +429,50 @@ class LocalReplayBucketItem(QtWidgets.QTreeWidgetItem):
         self.setIcon(0, util.THEME.icon("replays/bucket.png"))
         self.setText(0, kind)
         self.setText(3, "{} replays".format(len(children)))
-        self.setForeground(3, QtGui.QColor(client.instance.player_colors.getColor("default")))
+        self.setForeground(
+            3,
+            QtGui.QColor(client.instance.player_colors.get_color("default")),
+        )
 
         for item in children:
             self.addChild(item)
 
     def _setup_broken_appearance(self):
-        self.setForeground(0, QtGui.QColor("red"))  # FIXME: Needs to come from theme
+        # FIXME: Needs to come from theme
+        self.setForeground(0, QtGui.QColor("red"))
+
         self.setText(1, "(not watchable)")
-        self.setForeground(1, QtGui.QColor(client.instance.player_colors.getColor("default")))
+        self.setForeground(
+            1,
+            QtGui.QColor(client.instance.player_colors.get_color("default")),
+        )
 
     def _setup_incomplete_appearance(self):
-        self.setForeground(0, QtGui.QColor("yellow"))  # FIXME: Needs to come from theme
+        # FIXME: Needs to come from theme
+        self.setForeground(0, QtGui.QColor("yellow"))
+
         self.setText(1, "(watchable)")
-        self.setForeground(1, QtGui.QColor(client.instance.player_colors.getColor("default")))
+        self.setForeground(
+            1,
+            QtGui.QColor(client.instance.player_colors.get_color("default")),
+        )
 
     def _setup_legacy_appearance(self):
-        self.setForeground(0, QtGui.QColor(client.instance.player_colors.getColor("default")))
-        self.setForeground(1, QtGui.QColor(client.instance.player_colors.getColor("default")))
+        self.setForeground(
+            0,
+            QtGui.QColor(client.instance.player_colors.get_color("default")),
+        )
+        self.setForeground(
+            1,
+            QtGui.QColor(client.instance.player_colors.get_color("default")),
+        )
         self.setText(1, "(old replay system)")
 
     def _setup_date_appearance(self):
-        self.setForeground(0, QtGui.QColor(client.instance.player_colors.getColor("player")))
+        self.setForeground(
+            0,
+            QtGui.QColor(client.instance.player_colors.get_color("player")),
+        )
 
 
 class LocalReplaysWidgetHandler(object):
@@ -459,18 +480,27 @@ class LocalReplaysWidgetHandler(object):
         self.myTree = myTree
         self.myTree.itemDoubleClicked.connect(self.myTreeDoubleClicked)
         self.myTree.itemPressed.connect(self.myTreePressed)
-        self.myTree.header().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
-        self.myTree.header().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
-        self.myTree.header().setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
-        self.myTree.header().setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents)
+        self.myTree.header().setSectionResizeMode(
+            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents,
+        )
+        self.myTree.header().setSectionResizeMode(
+            1, QtWidgets.QHeaderView.ResizeMode.ResizeToContents,
+        )
+        self.myTree.header().setSectionResizeMode(
+            2, QtWidgets.QHeaderView.ResizeMode.Stretch,
+        )
+        self.myTree.header().setSectionResizeMode(
+            3, QtWidgets.QHeaderView.ResizeMode.ResizeToContents,
+        )
         self.myTree.modification_time = 0
 
         replay_cache = os.path.join(util.CACHE_DIR, "local_replays_metadata")
-        self.replay_files = LocalReplayMetadataCache(util.REPLAY_DIR,
-                                                     replay_cache)
+        self.replay_files = LocalReplayMetadataCache(
+            util.REPLAY_DIR, replay_cache,
+        )
 
     def myTreePressed(self, item):
-        if QtWidgets.QApplication.mouseButtons() != QtCore.Qt.RightButton:
+        if QtWidgets.QApplication.mouseButtons() != QtCore.Qt.MouseButton.RightButton:
             return
 
         if item.isDisabled():
@@ -491,7 +521,9 @@ class LocalReplaysWidgetHandler(object):
 
         # Triggers
         actionReplay.triggered.connect(lambda: self.myTreeDoubleClicked(item))
-        actionExplorer.triggered.connect(lambda: util.showFileInFileBrowser(item.replay_path()))
+        actionExplorer.triggered.connect(
+            lambda: util.showFileInFileBrowser(item.replay_path()),
+        )
 
         # Adding to menu
         menu.addAction(actionReplay)
@@ -509,12 +541,13 @@ class LocalReplaysWidgetHandler(object):
 
     def updatemyTree(self):
         modification_time = os.path.getmtime(util.REPLAY_DIR)
-        if self.myTree.modification_time == modification_time:  # anything changed?
+        if self.myTree.modification_time == modification_time:
             return  # nothing changed -> don't redo
         self.myTree.modification_time = modification_time
         self.myTree.clear()
 
-        # We put the replays into buckets by day first, then we add them to the treewidget.
+        # We put the replays into buckets by day first, then we add them to the
+        # treewidget.
         buckets = {}
 
         if not self.replay_files.cache_loaded:
@@ -534,7 +567,8 @@ class LocalReplaysWidgetHandler(object):
             buckets[bucket].append(item)
 
         self.replay_files.save_cache()
-        # Now, create a top level treeWidgetItem for every bucket, and put the bucket's contents into them
+        # Now, create a top level treeWidgetItem for every bucket, and put the
+        # bucket's contents into them
         for bucket, items in buckets.items():
             bucket_item = LocalReplayBucketItem(bucket, items)
             self.myTree.addTopLevelItem(bucket_item)
@@ -589,12 +623,20 @@ class LocalReplayMetadataCache:
 
 
 class ReplayVaultWidgetHandler(object):
-    HOST = "lobby.faforever.com"
-    PORT = 11002
-
-    # connect to save/restore persistence settings for checkboxes & search parameters
-    automatic = Settings.persisted_property("replay/automatic", default_value=False, type=bool)
-    spoiler_free = Settings.persisted_property("replay/spoilerFree", default_value=True, type=bool)
+    # connect to save/restore persistence settings for checkboxes & search
+    # parameters
+    automatic = Settings.persisted_property(
+        "replay/automatic", default_value=False, type=bool,
+    )
+    spoiler_free = Settings.persisted_property(
+        "replay/spoilerFree", default_value=True, type=bool,
+    )
+    hide_unranked = Settings.persisted_property(
+        "replay/hideUnranked", default_value=False, type=bool,
+    )
+    match_username = Settings.persisted_property(
+        "replay/matchUsername", default_value=True, type=bool,
+    )
 
     def __init__(self, widget, dispatcher, client, gameset, playerset):
         self._w = widget
@@ -605,13 +647,26 @@ class ReplayVaultWidgetHandler(object):
 
         self.onlineReplays = {}
         self.selectedReplay = None
-        self.vault_connection = ReplaysConnection(self._dispatcher, self.HOST, self.PORT)
-        self.client.lobby_info.replayVault.connect(self.replayVault)
+        self.apiConnector = ReplaysApiConnector()
+        self.apiConnector.data_ready.connect(self.process_replays_data)
         self.replayDownload = QNetworkAccessManager()
-        self.replayDownload.finished.connect(self.finishRequest)
+        self.replayDownload.finished.connect(self.onDownloadFinished)
+        self.toolboxHandler = ReplayToolboxHandler(
+            self, widget, dispatcher, client, gameset, playerset,
+        )
 
+        self.showLatest = True
         self.searching = False
         self.searchInfo = "<font color='gold'><b>Searching...</b></font>"
+        self.defaultSearchParams = {
+            "page[number]": 1,
+            "page[size]": 100,
+            "sort": "-startTime",
+            "include": (
+                "featuredMod,mapVersion,mapVersion.map,playerStats,"
+                "playerStats.player"
+            ),
+        }
 
         _w = self._w
         _w.onlineTree.setItemDelegate(ReplayItemDelegate(_w))
@@ -622,55 +677,207 @@ class ReplayVaultWidgetHandler(object):
         _w.playerName.returnPressed.connect(self.searchVault)
         _w.mapName.returnPressed.connect(self.searchVault)
         _w.automaticCheckbox.stateChanged.connect(self.automaticCheckboxchange)
+        _w.matchUsernameCheckbox.stateChanged.connect(
+            self.matchUsernameCheckboxChange,
+        )
+        _w.showLatestCheckbox.stateChanged.connect(
+            self.showLatestCheckboxchange,
+        )
         _w.spoilerCheckbox.stateChanged.connect(self.spoilerCheckboxchange)
+        _w.hideUnrCheckbox.stateChanged.connect(self.hideUnrCheckboxchange)
         _w.RefreshResetButton.pressed.connect(self.resetRefreshPressed)
 
         # restore persistent checkbox settings
+        _w.matchUsernameCheckbox.setChecked(self.match_username)
         _w.automaticCheckbox.setChecked(self.automatic)
         _w.spoilerCheckbox.setChecked(self.spoiler_free)
+        _w.hideUnrCheckbox.setChecked(self.hide_unranked)
 
-    def searchVault(self, minRating=None, mapName=None, playerName=None, modListIndex=None):
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.stopSearchVault)
+
+    def showToolTip(self, widget, msg):
+        """
+        Default tooltips are too slow and disappear when user starts typing
+        """
+
+        position = widget.mapToGlobal(
+            QtCore.QPoint(0 + widget.width(), 0 - widget.height() / 2),
+        )
+        QtWidgets.QToolTip.showText(position, msg)
+
+    def stopSearchVault(self):
+        self.searching = False
+        self._w.searchInfoLabel.clear()
+        self._w.advSearchInfoLabel.clear()
+        self.timer.stop()
+
+    def searchVault(
+        self,
+        minRating=None,
+        mapName=None,
+        playerName=None,
+        leaderboardId=None,
+        modListIndex=None,
+        quantity=None,
+        reset=None,
+        exactPlayerName=None,
+    ):
         w = self._w
-        if minRating is not None:
-            w.minRating.setValue(minRating)
-        if mapName is not None:
-            w.mapName.setText(mapName)
-        if playerName is not None:
-            w.playerName.setText(playerName)
-        if modListIndex is not None:
-            w.modList.setCurrentIndex(modListIndex)
+        timePeriod = None
 
-        # Map Search helper - the secondary server has a problem with blanks (fix until change to api)
-        map_name = w.mapName.text().replace(" ", "*")
+        if self.searching:
+            QtWidgets.QMessageBox.critical(
+                None,
+                "Replay vault",
+                "Please, wait for previous search to finish.",
+            )
+            return
 
-        """ search for some replays """
-        self._w.searchInfoLabel.setText(self.searchInfo)
-        self.searching = True
-        self.vault_connection.connect()
-        self.vault_connection.send(dict(command="search",
-                                        rating=w.minRating.value(),
-                                        map=map_name,
-                                        player=w.playerName.text(),
-                                        mod=w.modList.currentText()))
+        if reset:
+            w.minRating.setValue(0)
+            w.mapName.setText("")
+            w.playerName.setText("")
+            w.leaderboardList.setCurrentIndex(0)
+            w.modList.setCurrentIndex(0)
+            w.quantity.setValue(100)
+            w.showLatestCheckbox.setChecked(True)
+        else:
+            if minRating is not None:
+                w.minRating.setValue(minRating)
+            if mapName is not None:
+                w.mapName.setText(mapName)
+            if playerName is not None:
+                w.playerName.setText(playerName)
+            if leaderboardId is not None:
+                w.leaderboardList.setCurrentIndex(leaderboardId)
+            if modListIndex is not None:
+                w.modList.setCurrentIndex(modListIndex)
+            if quantity is not None:
+                w.quantity.setValue(quantity)
+            if not self.showLatest:
+                timePeriod = []
+                timePeriod.append(
+                    w.dateStart.dateTime().toUTC().toString(QtCore.Qt.DateFormat.ISODate),
+                )
+                timePeriod.append(
+                    w.dateEnd.dateTime().toUTC().toString(QtCore.Qt.DateFormat.ISODate),
+                )
+
+        filters = self.prepareFilters(
+            w.minRating.value(),
+            w.mapName.text(),
+            w.playerName.text(),
+            w.leaderboardList.currentIndex(),
+            w.modList.currentText(),
+            timePeriod,
+            exactPlayerName,
+        )
+
+        # """ search for some replays """
         self._w.onlineTree.clear()
+        self._w.searchInfoLabel.setText(self.searchInfo)
+        self._w.searchInfoLabel.setVisible(True)
+        self._w.advSearchInfoLabel.setVisible(False)
+        self.searching = True
+
+        parameters = self.defaultSearchParams.copy()
+        parameters["page[size]"] = w.quantity.value()
+
+        if filters:
+            parameters["filter"] = filters
+
+        self.apiConnector.requestData(parameters)
+        self.timer.start(90000)
+
+    def prepareFilters(
+        self,
+        minRating,
+        mapName,
+        playerName,
+        leaderboardId,
+        modListIndex,
+        timePeriod=None,
+        exactPlayerName=None,
+    ):
+        '''
+        Making filter string here + some logic to exclude "heavy" requests
+        which may overload database (>30 sec searches). It might looks weak
+        (and probably it is), but hey, it works! =)
+        '''
+
+        filters = []
+
+        if self.hide_unranked:
+            filters.append('validity=="VALID"')
+
+        if leaderboardId:
+            filters.append(
+                'playerStats.ratingChanges.leaderboard.id=="{}"'
+                .format(leaderboardId),
+            )
+
+        if minRating and minRating > 0:
+            filters.append(
+                'playerStats.ratingChanges.meanBefore=ge="{}"'
+                .format(minRating + 300),
+            )
+
+        if mapName:
+            filters.append(
+                'mapVersion.map.displayName=="*{}*"'.format(mapName),
+            )
+
+        if playerName:
+            if self.match_username or exactPlayerName:
+                filters.append(
+                    'playerStats.player.login=="{}"'.format(playerName),
+                )
+            else:
+                filters.append(
+                    'playerStats.player.login=="*{}*"'.format(playerName),
+                )
+
+        if modListIndex and modListIndex != "All":
+            filters.append(
+                'featuredMod.technicalName=="{}"'.format(modListIndex),
+            )
+
+        if timePeriod:
+            filters.append('startTime=ge="{}"'.format(timePeriod[0]))
+            filters.append('startTime=le="{}"'.format(timePeriod[1]))
+        elif len(filters) > 0:
+            months = 3
+            if playerName:
+                months = 6
+
+            startTime = (
+                QtCore.QDateTime.currentDateTimeUtc()
+                .addMonths(-months)
+                .toString(QtCore.Qt.DateFormat.ISODate)
+            )
+            filters.append('startTime=ge="{}"'.format(startTime))
+
+        if len(filters) > 0:
+            return "({})".format(";".join(filters))
+
+        return None
 
     def reloadView(self):
-        if not self.searching:  # something else is already in the pipe from SearchVault
-            if self.automatic or self.onlineReplays == {}:  # refresh on Tab change or only the first time
-                self._w.searchInfoLabel.setText(self.searchInfo)
-                self.vault_connection.connect()
-                self.vault_connection.send(dict(command="list"))
+        if not self.searching:
+            # refresh on Tab change or only the first time
+            if self.automatic or self.onlineReplays == {}:
+                self.searchVault(reset=True)
 
     def onlineTreeClicked(self, item):
-        if QtWidgets.QApplication.mouseButtons() == QtCore.Qt.RightButton:
-            if type(item.parent) == ReplaysWidget:      # FIXME - hack
+        if QtWidgets.QApplication.mouseButtons() == QtCore.Qt.MouseButton.RightButton:
+            if isinstance(item.parent, ReplaysWidget):      # FIXME - hack
                 item.pressed(item)
         else:
             self.selectedReplay = item
             if hasattr(item, "moreInfo"):
                 if item.moreInfo is False:
-                    self.vault_connection.connect()
-                    self.vault_connection.send(dict(command="info_replay", uid=item.uid))
+                    item.infoPlayers()
                 elif item.spoiled != self._w.spoilerCheckbox.isChecked():
                     self._w.replayInfos.clear()
                     self._w.replayInfos.setHtml(item.replayInfo)
@@ -678,13 +885,23 @@ class ReplayVaultWidgetHandler(object):
                 else:
                     self._w.replayInfos.clear()
                     item.generateInfoPlayersHtml()
+            if self.toolboxHandler.mapPreview:
+                self.toolboxHandler.updateMapPreview()
 
     def onlineTreeDoubleClicked(self, item):
+        if (
+            self.client.games.party
+            and self.client.games.party.memberCount > 1
+        ):
+            if not self.client.games.leave_party():
+                return
+
         if hasattr(item, "duration"):  # it's a game not a date separator
             if "playing" in item.duration:  # live game will not be in vault
-                # search result isn't updated automatically - so game status might have changed
-                if item.uid in self._gameset.games:  # game still running
-                    game = self._gameset.games[item.uid]
+                # search result isn't updated automatically - so game status
+                # might have changed
+                if item.uid in self._gameset:  # game still running
+                    game = self._gameset[item.uid]
                     if not game.launched_at:  # we frown upon those
                         return
                     if game.has_live_replay:  # live game over 5min
@@ -693,21 +910,34 @@ class ReplayVaultWidgetHandler(object):
                                 self._startReplay(name)
                                 break
                     else:
-                        wait_str = time.strftime('%M Min %S Sec', time.gmtime(game.LIVE_REPLAY_DELAY_SECS -
-                                                                              (time.time() - game.launched_at)))
-                        QtWidgets.QMessageBox.information(client.instance, "5 Minute Live Game Delay",
-                                                          "It is too early to join the Game.\n"
-                                                          "You have to wait " + wait_str + " to join.")
+                        delta = time.gmtime(
+                            game.LIVE_REPLAY_DELAY_SECS
+                            - (time.time() - game.launched_at),
+                        )
+                        wait_str = time.strftime('%M Min %S Sec', delta)
+                        QtWidgets.QMessageBox.information(
+                            client.instance,
+                            "5 Minute Live Game Delay",
+                            (
+                                "It is too early to join the Game.\n"
+                                "You have to wait {} to join.".format(wait_str)
+                            ),
+                        )
                 else:  # game ended - ask to start replay
-                    if QtWidgets.QMessageBox.question(client.instance, "Live Game ended",
-                                                      "Would you like to watch the replay from the vault?",
-                                                      QtWidgets.QMessageBox.Yes,
-                                                      QtWidgets.QMessageBox.No) == QtWidgets.QMessageBox.Yes:
-                        self.replayDownload.get(QNetworkRequest(QtCore.QUrl(item.url)))
+                    if QtWidgets.QMessageBox.question(
+                        client.instance,
+                        "Live Game ended",
+                        "Would you like to watch the replay from the vault?",
+                        QtWidgets.QMessageBox.StandardButton.Yes,
+                        QtWidgets.QMessageBox.StandardButton.No,
+                    ) == QtWidgets.QMessageBox.StandardButton.Yes:
+                        req = QNetworkRequest(QtCore.QUrl(item.url))
+                        self.replayDownload.get(req)
 
             else:  # start replay
                 if hasattr(item, "url"):
-                    self.replayDownload.get(QNetworkRequest(QtCore.QUrl(item.url)))
+                    req = QNetworkRequest(QtCore.QUrl(item.url))
+                    self.replayDownload.get(req)
 
     def _startReplay(self, name):
         if name is None or name not in self._playerset:
@@ -718,78 +948,82 @@ class ReplayVaultWidgetHandler(object):
             return
         replay(player.currentGame.url(player.id))
 
+    def matchUsernameCheckboxChange(self, state):
+        self.match_username = state
+
     def automaticCheckboxchange(self, state):
         self.automatic = state
 
     def spoilerCheckboxchange(self, state):
         self.spoiler_free = state
-        if self.selectedReplay:  # if something is selected in the tree to the left
-            if type(self.selectedReplay) == ReplayItem:  # and if it is a game
-                self.selectedReplay.generateInfoPlayersHtml()  # then we redo it
+        # if something is selected in the tree to the left
+        if self.selectedReplay:
+            # and if it is a game
+            if isinstance(self.selectedReplay, ReplayItem):
+                # then we redo it
+                self.selectedReplay.generateInfoPlayersHtml()
 
-    def resetRefreshPressed(self):  # reset search parameter and reload recent Replays List
-        self._w.searchInfoLabel.setText(self.searchInfo)
-        self.vault_connection.connect()
-        self.vault_connection.send(dict(command="list"))
-        self._w.minRating.setValue(0)
-        self._w.mapName.setText("")
-        self._w.playerName.setText("")
-        self._w.modList.setCurrentIndex(0)  # "All"
+    def showLatestCheckboxchange(self, state):
+        self.showLatest = state
+        if state:  # disable date edit fields if True
+            self._w.dateStart.setEnabled(False)
+            self._w.dateEnd.setEnabled(False)
+        else:  # enable date edit and set current date
+            self._w.dateStart.setEnabled(True)
+            self._w.dateEnd.setEnabled(True)
 
-    def finishRequest(self, reply):
-        if reply.error() != QNetworkReply.NoError:
-            QtWidgets.QMessageBox.warning(self._w, "Network Error", reply.errorString())
+            date = QtCore.QDate.currentDate()
+            self._w.dateStart.setDate(date)
+            self._w.dateEnd.setDate(date)
+
+    def hideUnrCheckboxchange(self, state):
+        self.hide_unranked = state
+
+    def resetRefreshPressed(self):
+        # reset search parameter and reload recent Replays List
+        if not self.searching:
+            self.searchVault(reset=True)
+
+    def onDownloadFinished(self, reply):
+        if reply.error() != QNetworkReply.NetworkError.NoError:
+            QtWidgets.QMessageBox.warning(
+                self._w, "Network Error", reply.errorString(),
+            )
         else:
-            faf_replay = QtCore.QFile(os.path.join(util.CACHE_DIR, "temp.fafreplay"))
-            faf_replay.open(QtCore.QIODevice.WriteOnly | QtCore.QIODevice.Truncate)
+            faf_replay = QtCore.QFile(
+                os.path.join(util.CACHE_DIR, "temp.fafreplay"),
+            )
+            faf_replay.open(
+                QtCore.QIODevice.OpenModeFlag.WriteOnly
+                | QtCore.QIODevice.OpenModeFlag.Truncate,
+            )
             faf_replay.write(reply.readAll())
             faf_replay.flush()
             faf_replay.close()
             replay(os.path.join(util.CACHE_DIR, "temp.fafreplay"))
 
-    def replayVault(self, message):
-        action = message["action"]
-        self._w.searchInfoLabel.clear()
-        if action == "list_recents":
-            self.onlineReplays = {}
-            replays = message["replays"]
-            for replay in replays:
-                uid = replay["id"]
+    def process_replays_data(self, message: dict) -> None:
+        self.stopSearchVault()
+        self._w.replayInfos.clear()
+        self.onlineReplays = {}
+        replays = message["data"]
+        for replay_item in replays:
+            uid = int(replay_item["id"])
+            if uid not in self.onlineReplays:
+                self.onlineReplays[uid] = ReplayItem(uid, self._w)
+            self.onlineReplays[uid].update(replay_item, self.client)
+        self.updateOnlineTree()
 
-                if uid not in self.onlineReplays:
-                    self.onlineReplays[uid] = ReplayItem(uid, self._w)
-                    self.onlineReplays[uid].update(replay, self.client)
-                else:
-                    self.onlineReplays[uid].update(replay, self.client)
-
-            self.updateOnlineTree()
-            self._w.replayInfos.clear()
-            self._w.RefreshResetButton.setText("Refresh Recent List")
-
-        elif action == "info_replay":
-            uid = message["uid"]
-            if uid in self.onlineReplays:
-                self.onlineReplays[uid].infoPlayers(message["players"])
-
-        elif action == "search_result":
-            self.searching = False
-            self.onlineReplays = {}
-            replays = message["replays"]
-            for replay in replays:
-                uid = replay["id"]
-
-                if uid not in self.onlineReplays:
-                    self.onlineReplays[uid] = ReplayItem(uid, self._w)
-                    self.onlineReplays[uid].update(replay, self.client)
-                else:
-                    self.onlineReplays[uid].update(replay, self.client)
-
-            self.updateOnlineTree()
-            self._w.replayInfos.clear()
-            self._w.RefreshResetButton.setText("Reset Search to Recent")
+        if len(message["data"]) == 0:
+            self._w.searchInfoLabel.setText(
+                "<font color='gold'><b>No replays found</b></font>",
+            )
+            self._w.advSearchInfoLabel.setText(
+                "<font color='gold'><b>No replays found</b></font>",
+            )
 
     def updateOnlineTree(self):
-        self.selectedReplay = None  # clear because won't be part of the new tree
+        self.selectedReplay = None  # clear, it won't be part of the new tree
         self._w.replayInfos.clear()
         self._w.onlineTree.clear()
         buckets = {}
@@ -802,13 +1036,18 @@ class ReplayVaultWidgetHandler(object):
             self._w.onlineTree.addTopLevelItem(bucket_item)
 
             bucket_item.setIcon(0, util.THEME.icon("replays/bucket.png"))
-            bucket_item.setText(0, "<font color='white'>" + bucket+"</font>")
-            bucket_item.setText(1, "<font color='white'>" + str(len(buckets[bucket])) + " replays</font>")
+            bucket_item.setText(
+                0, "<font color='white'>{}</font>".format(bucket),
+            )
+            bucket_len = len(buckets[bucket])
+            bucket_item.setText(
+                1, "<font color='white'>{} replays</font>".format(bucket_len),
+            )
 
-            for replay in buckets[bucket]:
-                bucket_item.addChild(replay)
-                replay.setFirstColumnSpanned(True)
-                replay.setIcon(0, replay.icon)
+            for replay_item in buckets[bucket]:
+                bucket_item.addChild(replay_item)
+                replay_item.setFirstColumnSpanned(True)
+                replay_item.setIcon(0, replay_item.icon)
 
             bucket_item.setExpanded(True)
 
@@ -819,15 +1058,27 @@ class ReplaysWidget(BaseClass, FormClass):
 
         self.setupUi(self)
 
-        self.liveManager = LiveReplaysWidgetHandler(self.liveTree, client, gameset)
+        self.liveManager = LiveReplaysWidgetHandler(
+            self.liveTree, client, gameset,
+        )
         self.localManager = LocalReplaysWidgetHandler(self.myTree)
-        self.vaultManager = ReplayVaultWidgetHandler(self, dispatcher, client, gameset, playerset)
+        self.vaultManager = ReplayVaultWidgetHandler(
+            self, dispatcher, client, gameset, playerset,
+        )
 
         logger.info("Replays Widget instantiated.")
 
-    def set_player(self, name):
+    def set_player(self, name, leaderboardName=None):
         self.setCurrentIndex(2)  # focus on Online Fault
-        self.vaultManager.searchVault(-1400, "", name, 0)
+        if leaderboardName is not None:
+            leaderboardId = self.leaderboardList.findText(leaderboardName)
+            self.vaultManager.searchVault(
+                0, "", name, leaderboardId, 0, 100, exactPlayerName=True,
+            )
+        else:
+            self.vaultManager.searchVault(
+                0, "", name, 0, 0, 100, exactPlayerName=True,
+            )
 
     def focusEvent(self, event):
         self.localManager.updatemyTree()

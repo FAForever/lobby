@@ -1,6 +1,280 @@
 0.x.x
 =====
 
+0.21.0
+=====
+### Make it operational again
+* Port the client to PyQt6 and python3.12
+
+  Qt stopped providing 32-bit packages several years ago,
+  therefore we have to move to 64-bit too.
+
+  The previous port added QtWebEngine with the hope to eliminate
+  it in the future, and the future has come. This port removes
+  QtWebEngine and allows real web browsers to do their job.
+  But unfortunately this change hasn't slimmed down the client,
+  as previous maintainers had hoped, because java-ice-adapter
+  has become about **11  times larger**, not to mention jre and Qt itself
+
+* Fixes:
+  - Fix constant reconnect while in game
+  - Fix parsing Game.prefs file
+  - Fix sim mod downloads for coop games
+  - Fix updater not being able to download game files (#1133)
+  - Fix notifications being shown over taskbar
+  - Fix replay decompression
+  - Fix ice adapter usage
+  - Fix movies and sounds unpacking
+  - Fix maximizing/resizing window
+  - Fix updating MapGenerator
+* Other:
+  - Connect to lobby and chat with websockets
+  - Move updater's work into its own thread and don't block UI
+  - Finally use the UpdaterProgressDialog and give the user more
+    information about what's going on
+  - Restore coop leaderboards
+  - Move from jsonschema to pydantic (also speeds up loading the replay tab)
+  - Log in with browser
+  - Add option to change application style
+  - Fetch coop missions from API and don't rely on lobby server
+  - Patch FA version by ourselves if the one in the downloaded file
+    is incorrect
+
+0.20.2
+=====
+* Fix updater
+
+0.20.1
+=====
+* Fixes
+   * Connect to chat faster
+   * Fix throwing an exception in chat when someone renames
+   * Fix map generator not being able to generate some maps
+   * Fix pre-release being recognised as stable release
+* Features
+   * Add ability to set generator map size in 1.25km increments
+   * Display technical names of matchmaker queues
+* Other
+   * Add support for game options in matchmaker queues
+   * Update ICE adapter to v3.1.2
+
+0.20.0
+=====
+ * Features:
+    * Add advanced login parameters (#1096)
+    * Add full game title to the game tooltip
+    * Add leaderboards from API
+    * Add map generator support
+    * Add option to force switching to vault fallback location
+    * Add teammatchmaking, basic party system
+    * Allow to foe moderators
+    * Disable ICE adapter info window by default
+    * Exclude observers from game player count
+    * Separate 'ignore' from 'add fore' option
+ * Technical
+    * Login with OAuth tokens
+    * Use new server protocol
+    * Replace hardcoded irclib with external library
+    * Migrate to GitHub Actions
+ * Fixes:
+    * Fix broken map downloader
+    * Fix diplaying news
+    * Fix download cancellation in vaults
+    * Fix icon sizes in vaults
+    * Fix window flags (#867)
+    * Remove some deprecations
+    * Support zstandard compression in replay files
+
+Contributors:
+ - Askaholic
+ - Strogo
+ - Gatsik
+
+0.19.0
+=====
+ * Fix broken compatibility with server
+ * Fix basic searching in vaults
+ * Implement somewhat of a cache system like in the Java client
+ * Online replay vault: fix downloading replays
+
+Contributors:
+ - Gatsik
+
+0.18.9
+=====
+ * Online vault: display player name as "No data" instead of throwing an error
+
+Contributors:
+ - Strogo
+
+0.18.8
+=====
+ * News tab: disable automatic urls
+ * News tab: add filtering
+
+Contributors:
+ - Strogo
+
+0.18.7
+=====
+ * Fix units database
+ * Add Spooky database as an alternative
+
+Contributors:
+ - Brutus5000
+ - Strogo
+ - Dragonite
+
+0.18.6
+=====
+ * Show "unofficial client" message via notifications and only once per day.
+ * Fetch featured mod info from API instead of lobby server
+
+Contributors:
+ - Askaholic
+ - Strogo
+
+0.18.5
+=====
+ * map vault fixes
+ * fix featured_mod_versions server problem
+
+Contributors:
+ - Strogo
+
+0.18.4
+=====
+ * Replay vault update for JSONAPI
+
+Contributors:
+ - Strogo
+ - muellni
+
+0.18.3
+=====
+ * ICE adapter debug window fixes
+
+Contributors:
+ - Geosearchef
+ - muellni
+
+0.18.2
+=====
+ * ICE adapter integration
+ * Don't disable autorelogin after sending credentials
+ * Fix 'connect'/'disconnect' naming
+
+Contributors:
+ - Wesmania
+ - muellni
+
+0.18.1
+=====
+ * Fix repeated opening of 'host game' widget filling mod selection with
+   duplicate entries
+ * Fix 'open config file' button opening the wrong directory on Windows
+ * Update ladder map pool forum link
+
+Contributors:
+ - Wesmania
+ - EvanGalea
+
+0.18.0
+=====
+ * Refactor updater code. Although tested to work, let's still pray that it
+   doesn't break everything!
+ * Pick the right SupCom directory even if the user picked some subdirectory of
+   it like 'bin'
+
+ Contributors:
+ - Wesmania
+
+0.18.0-rc.5
+=====
+ * Prevent being able to foe or igore aeolus mods
+ * Fix game names being accidentally HTML-escaped
+ * Fix communication with nickserv sometimes breaking
+
+ Contributors:
+ - Wesmania
+
+0.18.0-rc.4
+=====
+ * Fix wrong chat line colors in some rare cases
+ * Fix client crash at some points during live game when connection to
+   lobbyserver was lost
+
+ Contributors:
+ - Wesmania
+ - muellni
+
+0.18.0-rc.3
+=====
+ * Fix an uncaught exception when handling unknown IRC chatter mode
+ * Log fatal errors like segmentation faults to crash.log
+
+ Contributors:
+ - Wesmania
+
+0.18.0-rc.2
+=====
+ * Fix an issue with login dialog not starting
+ * Add a caveat about themes to the exception dialog
+
+ Contributors:
+ - Wesmania
+
+0.17.4
+=====
+ * Integrate client with new Rackover's database
+ * Implement autojoining language channels
+   - Currently supports #german, #french and #russian.
+   - At first run, checks system UI language on Windows and LANG on unix. If no
+     matching channel is found, uses user's geoIP.
+   - Language channels to join configurable through settings.
+ * Log qt messages to FAF client log, silence some noisier messages.
+ * Re-add chat disconnect notifications.
+ * Temporarily hide Tutorials and Tournaments tabs. We'll re-add them once
+   they're in working state.
+ * Add icons to chat tabs to indicate activity in the channel.
+ * Restore private chat channels after reconnecting to chat.
+ * Fix a bunch of chat and mod tool bugs.
+
+ Contributors:
+ - Wesmania
+ - Giebmasse
+
+0.17.3
+=====
+ * Fix all players being displayed as clannies if user is not in a clan (#1011)
+ * Fix player count in chat ignoring leaving players
+ * Restore copying text in chat area with Ctrl-C
+ * Restore joining game / replay when doubleclicking player status
+ * Fix several bugs in mod tools
+ * Add a "copy username" entry to chatter menu
+ * Allow to hide parts of chatter list interface:
+   - Options -> chat -> hide chatter controls the hiding of UI items.
+
+ Contributors:
+ - Wesmania
+
+0.17.2
+=====
+ * Rewrite chat from the ground up. No changes in functionality, but should fix
+   plenty of chat mubs and make it easier to add new features.
+ * Ctrl-C now quits the client when ran from console (#1001, #1008)
+ * Add config file location entry to client menu.
+
+ Contributors:
+ - Wesmania
+
+0.17.1
+=====
+ * Fix missing audio plugin causing sounds not to be played on Windows (#995)
+
+ Contributors:
+ - Wesmania
+
 0.17.0
 =====
  * Fix the error message "failed to get uid" which has bad spacing
@@ -9,6 +283,8 @@
  * Send logs from every game to a separate log file (#875, #975)
  * Refactor downloading previews to fix issues with broken previews (#852)
  * User's own messages can no longer ping him (#906)
+ * Update "run from source" instructions for Linux (#980)
+ * Standarize client data model classes (#981)
 
 Contributors:
  - MathieuB8

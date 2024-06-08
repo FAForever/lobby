@@ -1,101 +1,53 @@
-from PyQt5.QtCore import QObject, pyqtSignal
+from model.ircuser import IrcUser
+from model.modelitemset import ModelItemSet
+from model.transaction import transactional
 
 
-class IrcUserset(QObject):
-    userAdded = pyqtSignal(object)
-    userRemoved = pyqtSignal(object)
-
+class IrcUserset(ModelItemSet):
     def __init__(self, playerset):
-        QObject.__init__(self)
-        self._users = {}
+        ModelItemSet.__init__(self)
         self._playerset = playerset
-        playerset.playerAdded.connect(self._at_player_added)
-        playerset.playerRemoved.connect(self._at_player_removed)
+        playerset.before_added.connect(self._at_player_added)
+        playerset.before_removed.connect(self._at_player_removed)
 
-    def __getitem__(self, item):
-        return self._users[item]
+    @transactional
+    def set_item(self, key, value, _transaction=None):
+        if not isinstance(key, str) or not isinstance(value, IrcUser):
+            raise TypeError
+        ModelItemSet.set_item(self, key, value, _transaction)
+        if value.id_key in self._playerset:
+            value.player = self._playerset[value.id_key]
+        value.before_updated.connect(self._at_user_updated)
+        self.emit_added(value, _transaction)
 
-    def __len__(self):
-        return len(self._users)
-
-    def __iter__(self):
-        return iter(self._users)
-
-    # We need to define the below things - QObject
-    # doesn't allow for Mapping mixin
-    def keys(self):
-        return self._users.keys()
-
-    def values(self):
-        return self._users.values()
-
-    def items(self):
-        return self._users.items()
-
-    def get(self, item, default=None):
-        try:
-            return self[item]
-        except KeyError:
-            return default
-
-    def __contains__(self, item):
-        try:
-            self[item]
-            return True
-        except KeyError:
-            return False
-
-    def __setitem__(self, key, value):
-        if key in self:     # disallow overwriting existing chatters
-            raise ValueError
-
-        if key != value.name:
-            raise ValueError
-
-        self._users[key] = value
-
-        if value.name in self._playerset:
-            value.player = self._playerset[value.name]
-
-        # We're first to connect, so first to get called
-        value.updated.connect(self._at_user_updated)
-
-        self.userAdded.emit(value)
-
-    def __delitem__(self, item):
-        try:
-            user = self[item]
-        except KeyError:
+    @transactional
+    def del_item(self, key, _transaction=None):
+        user = ModelItemSet.del_item(self, key, _transaction)
+        if user is None:
             return
-        del self._users[user.name]
-        user.updated.disconnect(self._at_user_updated)
-        self.userRemoved.emit(user)
+        user.before_updated.disconnect(self._at_user_updated)
+        self.emit_removed(user, _transaction)
 
-    def clear(self):
-        oldusers = list(self.keys())
-        for user in oldusers:
-            del self[user]
-
-    def _at_player_added(self, player):
+    def _at_player_added(self, player, _transaction=None):
         if player.login in self:
-            self[player.login].player = player
+            self[player.login].set_player(player, _transaction)
 
-    def _at_player_removed(self, player):
+    def _at_player_removed(self, player, _transaction=None):
         if player.login in self:
-            self[player.login].player = None
+            self[player.login].set_player(None, _transaction)
 
-    def _at_user_updated(self, user, olduser):
+    def _at_user_updated(self, user, olduser, _transaction=None):
         if user.name != olduser.name:
-            self._handle_rename(user, olduser)
+            self._handle_rename(user, olduser, _transaction)
 
-    def _handle_rename(self, user, olduser):
+    def _handle_rename(self, user, olduser, _transaction=None):
         # We should never rename to an existing user, but let's handle it
         if user.name in self:
-            del self[user.name]
+            self.del_item(user.name, _transaction)
 
-        if olduser.name in self._users:
-            del self._users[olduser.name]
-        self._users[user.name] = user
+        if olduser.name in self._items:
+            del self._items[olduser.name]
+        self._items[user.name] = user
 
         newplayer = self._playerset.get(user.name)
-        user.player = newplayer
+        user.set_player(newplayer, _transaction)

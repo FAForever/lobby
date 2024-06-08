@@ -1,0 +1,14 @@
+<font color="{color}" size="+2"><b>{title} V{version}</b></font>
+<font color="silver" size="+0.5">
+{modtype}
+<p width="230">
+{description}
+</p>
+<table border=0 cellpadding="0" cellspacing="0" width="230">
+<tbody>
+<tr><td><b><i>Size:</i></b> {width} x {height} km</td></tr>
+<tr><td><b><i>Rating:</i></b> {rating} ({reviews})</td></tr>
+<tr><td><b><i>Uploaded:</i></b> {date}</td></tr>
+</tbody>
+</table>
+</font>

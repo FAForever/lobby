@@ -1,11 +1,9 @@
-import util
 import json
 import random
 from enum import Enum
 
-
-def _loadcolors(filename):
-    return json.loads(util.THEME.readfile(filename))
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import pyqtSignal
 
 
 class PlayerAffiliation(Enum):
@@ -13,44 +11,68 @@ class PlayerAffiliation(Enum):
     FRIEND = "friend"
     FOE = "foe"
     CLANNIE = "clan"
+    CHATTERBOX = "chatterbox"
     OTHER = "default"
 
 
-class PlayerColors:
-    # Color table used by the following method
-    # CAVEAT: will break if theme is loaded after client module is imported
-    colors = _loadcolors("client/colors.json")
-    operatorColors = _loadcolors("chat/formatters/operator_colors.json")
-    randomcolors = _loadcolors("client/randomcolors.json")
+class PlayerColors(QObject):
+    changed = pyqtSignal()
 
-    def __init__(self, user):
-        self._user = user
-        self.coloredNicknames = False
+    def __init__(self, me, user_relations, theme):
+        QObject.__init__(self)
+        self._me = me
+        self._user_relations = user_relations
+        self._theme = theme
+        self._colored_nicknames = False
+        self.colors = self._load_colors("client/colors.json")
+        self.random_colors = self._load_colors("client/randomcolors.json")
 
-    def getColor(self, name):
+    @property
+    def colored_nicknames(self):
+        return self._colored_nicknames
+
+    @colored_nicknames.setter
+    def colored_nicknames(self, value):
+        if self._colored_nicknames != value:
+            self._colored_nicknames = value
+            self.changed.emit()
+
+    def _load_colors(self, filename):
+        return json.loads(self._theme.readfile(filename))
+
+    def get_color(self, name):
         if name in self.colors:
             return self.colors[name]
         else:
             return self.colors["default"]
 
-    def getRandomColor(self, seed):
-        '''Generate a random color from a seed'''
-        random.seed(seed)
-        return random.choice(self.randomcolors)
+    def _seed(self, id_, name):
+        return id_ if id_ not in [-1, None] else name
 
-    def getAffiliation(self, id_=-1, name=None):
-        if self._user.player and self._user.player.id == id_:
+    def get_random_color(self, id_, name):
+        random.seed(self._seed(id_, name))
+        return random.choice(self.random_colors)
+
+    def get_random_color_index(self, id_, name):
+        random.seed(self._seed(id_, name))
+        return random.choice(range(len(self.random_colors)))
+
+    def _get_affiliation(self, id_=-1, name=None):
+        if self._me.player is not None and self._me.player.id == id_:
             return PlayerAffiliation.SELF
-        if self._user.isFriend(id_, name):
+        if self._user_relations.is_friend(id_, name):
             return PlayerAffiliation.FRIEND
-        if self._user.isFoe(id_, name):
+        if self._user_relations.is_foe(id_, name):
             return PlayerAffiliation.FOE
-        if self._user.isClannie(id_):
+        if self._me.is_clannie(id_):
             return PlayerAffiliation.CLANNIE
         return PlayerAffiliation.OTHER
 
-    def getUserColor(self, _id=-1, name=None):
-        affil = self.getAffiliation(_id, name)
+    def get_user_color(self, _id=-1, name=None):
+        if self._user_relations.is_chatterbox(_id, name):
+            return self.get_chatterbox_color(_id, name)
+
+        affil = self._get_affiliation(_id, name)
         names = {
             PlayerAffiliation.SELF: "self",
             PlayerAffiliation.FRIEND: "friend",
@@ -59,26 +81,33 @@ class PlayerColors:
         }
 
         if affil in names:
-            return self.getColor(names[affil])
-        if self.coloredNicknames:
-            return self.getRandomColor(_id if _id != -1 else name)
+            return self.get_color(names[affil])
+        if self.colored_nicknames:
+            return self.get_random_color(_id, name)
 
         if _id == -1:   # IRC user
-            return self.getColor("default")
-        return self.getColor("player")
+            return self.get_color("default")
+        return self.get_color("player")
 
-    def getModColor(self, elevation, _id=-1, name=None):
-        affil = self.getAffiliation(_id, name)
+    def get_mod_color(self, _id=-1, name=None):
+        affil = self._get_affiliation(_id, name)
         names = {
             PlayerAffiliation.SELF: "self_mod",
             PlayerAffiliation.FRIEND: "friend_mod",
+            PlayerAffiliation.FOE: "foe_mod",
             PlayerAffiliation.CLANNIE: "friend_mod",
         }
-
         if affil in names:
-            return self.getColor(names[affil])
+            return self.get_color(names[affil])
+        return self.get_color("mod")
 
-        if elevation in self.operatorColors:
-                return self.operatorColors[elevation]
-
-        return self.getColor("player")
+    def get_chatterbox_color(self, _id=-1, name=None):
+        affil = self._get_affiliation(_id, name)
+        names = {
+            PlayerAffiliation.FRIEND: "friend_chatterbox",
+            PlayerAffiliation.FOE: "foe_chatterbox",
+            PlayerAffiliation.CLANNIE: "clan_chatterbox",
+        }
+        if affil in names:
+            return self.get_color(names[affil])
+        return self.get_color("chatterbox")

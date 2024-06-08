@@ -1,54 +1,62 @@
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
+
+from model.modelitem import ModelItem
+from model.transaction import transactional
 
 
-class IrcUser(QObject):
-    updated = pyqtSignal(object, object)
+class IrcUser(ModelItem):
     newPlayer = pyqtSignal(object, object, object)
 
     def __init__(self, name, hostname):
-        QObject.__init__(self)
-
-        self.name = name
+        ModelItem.__init__(self)
 
         self.elevation = {}
-        self.hostname = hostname
+        self.add_field("name", name)
+        self.add_field("hostname", hostname)
 
         self._player = None
 
+    @property
+    def id_key(self):
+        return self.name
+
     def copy(self):
-        old = IrcUser(self.name, self.hostname)
+        old = IrcUser(**self.field_dict)
         for channel in self.elevation:
             old.set_elevation(channel, self.elevation[channel])
         return old
 
-    def update(self, name=None, hostname=None):
+    @transactional
+    def update(self, **kwargs):
+        _transaction = kwargs.pop("_transaction")
         olduser = self.copy()
+        ModelItem.update(self, **kwargs)
+        self.emit_update(olduser, _transaction)
 
-        if name is not None:
-            self.name = name
-        if hostname is not None:
-            self.hostname = hostname
-
-        self.updated.emit(self, olduser)
-
-    def set_elevation(self, channel, elevation):
+    @transactional
+    def set_elevation(self, channel, elevation, _transaction=None):
         olduser = self.copy()
         if elevation is None:
             if channel in self.elevation:
                 del self.elevation[channel]
         else:
             self.elevation[channel] = elevation
-        self.updated.emit(self, olduser)
+        self.emit_update(olduser, _transaction)
 
     @property
     def player(self):
         return self._player
 
-    @player.setter
-    def player(self, val):
+    @transactional
+    def set_player(self, val, _transaction=None):
         oldplayer = self._player
         self._player = val
-        self.newPlayer.emit(self, val, oldplayer)
+        _transaction.emit(self.newPlayer, self, val, oldplayer)
+
+    @player.setter
+    def player(self, val):
+        # CAVEAT: this will emit signals immediately!
+        self.set_player(val)
 
     def is_mod(self, channel):
         if channel not in self.elevation:

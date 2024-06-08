@@ -31,9 +31,6 @@
   <property name="toolButtonStyle">
    <enum>Qt::ToolButtonIconOnly</enum>
   </property>
-  <property name="dockOptions">
-   <set>QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
-  </property>
   <property name="unifiedTitleAndToolBarOnMac">
    <bool>false</bool>
   </property>
@@ -88,7 +85,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>7</number>
       </property>
       <property name="iconSize">
        <size>
@@ -226,32 +223,16 @@
        </layout>
       </widget>
       <widget class="QWidget" name="unitdbTab">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <attribute name="title">
         <string>Units Database</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_10">
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
-        <item row="0" column="0">
-         <widget class="QWebEngineView" name="unitdbWebView">
-          <property name="url">
-           <url>
-            <string>about:blank</string>
-           </url>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       <layout class="QVBoxLayout" name="verticalLayout_2"/>
       </widget>
       <widget class="QWidget" name="replaysTab">
        <attribute name="title">
@@ -338,6 +319,28 @@
       </widget>
      </widget>
     </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="labelAutomatchInfo">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -346,7 +349,7 @@
      <x>0</x>
      <y>0</y>
      <width>817</width>
-     <height>19</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuOptions">
@@ -360,12 +363,14 @@
      <addaction name="actionSetAutoLogin"/>
      <addaction name="actionSetAutoDownloadMods"/>
      <addaction name="actionSetAutoDownloadMaps"/>
+     <addaction name="actionSetAutoGenerateMaps"/>
      <addaction name="separator"/>
      <addaction name="actionLink_account_to_Steam"/>
      <addaction name="separator"/>
      <addaction name="actionSetGamePath"/>
-     <addaction name="actionSetGamePort"/>
      <addaction name="actionSaveGamelogs"/>
+     <addaction name="separator"/>
+     <addaction name="actionVaultFallback"/>
     </widget>
     <widget class="QMenu" name="menuTheme">
      <property name="tearOffEnabled">
@@ -383,11 +388,23 @@
      <addaction name="actionClearSettings"/>
      <addaction name="separator"/>
      <addaction name="actionClearGameFiles"/>
+     <addaction name="actionClearMapGenerators"/>
     </widget>
     <widget class="QMenu" name="menuChat">
      <property name="title">
       <string>&amp;Chat...</string>
      </property>
+     <widget class="QMenu" name="menuHide_chatter">
+      <property name="title">
+       <string>&amp;Hide chatter...</string>
+      </property>
+      <addaction name="actionHideChatterRank"/>
+      <addaction name="actionHideChatterAvatar"/>
+      <addaction name="actionHideChatterCountry"/>
+      <addaction name="actionHideChatterNick"/>
+      <addaction name="actionHideChatterStatus"/>
+      <addaction name="actionHideChatterMap"/>
+     </widget>
      <addaction name="actionColoredNicknames"/>
      <addaction name="actionFriendsOnTop"/>
      <addaction name="actionSetNewbiesChannel"/>
@@ -396,8 +413,9 @@
      <addaction name="actionSetOpenGames"/>
      <addaction name="actionSetLiveReplays"/>
      <addaction name="actionSetSoundEffects"/>
-     <addaction name="actionSetChatMaps"/>
-     <addaction name="separator"/>
+     <addaction name="actionIgnoreFoes"/>
+     <addaction name="actionLanguageChannels"/>
+     <addaction name="menuHide_chatter"/>
     </widget>
     <widget class="QMenu" name="menuNotifications">
      <property name="title">
@@ -415,6 +433,7 @@
      <addaction name="actionShowReplaysDir"/>
      <addaction name="actionShowThemesDir"/>
      <addaction name="actionShowGamePrefs"/>
+     <addaction name="actionShowClientConfigFile"/>
     </widget>
     <widget class="QMenu" name="menuUpdates">
      <property name="title">
@@ -423,11 +442,32 @@
      <addaction name="actionCheck_for_Updates"/>
      <addaction name="actionUpdate_Settings"/>
     </widget>
+    <widget class="QMenu" name="menuKeep_game_files_in_cache">
+     <property name="title">
+      <string>Keep game files in cache...</string>
+     </property>
+     <addaction name="actionDoNotKeep"/>
+     <addaction name="actionForever"/>
+     <addaction name="separator"/>
+     <addaction name="actionSetYourOwnTimeInterval"/>
+     <addaction name="separator"/>
+     <addaction name="actionKeepCacheWhileInSession"/>
+    </widget>
+    <widget class="QMenu" name="menuICE_Adapter">
+     <property name="title">
+      <string>ICE Adapter...</string>
+     </property>
+     <addaction name="actionEnableIceAdapterInfoWindow"/>
+     <addaction name="actionSetIceAdapterWindowLaunchDelay"/>
+    </widget>
     <addaction name="menuSettings"/>
     <addaction name="menuChat"/>
     <addaction name="menuTheme"/>
     <addaction name="menuNotifications"/>
     <addaction name="menuUpdates"/>
+    <addaction name="menuICE_Adapter"/>
+    <addaction name="separator"/>
+    <addaction name="menuKeep_game_files_in_cache"/>
     <addaction name="separator"/>
     <addaction name="menuLocalPath"/>
     <addaction name="menuClear"/>
@@ -457,7 +497,7 @@
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
-     <string>Tools</string>
+     <string>&amp;Tools</string>
     </property>
     <addaction name="actionCheckPlayerAliases"/>
    </widget>
@@ -573,11 +613,6 @@
     <string>&amp;Game Path...</string>
    </property>
   </action>
-  <action name="actionSetGamePort">
-   <property name="text">
-    <string>Game &amp;Port...</string>
-   </property>
-  </action>
   <action name="actionSetSoundEffects">
    <property name="checkable">
     <bool>true</bool>
@@ -624,14 +659,6 @@
    </property>
    <property name="text">
     <string>&amp;Joins / Parts</string>
-   </property>
-  </action>
-  <action name="actionSetChatMaps">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Map icons in chat</string>
    </property>
   </action>
   <action name="actionSetOpenGames">
@@ -768,17 +795,181 @@
   </action>
   <action name="actionCheckPlayerAliases">
    <property name="text">
-    <string>Check player aliases</string>
+    <string>&amp;Check player aliases</string>
+   </property>
+  </action>
+  <action name="actionIgnoreFoes">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Ignore foes</string>
+   </property>
+  </action>
+  <action name="actionShowClientConfigFile">
+   <property name="text">
+    <string>Show &amp;client config file</string>
+   </property>
+  </action>
+  <action name="actionHideChatterNick">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Nick</string>
+   </property>
+  </action>
+  <action name="actionHideChatterMap">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Map</string>
+   </property>
+  </action>
+  <action name="actionHideChatterRank">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Rank</string>
+   </property>
+  </action>
+  <action name="actionHideChatterAvatar">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Avatar</string>
+   </property>
+  </action>
+  <action name="actionHideChatterCountry">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Country</string>
+   </property>
+  </action>
+  <action name="actionHideChatterStatus">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Status</string>
+   </property>
+  </action>
+  <action name="actionLanguageChannels">
+   <property name="text">
+    <string>Language channels</string>
+   </property>
+  </action>
+  <action name="actionDoNotKeep">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Do not keep</string>
+   </property>
+  </action>
+  <action name="action15Days">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>15 days</string>
+   </property>
+  </action>
+  <action name="action30Days">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>30 days</string>
+   </property>
+  </action>
+  <action name="action60Days">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>60 days</string>
+   </property>
+  </action>
+  <action name="actionForever">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Forever</string>
+   </property>
+  </action>
+  <action name="actionSetYourOwnTimeInterval">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Set your own time interval</string>
+   </property>
+  </action>
+  <action name="actionKeepCacheWhileInSession">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Keep cache while in session</string>
+   </property>
+  </action>
+  <action name="actionSetAutoGenerateMaps">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Automatic Generating of Maps</string>
+   </property>
+  </action>
+  <action name="actionClearMapGenerators">
+   <property name="text">
+    <string>Map Generators</string>
+   </property>
+  </action>
+  <action name="actionVaultFallback">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Vault fallback location</string>
+   </property>
+   <property name="toolTip">
+    <string>Sets &quot;ProgramData/FAForever/user&quot; instead of &quot;User/Documents&quot; folder as personal directory</string>
+   </property>
+  </action>
+  <action name="actionEnableIceAdapterInfoWindow">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Enable info window</string>
+   </property>
+  </action>
+  <action name="actionSetIceAdapterWindowLaunchDelay">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Set window launch delay...</string>
    </property>
   </action>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QWebEngineView</class>
-   <extends>QWidget</extends>
-   <header location="global">QtWebEngineWidgets/QWebEngineView</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

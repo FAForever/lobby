@@ -1,24 +1,24 @@
-import pytest
 import copy
+
+import pytest
 
 from model import game
 
 DEFAULT_DICT = {
-    "uid":  1,
+    "uid": 1,
     "state": game.GameState.OPEN,
     "launched_at": 10000,
     "num_players": 3,
     "max_players": 8,
     "title": "Sentons sucks",
-    "host":  "IllIIIlIlIIIlI",
+    "host": "IllIIIlIlIIIlI",
     "mapname": "Sentons Ultimate 6v6",
     "map_file_path": "xrca_co_000001.scfamap",
     "teams": {
         1: ["IllIIIlIlIIIlI", "TableNoob"],
-        2: ["Kraut"]
-        },
+        2: ["Kraut"],
+    },
     "featured_mod": "faf",
-    "featured_mod_versions": {},
     "sim_mods": {},
     "password_protected": False,
     "visibility": game.GameVisibility.PUBLIC,
@@ -45,8 +45,8 @@ def test_update_signal(playerset, mocker):
         assert old.host == "IllIIIlIlIIIlI"
         assert new.host == "OtherName"
 
-    g.gameUpdated.connect(updated)
-    g.gameUpdated.connect(check_signal)
+    g.updated.connect(updated)
+    g.updated.connect(check_signal)
     data["host"] = "OtherName"
     g.update(**data)
     assert updated.called

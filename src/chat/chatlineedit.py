@@ -4,15 +4,17 @@ Created on Dec 8, 2011
 
 @author: thygrrr
 """
-from PyQt5 import QtCore, QtWidgets
+from PyQt6 import QtCore
+from PyQt6 import QtWidgets
 
 
 class ChatLineEdit(QtWidgets.QLineEdit):
     """
-    A special promoted QLineEdit that is used in channel.ui to provide a mirc-style editing experience
-    with completion and history.
+    A special promoted QLineEdit that is used in channel.ui to provide a
+    mirc-style editing experience with completion and history.
     LATER: History and tab completion support
     """
+
     def __init__(self, parent):
         QtWidgets.QLineEdit.__init__(self, parent)
         self.returnPressed.connect(self.on_line_entered)
@@ -20,27 +22,28 @@ class ChatLineEdit(QtWidgets.QLineEdit):
         self.currentHistoryIndex = None
         self.historyShown = False
         self.completionStarted = False
-        self.chatters = {}
+        self.channel = None
         self.LocalChatterNameList = []
         self.currenLocalChatter = None
 
-    def set_chatters(self, chatters):
-        self.chatters = chatters
+    def set_channel(self, channel):
+        self.channel = channel
 
     def event(self, event):
-        if event.type() == QtCore.QEvent.KeyPress:
-            # Swallow a selection of keypresses that we want for our history support.
-            if event.key() == QtCore.Qt.Key_Tab:
+        if event.type() == QtCore.QEvent.Type.KeyPress:
+            # Swallow a selection of keypresses that we want for our history
+            # support.
+            if event.key() == QtCore.Qt.Key.Key_Tab:
                 self.try_completion()
                 return True
-            elif event.key() == QtCore.Qt.Key_Space:
+            elif event.key() == QtCore.Qt.Key.Key_Space:
                 self.accept_completion()
                 return QtWidgets.QLineEdit.event(self, event)
-            elif event.key() == QtCore.Qt.Key_Up:
+            elif event.key() == QtCore.Qt.Key.Key_Up:
                 self.cancel_completion()
                 self.prev_history()
                 return True
-            elif event.key() == QtCore.Qt.Key_Down:
+            elif event.key() == QtCore.Qt.Key.Key_Down:
                 self.cancel_completion()
                 self.next_history()
                 return True
@@ -57,7 +60,7 @@ class ChatLineEdit(QtWidgets.QLineEdit):
         self.currentHistoryIndex = len(self.history) - 1
 
     def showEvent(self, event):
-        self.setFocus(True)
+        self.setFocus()
         return QtWidgets.QLineEdit.showEvent(self, event)
 
     def try_completion(self):
@@ -67,28 +70,38 @@ class ChatLineEdit(QtWidgets.QLineEdit):
                 return
             # no completion if last character is a space
             if self.text().rfind(" ") == (len(self.text()) - 1):
-                return            
+                return
 
-            self.completionStarted = True   
+            self.completionStarted = True
             self.LocalChatterNameList = []
-            self.completionText = self.text().split()[-1]                  # take last word from line
-            self.completionLine = self.text().rstrip(self.completionText)  # store line to be completed without the completion string
-            
-            # make a copy of users because the list might change frequently giving all kind of problems
-            for chatter in self.chatters:
-                if chatter.name.lower().startswith(self.completionText.lower()):
-                    self.LocalChatterNameList.append(chatter.name)
-            
+            # take last word from line
+            self.completionText = self.text().split()[-1]
+            # store line to be completed without the completion string
+            self.completionLine = self.text().rstrip(self.completionText)
+
+            # make a copy of users because the list might change frequently
+            # giving all kind of problems
+            if self.channel is not None:
+                for cc in self.channel.chatters.values():
+                    name = cc.chatter.name
+                    if name.lower().startswith(self.completionText.lower()):
+                        self.LocalChatterNameList.append(name)
+
             if len(self.LocalChatterNameList) > 0:
-                self.LocalChatterNameList.sort(key=lambda chatter: chatter.lower())
+                self.LocalChatterNameList.sort(
+                    key=lambda chatter: chatter.lower(),
+                )
                 self.currenLocalChatter = 0
-                self.setText(self.completionLine + self.LocalChatterNameList[self.currenLocalChatter])
+                localName = self.LocalChatterNameList[self.currenLocalChatter]
+                self.setText(self.completionLine + localName)
             else:
                 self.currenLocalChatter = None
         else:
             if self.currenLocalChatter is not None:
-                self.currenLocalChatter = (self.currenLocalChatter + 1) % len(self.LocalChatterNameList)
-                self.setText(self.completionLine + self.LocalChatterNameList[self.currenLocalChatter])
+                self.currenLocalChatter += 1
+                self.currenLocalChatter %= len(self.LocalChatterNameList)
+                localName = self.LocalChatterNameList[self.currenLocalChatter]
+                self.setText(self.completionLine + localName)
 
     def accept_completion(self):
         self.completionStarted = False
@@ -98,14 +111,21 @@ class ChatLineEdit(QtWidgets.QLineEdit):
 
     def prev_history(self):
         if self.currentHistoryIndex is not None:  # no history nothing to do
-            if self.currentHistoryIndex > 0 and self.historyShown:  # check for boundaries and only change index is hostory is alrady shown
+            # check for boundaries and only change index is history is already
+            # shown
+            if self.currentHistoryIndex > 0 and self.historyShown:
                 self.currentHistoryIndex -= 1
             self.historyShown = True
             self.setText(self.history[self.currentHistoryIndex])
-    
+
     def next_history(self):
         if self.currentHistoryIndex is not None:
-            if self.currentHistoryIndex < len(self.history)-1 and self.historyShown:  # check for boundaries and only change index is hostory is alrady shown
+            # check for boundaries and only change index is history is already
+            # shown
+            if (
+                self.currentHistoryIndex < len(self.history) - 1
+                and self.historyShown
+            ):
                 self.currentHistoryIndex += 1
             self.historyShown = True
-            self.setText(self.history[self.currentHistoryIndex])          
+            self.setText(self.history[self.currentHistoryIndex])

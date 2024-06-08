@@ -1,13 +1,8 @@
-from PyQt5 import QtCore
-import util
-import config
-from config import Settings
-from notifications.ns_hook import NsHook
-import notifications as ns
-
 """
 Settings for notifications: If a game is full
 """
+import notifications as ns
+from notifications.ns_hook import NsHook
 
 
 class NsHookGameFull(NsHook):

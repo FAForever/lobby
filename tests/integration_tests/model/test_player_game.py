@@ -1,26 +1,25 @@
 import copy
 
 from model.game import Game, GameState, GameVisibility
-from model.gameset import Gameset
-from model.playerset import Playerset
+from model.gameset import Gameset, PlayerGameIndex
 from model.player import Player
+from model.playerset import Playerset
 
 GAME_DICT = {
-    "uid":  1,
+    "uid": 1,
     "state": GameState.OPEN,
     "launched_at": 10000,
     "num_players": 3,
     "max_players": 8,
     "title": "Sentons sucks",
-    "host":  "Guy",
+    "host": "Guy",
     "mapname": "Sentons Ultimate 6v6",
     "map_file_path": "xrca_co_000001.scfamap",
     "teams": {
         1: ["Guy", "TableNoob"],
-        2: ["Kraut"]
-        },
+        2: ["Kraut"],
+    },
     "featured_mod": "faf",
-    "featured_mod_versions": {},
     "sim_mods": {},
     "password_protected": False,
     "visibility": GameVisibility.PUBLIC,
@@ -35,7 +34,7 @@ def check_relation(game, player, exists):
 def setup():
     ps = Playerset()
     gs = Gameset(ps)
-
+    pgr = PlayerGameIndex(gs, ps)
     p = Player(**{"id_": 1, "login": "Guy"})
     ps[p.id] = p
     p = Player(**{"id_": 2, "login": "TableNoob"})
@@ -45,11 +44,11 @@ def setup():
 
     g = Game(playerset=ps, **GAME_DICT)
     gs[g.uid] = g
-    return ps, gs
+    return ps, gs, pgr
 
 
 def test_setup():
-    ps, gs = setup()
+    ps, gs, pgr = setup()
     for i in range(1, 3):
         assert ps[i].currentGame is gs[1]
 
@@ -67,6 +66,7 @@ def test_setup():
 def test_player_at_game_change(mocker):
     ps = Playerset()
     gs = Gameset(ps)
+    pgr = PlayerGameIndex(gs, ps)  # noqa: F841
 
     p = Player(**{"id_": 1, "login": "Guy"})
     ps[p.id] = p
@@ -96,7 +96,7 @@ def test_player_at_game_change(mocker):
 
 
 def test_player_at_another_game(mocker):
-    ps, gs = setup()
+    ps, gs, pgr = setup()
 
     data = copy.deepcopy(GAME_DICT)
 
@@ -126,6 +126,7 @@ def test_player_at_another_game(mocker):
 def test_game_at_missing_player(mocker):
     ps = Playerset()
     gs = Gameset(ps)
+    pgr = PlayerGameIndex(gs, ps)  # noqa: F841
 
     p = Player(**{"id_": 1, "login": "Guy"})
     ps[p.id] = p
@@ -134,8 +135,6 @@ def test_game_at_missing_player(mocker):
 
     data = copy.deepcopy(GAME_DICT)
     g1 = Game(playerset=ps, **data)
-    pAdd = mocker.Mock()
-    g1.connectedPlayerAdded.connect(pAdd)
 
     gs[1] = g1
     assert len(g1.players) == 3
@@ -144,10 +143,8 @@ def test_game_at_missing_player(mocker):
     assert ps[1] in gps
     assert ps[2] in gps
 
-    assert not pAdd.called
     p = Player(**{"id_": 3, "login": "Kraut"})
     ps[p.id] = p
-    pAdd.assert_called_with(g1, ps[3])
 
     gps = [g1.to_player(n) for n in g1.players if g1.is_connected(n)]
     assert len(gps) == 3
@@ -157,29 +154,16 @@ def test_game_at_missing_player(mocker):
 
 
 def test_remove_add_player(mocker):
-    ps, gs = setup()
-
-    pAdd = mocker.Mock()
-    gs[1].connectedPlayerAdded.connect(pAdd)
-    pRem = mocker.Mock()
-    gs[1].connectedPlayerRemoved.connect(pRem)
-
+    ps, gs, pgr = setup()
     p3 = ps[3]
     del ps[3]
-    pRem.assert_called_with(gs[1], p3)
-    assert not pAdd.called
     assert not gs[1].is_connected(p3.login)
-
-    pRem.reset_mock()
-
     ps[3] = p3
-    pAdd.assert_called_with(gs[1], p3)
-    assert not pRem.called
     assert gs[1].is_connected(p3.login)
 
 
 def test_game_at_another_game(mocker):
-    ps, gs = setup()
+    ps, gs, pgr = setup()
 
     data = copy.deepcopy(GAME_DICT)
 
@@ -201,8 +185,20 @@ def test_game_at_another_game(mocker):
     check_relation(gs[1], ps[1], False)
 
 
+def test_no_player_change_does_not_resend_game_set_signals(mocker):
+    ps, gs, pgr = setup()
+
+    gUpd = mocker.Mock()
+    ps[1].newCurrentGame.connect(gUpd)
+
+    data = copy.deepcopy(GAME_DICT)
+    data["state"] = GameState.PLAYING
+    gs[1].update(**data)
+    assert not gUpd.called
+
+
 def test_game_abort_removes_relation(mocker):
-    ps, gs = setup()
+    ps, gs, pgr = setup()
     gUpd = mocker.Mock()
     ps[1].newCurrentGame.connect(gUpd)
 
@@ -215,7 +211,7 @@ def test_game_abort_removes_relation(mocker):
 
 
 def test_game_closed_removes_relation(mocker):
-    ps, gs = setup()
+    ps, gs, pgr = setup()
     gUpd = mocker.Mock()
     ps[1].newCurrentGame.connect(gUpd)
 
@@ -232,7 +228,7 @@ def test_game_closed_removes_relation(mocker):
 
 
 def test_game_closed_removes_only_own(mocker):
-    ps, gs = setup()
+    ps, gs, pgr = setup()
 
     data = copy.deepcopy(GAME_DICT)
     data["uid"] = 2
@@ -250,7 +246,7 @@ def test_game_closed_removes_only_own(mocker):
 
 
 def override_tests(g1_dict, g2_dict, should):
-    ps, gs = setup()
+    ps, gs, pgr = setup()
 
     data = copy.deepcopy(GAME_DICT)
     data.update(g1_dict)
@@ -279,32 +275,48 @@ def test_game_doesnt_override_lobby():
 
 
 def test_later_game_overrides_earlier_game():
-    g1 = {"state": GameState.PLAYING,
-          "launched_at": 1000}
-    g2 = {"state": GameState.PLAYING,
-          "launched_at": 1200}
+    g1 = {
+        "state": GameState.PLAYING,
+        "launched_at": 1000,
+    }
+    g2 = {
+        "state": GameState.PLAYING,
+        "launched_at": 1200,
+    }
     override_tests(g1, g2, True)
 
 
 def test_earlier_game_doesnt_override_later_game():
-    g1 = {"state": GameState.PLAYING,
-          "launched_at": 1200}
-    g2 = {"state": GameState.PLAYING,
-          "launched_at": 1000}
+    g1 = {
+        "state": GameState.PLAYING,
+        "launched_at": 1200,
+    }
+    g2 = {
+        "state": GameState.PLAYING,
+        "launched_at": 1000,
+    }
     override_tests(g1, g2, False)
 
 
 def test_launchtime_overrides_no_launchtime():
-    g1 = {"state": GameState.PLAYING,
-          "launched_at": None}
-    g2 = {"state": GameState.PLAYING,
-          "launched_at": 1000}
+    g1 = {
+        "state": GameState.PLAYING,
+        "launched_at": None,
+    }
+    g2 = {
+        "state": GameState.PLAYING,
+        "launched_at": 1000,
+    }
     override_tests(g1, g2, True)
 
 
 def test_no_launchtime_doesnt_override_launchtime():
-    g1 = {"state": GameState.PLAYING,
-          "launched_at": 1000}
-    g2 = {"state": GameState.PLAYING,
-          "launched_at": None}
+    g1 = {
+        "state": GameState.PLAYING,
+        "launched_at": 1000,
+    }
+    g2 = {
+        "state": GameState.PLAYING,
+        "launched_at": None,
+    }
     override_tests(g1, g2, False)

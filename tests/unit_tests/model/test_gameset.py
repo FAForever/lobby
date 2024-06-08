@@ -1,24 +1,24 @@
-import pytest
 import copy
 
-from model import gameset, game
+import pytest
+
+from model import game, gameset
 
 DEFAULT_DICT = {
-    "uid":  1,
+    "uid": 1,
     "state": game.GameState.OPEN,
     "launched_at": 10000,
     "num_players": 3,
     "max_players": 8,
     "title": "Sentons sucks",
-    "host":  "IllIIIlIlIIIlI",
+    "host": "IllIIIlIlIIIlI",
     "mapname": "Sentons Ultimate 6v6",
     "map_file_path": "xrca_co_000001.scfamap",
     "teams": {
         1: ["IllIIIlIlIIIlI", "TableNoob"],
-        2: ["Kraut"]
-        },
+        2: ["Kraut"],
+    },
     "featured_mod": "faf",
-    "featured_mod_versions": {},
     "sim_mods": {},
     "password_protected": False,
     "visibility": game.GameVisibility.PUBLIC,
@@ -34,7 +34,7 @@ def test_add_update(mocker, playerset):
     data = copy.deepcopy(DEFAULT_DICT)
     s = gameset.Gameset(playerset=playerset)
     newgame = mocker.Mock()
-    s.newGame.connect(newgame)
+    s.added.connect(newgame)
 
     s[1] = game.Game(playerset=playerset, **data)
     assert 1 in s

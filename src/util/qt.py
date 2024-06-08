@@ -1,27 +1,33 @@
-from PyQt5.QtWebEngineWidgets import QWebEnginePage
-from PyQt5.QtGui import QDesktopServices
+import types
+from contextlib import contextmanager
+from typing import Generator
+
+from PyQt6.QtCore import QFile
+from PyQt6.QtGui import QPainter
 
 
-class ExternalLinkPage(QWebEnginePage):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+def monkeypatch_method(obj, name, fn):
+    old_fn = getattr(obj, name)
 
-    def acceptNavigationRequest(self, url, navtype, isMainFrame):
-        if navtype == QWebEnginePage.NavigationTypeLinkClicked:
-            QDesktopServices.openUrl(url)
-            return False
-        return True
+    def wrapper(self, *args, **kwargs):
+        return fn(self, old_fn, *args, **kwargs)
+    setattr(obj, name, types.MethodType(wrapper, obj))
 
 
-def injectWebviewCSS(page, css):
-    # Hacky way to inject CSS into QWebEnginePage, since QtWebengine doesn't
-    # have a way to inject user CSS yet
-    # We should eventually remove all QtWebEngine uses anyway
-    js = """
-        var css = document.createElement("style");
-        css.type = "text/css";
-        css.innerHTML = `{}`;
-        document.head.appendChild(css);
-        """
-    js = js.format(css)
-    page.runJavaScript(js)
+@contextmanager
+def qopen(path: str, flags: QFile.OpenModeFlag) -> Generator[QFile, None, None]:
+    try:
+        file = QFile(path)
+        file.open(flags)
+        yield file
+    finally:
+        file.close()
+
+
+@contextmanager
+def qpainter(painter: QPainter) -> Generator[QPainter, None, None]:
+    try:
+        painter.save()
+        yield painter
+    finally:
+        painter.restore()

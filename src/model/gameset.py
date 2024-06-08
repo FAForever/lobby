@@ -1,11 +1,13 @@
-from PyQt5.QtCore import QObject, pyqtSignal
-from decorators import with_logger
+from PyQt6.QtCore import pyqtSignal
 
+from decorators import with_logger
 from model import game
+from model.modelitemset import ModelItemSet
+from model.transaction import transactional
 
 
 @with_logger
-class Gameset(QObject):
+class Gameset(ModelItemSet):
     """
     Keeps track of currently active games. Removes games that closed. Reports
     creation and state change of games. Gives access to active games.
@@ -14,147 +16,137 @@ class Gameset(QObject):
     send a game state for a uid, send a state that closes it, then send a state
     with the same uid again, and it will be reported as a new game.
     """
-    newGame = pyqtSignal(object)
-
     newLobby = pyqtSignal(object)
     newLiveGame = pyqtSignal(object)
     newClosedGame = pyqtSignal(object)
     newLiveReplay = pyqtSignal(object)
 
     def __init__(self, playerset):
-        QObject.__init__(self)
-        self.games = {}
+        ModelItemSet.__init__(self)
         self._playerset = playerset
-        self._idx = PlayerGameIndex(playerset)
 
-    def __getitem__(self, uid):
-        return self.games[uid]
-
-    def __contains__(self, uid):
-        return uid in self.games
-
-    def __iter__(self):
-        return iter(self.games)
-
-    def keys(self):
-        return self.games.keys()
-
-    def values(self):
-        return self.games.values()
-
-    def items(self):
-        return self.games.items()
-
-    def get(self, item, default=None):
-        try:
-            return self[item]
-        except KeyError:
-            return default
-
-    def __setitem__(self, key, value):
+    @transactional
+    def set_item(self, key, value, _transaction=None):
         if not isinstance(key, int) or not isinstance(value, game.Game):
             raise TypeError
-
-        if key in self or value.closed():
+        if value.closed():
             raise ValueError
 
-        if key != value.uid:
-            raise ValueError
+        ModelItemSet.set_item(self, key, value, _transaction)
+        value.before_updated.connect(self._at_game_update)
+        value.before_replay_available.connect(self._at_live_replay)
+        self._at_game_update(value, None, _transaction)
+        self._logger.debug("Added game, uid {}".format(value.id_key))
+        self.emit_added(value, _transaction)
 
-        self.games[key] = value
-        # We should be the first ones to connect to the signal
-        value.gameUpdated.connect(self._at_game_update)
-        value.liveReplayAvailable.connect(self._at_live_replay)
-        self._at_game_update(value, None)
-        self.newGame.emit(value)
-        self._logger.debug("Added game, uid {}".format(value.uid))
+    @transactional
+    def del_item(self, key, _transaction=None):
+        g = ModelItemSet.del_item(self, key, _transaction)
+        if g is None:
+            return
 
-    def clear(self):
+        g.before_updated.disconnect(self._at_game_update)
+        g.before_replay_available.disconnect(self._at_live_replay)
+        self._logger.debug("Removed game, uid {}".format(g.id_key))
+        self.emit_removed(g, _transaction)
+
+    @transactional
+    def clear(self, _transaction=None):
         # Abort_game removes g from dict, so 'for g in values()' complains
-        for g in list(self.games.values()):
-            g.abort_game()
+        for g in list(self._items.values()):
+            g.abort_game(_transaction)
 
-    def _at_game_update(self, new, old):
+    def _at_game_update(self, new, old, _transaction=None):
         if new.closed():
-            self._remove_game(new)
-        self._idx.at_game_update(new, old)
+            self.del_item(new.id_key, _transaction)
         if old is None or new.state != old.state:
-            self._new_state(new)
+            self._new_state(new, _transaction)
 
-    def _new_state(self, g):
-        self._logger.debug("New game state {}, uid {}".format(g.state, g.uid))
+    def _new_state(self, g, _transaction=None):
+        self._logger.debug(
+            "New game state {}, uid {}".format(g.state, g.id_key),
+        )
         if g.state == game.GameState.OPEN:
-            self.newLobby.emit(g)
+            _transaction.emit(self.newLobby, g)
         elif g.state == game.GameState.PLAYING:
-            self.newLiveGame.emit(g)
+            _transaction.emit(self.newLiveGame, g)
         elif g.state == game.GameState.CLOSED:
-            self.newClosedGame.emit(g)
+            _transaction.emit(self.newClosedGame, g)
 
-    def _at_live_replay(self, game):
-        self.newLiveReplay.emit(game)
-
-    def _remove_game(self, g):
-        try:
-            g = self.games[g.uid]
-            g.gameUpdated.disconnect(self._at_game_update)
-            g.liveReplayAvailable.disconnect(self._at_live_replay)
-            del self.games[g.uid]
-            self._logger.debug("Removed game, uid {}".format(g.uid))
-        except KeyError:
-            pass
+    def _at_live_replay(self, game, _transaction=None):
+        _transaction.emit(self.newLiveReplay, game)
 
 
 class PlayerGameIndex:
     # Helper class that keeps track of player / game relationship and helps
     # assign games to players that reconnected.
-    def __init__(self, playerset):
+    def __init__(self, gameset, playerset):
         self._playerset = playerset
+        self._gameset = gameset
+        self._playerset.before_added.connect(self._on_player_added)
+        self._playerset.before_removed.connect(self._on_player_removed)
+        self._gameset.before_added.connect(self._on_game_added)
+        self._gameset.before_removed.connect(self._on_game_removed)
+
         self._idx = {}
-        self._playerset.playerAdded.connect(self._on_player_added)
-        self._playerset.playerRemoved.connect(self._on_player_removed)
 
-    # Called by gameset
-    def at_game_update(self, new, old):
-        old_closed = old is None or old.closed()
+    def player_game(self, pname):
+        return self._idx.get(pname)
 
+    def _on_game_added(self, game, _transaction=None):
+        game.before_updated.connect(self._at_game_update)
+        for p in game.players:
+            self._set_relation(p, game, _transaction)
+
+    def _on_game_removed(self, game, _transaction=None):
+        game.before_updated.disconnect(self._at_game_update)
+        for p in game.players:
+            self._remove_relation(p, game, _transaction)
+
+    def _at_game_update(self, new, old, _transaction=None):
         news = set() if new.closed() else set(new.players)
-        olds = set() if old_closed else set(old.players)
-
-        removed = [p for p in olds - news
-                   if p in self._idx and self._idx[p] == new]
+        olds = set() if old.closed() else set(old.players)
+        removed = olds - news
         added = news - olds
-
-        # Player games are part of state, so update all first before signals
-        signals = []
         for p in removed:
-            signals.append(self._set_player_game_defer_signal(p, None))
+            self._remove_relation(p, new, _transaction)
         for p in added:
-            signals.append(self._set_player_game_defer_signal(p, new))
+            self._set_relation(p, new, _transaction)
 
-        for s in signals:
-            s()
+    def _remove_relation(self, pname, game, _transaction=None):
+        if pname not in self._idx:
+            return
+        if self.player_game(pname) != game:
+            return
 
-    def _set_player_game_defer_signal(self, pname, game):
-        oldgame = self._idx.get(pname)
-        if not self._should_update_player_game(game, oldgame):
-            return lambda: None
+        player = self._playerset.get(pname)
+        del self._idx[pname]
 
-        if game is None:
-            if pname in self._idx:
-                del self._idx[pname]
-        else:
-            self._idx[pname] = game
+        if player is not None:
+            player.set_currentGame(None, _transaction)
+            game.ingame_player_removed(player, _transaction)
 
-        if pname in self._playerset:
-            player = self._playerset[pname]
-            return player.set_current_game_defer_signal(game)
-        else:
-            return lambda: None
+    def _set_relation(self, pname, game, _transaction=None):
+        oldgame = self.player_game(pname)
+        if not self._player_did_change_game(game, oldgame):
+            return
 
-    def _should_update_player_game(self, new, old):
+        player = self._playerset.get(pname)
+        self._idx[pname] = game
+
+        if player is not None:
+            player.set_currentGame(game, _transaction)
+            if oldgame is not None:
+                oldgame.ingame_player_removed(player, _transaction)
+            game.ingame_player_added(player, _transaction)
+
+    def _player_did_change_game(self, new, old):
         # Removing or setting new game should always happen
         if new is None or old is None:
             return True
+
+        if new.id_key == old.id_key:
+            return False
 
         # Games should be not closed now
         # Lobbies always take precedence - if there are 2 at once, tough luck
@@ -170,16 +162,13 @@ class PlayerGameIndex:
             return True
         return new.launched_at > old.launched_at
 
-    def player_game(self, pname):
-        return self._idx.get(pname)
-
-    def _on_player_added(self, player):
+    def _on_player_added(self, player, _transaction=None):
         pgame = self.player_game(player.login)
         if pgame is not None:
-            player.currentGame = pgame
-            pgame.connectedPlayerAdded.emit(pgame, player)
+            player.set_currentGame(pgame, _transaction)
+            pgame.ingame_player_added(player, _transaction)
 
-    def _on_player_removed(self, player):
+    def _on_player_removed(self, player, _transaction=None):
         pgame = self.player_game(player.login)
         if pgame is not None:
-            pgame.connectedPlayerRemoved.emit(pgame, player)
+            pgame.ingame_player_removed(player, _transaction)

@@ -1,13 +1,12 @@
-from PyQt5 import QtCore
-import util
-import config
-from config import Settings
-from notifications.ns_hook import NsHook
-import notifications as ns
-
 """
 Settings for notifications: if a player comes online
 """
+from PyQt6 import QtCore
+
+import notifications as ns
+import util
+from config import Settings
+from notifications.ns_hook import NsHook
 
 
 class NsHookUserOnline(NsHook):
@@ -17,7 +16,10 @@ class NsHookUserOnline(NsHook):
         self.dialog = UserOnlineDialog(self, self.eventType)
         self.button.clicked.connect(self.dialog.show)
 
-FormClass, BaseClass = util.THEME.loadUiType("notification_system/user_online.ui")
+
+FormClass, BaseClass = util.THEME.loadUiType(
+    "notification_system/user_online.ui",
+)
 
 
 class UserOnlineDialog(FormClass, BaseClass):
@@ -29,12 +31,14 @@ class UserOnlineDialog(FormClass, BaseClass):
         self.setupUi(self)
 
         # remove help button
-        self.setWindowFlags(self.windowFlags() & (~QtCore.Qt.WindowContextHelpButtonHint))
+        self.setWindowFlags(
+            self.windowFlags() & (~QtCore.Qt.WindowType.WindowContextHelpButtonHint),
+        )
 
         self.loadSettings()
 
     def loadSettings(self):
-        self.mode = Settings.get(self._settings_key+'/mode', 'friends')
+        self.mode = Settings.get(self._settings_key + '/mode', 'friends')
 
         if self.mode == 'friends':
             self.radioButtonFriends.setChecked(True)
@@ -43,7 +47,7 @@ class UserOnlineDialog(FormClass, BaseClass):
         self.parent.mode = self.mode
 
     def saveSettings(self):
-        Settings.set(self._settings_key+'/mode', self.mode)
+        Settings.set(self._settings_key + '/mode', self.mode)
         self.parent.mode = self.mode
 
     @QtCore.pyqtSlot()

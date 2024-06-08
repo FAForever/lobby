@@ -1,77 +1,35 @@
-from PyQt5.QtCore import QAbstractListModel, Qt, QSortFilterProxyModel, QModelIndex
-from .gamemodelitem import GameModelItem
 from enum import Enum
+
+from PyQt6.QtCore import QSortFilterProxyModel
+from PyQt6.QtCore import Qt
 
 from games.moditem import mod_invisible
 from model.game import GameState
+from util.qt_list_model import QtListModel
+
+from .gamemodelitem import GameModelItem
 
 
-class GameModel(QAbstractListModel):
+class GameModel(QtListModel):
     def __init__(self, me, preview_dler, gameset=None):
-        QAbstractListModel.__init__(self)
-        self._me = me
-        self._preview_dler = preview_dler
-
-        self._gameitems = {}
-        self._itemlist = []  # For queries
+        builder = GameModelItem.builder(me, preview_dler)
+        QtListModel.__init__(self, builder)
 
         self._gameset = gameset
         if self._gameset is not None:
-            self._gameset.newGame.connect(self.add_game)
+            self._gameset.added.connect(self.add_game)
             self._gameset.newClosedGame.connect(self.remove_game)
-
             for game in self._gameset.values():
                 self.add_game(game)
 
-    def rowCount(self, parent):
-        if parent.isValid():
-            return 0
-        return len(self._itemlist)
-
-    def data(self, index, role):
-        if not index.isValid() or index.row() >= len(self._itemlist):
-            return None
-        if role != Qt.DisplayRole:
-            return None
-        return self._itemlist[index.row()]
-
-    # TODO - insertion and removal are O(n). Server bandwidth would probably
-    # become a bigger issue if number of games increased too much though.
-
     def add_game(self, game):
-        assert game.uid not in self._gameitems
-
-        next_index = len(self._itemlist)
-        self.beginInsertRows(QModelIndex(), next_index, next_index)
-
-        item = GameModelItem(game, self._me, self._preview_dler)
-        item.updated.connect(self._at_item_updated)
-
-        self._gameitems[game.uid] = item
-        self._itemlist.append(item)
-
-        self.endInsertRows()
+        self._add_item(game, game.uid)
 
     def remove_game(self, game):
-        assert game.uid in self._gameitems
-
-        item = self._gameitems[game.uid]
-        item_index = self._itemlist.index(item)
-        self.beginRemoveRows(QModelIndex(), item_index, item_index)
-
-        item.updated.disconnect(self._at_item_updated)
-        del self._gameitems[game.uid]
-        self._itemlist.pop(item_index)
-        self.endRemoveRows()
+        self._remove_item(game.uid)
 
     def clear_games(self):
-        for data in list(self._gameitems.values()):
-            self.remove_game(data.game)
-
-    def _at_item_updated(self, item):
-        item_index = self._itemlist.index(item)
-        index = self.index(item_index, 0)
-        self.dataChanged.emit(index, index)
+        self._clear_items()
 
 
 class GameSortModel(QSortFilterProxyModel):
@@ -90,8 +48,8 @@ class GameSortModel(QSortFilterProxyModel):
         self.sort(0)
 
     def lessThan(self, leftIndex, rightIndex):
-        left = self.sourceModel().data(leftIndex, Qt.DisplayRole).game
-        right = self.sourceModel().data(rightIndex, Qt.DisplayRole).game
+        left = self.sourceModel().data(leftIndex, Qt.ItemDataRole.DisplayRole).game
+        right = self.sourceModel().data(rightIndex, Qt.ItemDataRole.DisplayRole).game
 
         comp_list = [self._lt_friend, self._lt_type, self._lt_fallback]
 
@@ -105,7 +63,10 @@ class GameSortModel(QSortFilterProxyModel):
     def _lt_friend(self, left, right):
         hostl = -1 if left.host_player is None else left.host_player.id
         hostr = -1 if right.host_player is None else right.host_player.id
-        return self._me.isFriend(hostl) and not self._me.isFriend(hostr)
+        return (
+            self._me.relations.model.is_friend(hostl)
+            and not self._me.relations.model.is_friend(hostr)
+        )
 
     def _lt_type(self, left, right):
         stype = self._sort_type

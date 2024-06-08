@@ -1,14 +1,19 @@
-from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
-from PyQt5 import QtCore
-
 import json
 import logging
-import sys
+
+from PyQt6 import QtCore
+from PyQt6.QtNetwork import QNetworkAccessManager
+from PyQt6.QtNetwork import QNetworkReply
+from PyQt6.QtNetwork import QNetworkRequest
+
+from config import Settings
 
 logger = logging.getLogger(__name__)
 
 # FIXME: Make setting
-WPAPI_ROOT = 'http://direct.faforever.com/wp-json/wp/v2/posts?per_page={perpage}&page={page}&_embed=1'
+WPAPI_ROOT = (
+    '{host}/wp-json/wp/v2/posts?per_page={perpage}&page={page}&_embed=1'
+)
 
 
 class WPAPI(QtCore.QObject):
@@ -41,15 +46,26 @@ class WPAPI(QtCore.QObject):
                     'body': post.get('content', {}).get('rendered'),
                     'date': post.get('date'),
                     'excerpt': post.get('excerpt', {}).get('rendered'),
-                    'author': post.get('_embedded', {}).get('author')
+                    'author': post.get('_embedded', {}).get('author'),
+                    'link': post.get('link'),
+                    'external_link': post.get('newshub_externalLinkUrl'),
+                    'img_url': (
+                        post.get('_embedded', {})
+                        .get('wp:featuredmedia', [{}])[0]
+                        .get('source_url', "")
+                    ),
                 }
                 posts.append(content)
 
             self.newsDone.emit(posts)
-        except:
+        except BaseException:
             logger.exception('Error handling wp data')
 
     def download(self, page=1, perpage=10):
-        url = QtCore.QUrl(WPAPI_ROOT.format(page=page, perpage=perpage))
+        url = QtCore.QUrl(
+            WPAPI_ROOT.format(
+                host=Settings.get('news/host'), page=page, perpage=perpage,
+            ),
+        )
         request = QNetworkRequest(url)
         self.nam.get(request)

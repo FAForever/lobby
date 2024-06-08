@@ -1,3 +1,7 @@
+Development status
+==================
+This is the legacy client. The offically supported version can be found [here](https://github.com/FAForever/downlords-faf-client). The development is more or less discontinued.
+
 FA Forever Client
 =================
 
@@ -29,11 +33,11 @@ By contributing, you agree to license your work to the FAForever project in such
 
 ### Code-Style
 
-[Downlord's FAF Client Contribution Guidelines](https://github.com/FAForever/downlords-faf-client/wiki/Contribution-guidelines#write-readable-code)
-* [Quality has highest priority](https://github.com/FAForever/downlords-faf-client/wiki/Contribution-guidelines#choose-quality-over-quantity)
-* [Write readable code](https://github.com/FAForever/downlords-faf-client/wiki/Contribution-guidelines#write-readable-code)
-* [Use comments only when absolutely necessary to explain complex algorithms or inherently unintuitive reasons for how or why your code functions](https://github.com/FAForever/downlords-faf-client/wiki/Contribution-guidelines#avoid-javadoc-and-comments)
-* Use the logger
+[Downlord's FAF Client Contribution Guidelines](https://github.com/FAForever/java-guidelines/wiki/Contribution-Guidelines)
+* [Quality has highest priority](https://github.com/FAForever/java-guidelines/wiki/Contribution-Guidelines#quality-has-highest-priority)
+* [Write readable code](https://github.com/FAForever/java-guidelines/wiki/Contribution-Guidelines#write-readable-code)
+* [Use comments only when absolutely necessary to explain complex algorithms or inherently unintuitive reasons for how or why your code functions](https://github.com/FAForever/java-guidelines/wiki/Contribution-Guidelines#avoid-javadoc-and-comments)
+* [Use the logger](https://github.com/FAForever/java-guidelines/wiki/Contribution-Guidelines#logging)
 
 ### Issues, PRs, and commit formatting
 
@@ -68,12 +72,14 @@ Create a python3(!) virtualenv for installing its dependencies:
     virtualenv ./faf-client-venv --system-site-packages
     ./faf-client-venv/bin/pip install -r ./faf-client/requirements.txt
 
+**Note that many distributions have separate names for Python 2 and Python 3 virtualenv, such as "virtualenv" and "virtualenv3" - ensure you're using the Python 3 specific version on your distribution!**
+
 Now download the `faf-uid` executable:
 
-    wget https://github.com/FAForever/uid/releases/download/v3.0.0/faf-uid -O ./faf-client/lib/faf-uid
+    wget https://github.com/FAForever/uid/releases/download/v4.0.4/faf-uid -O ./faf-client/lib/faf-uid
     chmod +x ./faf-client/lib/faf-uid
 
-Note that the `faf-uid` smurf protection executable needs to run `xrandr`, `lspci`, `lsblk` and `uname` to gather unique system information.
+Note that the `faf-uid` smurf protection executable needs to run `xrandr`, `lspci`, `lsblk` and `uname` to gather unique system information. Additionally the `lsblk` command must support the "--json" flag, which was added in util-linux-2.27.
 
 Run the client:
 

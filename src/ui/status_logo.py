@@ -1,27 +1,36 @@
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QLabel, QAction, QMenu
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QMenu
+
 import util
-from client import ClientState
+from client.clientstate import ClientState
 
 
 class StatusLogo(QLabel):
     disconnect_requested = pyqtSignal()
     reconnect_requested = pyqtSignal()
+    chat_reconnect_requested = pyqtSignal()
     about_dialog_requested = pyqtSignal()
     connectivity_dialog_requested = pyqtSignal()
 
-    def __init__(self, client, logo_file='window_icon.png'):
+    def __init__(self, client, chat_model, logo_file='window_icon.png'):
         QLabel.__init__(self)
 
+        self._chat_model = chat_model
         self.state = client.state
         self.setScaledContents(True)
         self.setMargin(3)
 
-        normal, yellow, red = list(map(util.THEME.pixmap, [
-            'window_icon.png',
-            'window_icon_yellow.png',
-            'window_icon_red.png'
-        ]))
+        normal, yellow, red = list(
+            map(
+                util.THEME.pixmap, [
+                    'window_icon.png',
+                    'window_icon_yellow.png',
+                    'window_icon_red.png',
+                ],
+            ),
+        )
 
         self._pixmaps = {
             ClientState.SHUTDOWN: red,
@@ -49,23 +58,33 @@ class StatusLogo(QLabel):
 
         dc = QAction('Disconnect', None)
         rc = QAction('Reconnect', None)
+        crc = QAction('Reconnect with chat', None)
+        conn = QAction('Connectivity', None)
         about = QAction('About', None)
 
         if self.state != ClientState.DISCONNECTED:
             menu.addAction(dc)
+            if not self._chat_model.connected:
+                menu.addAction(crc)
         if self.state not in [
                 ClientState.CONNECTING,
                 ClientState.CONNECTED,
-                ClientState.LOGGED_IN]:
+                ClientState.LOGGED_IN,
+        ]:
             menu.addAction(rc)
 
+        menu.addAction(conn)
         menu.addAction(about)
 
-        action = menu.exec_(self.mapToGlobal(event.pos()))
+        action = menu.exec(self.mapToGlobal(event.pos()))
         if action == dc:
             self.disconnect_requested.emit()
         elif action == rc:
             self.reconnect_requested.emit()
+        elif action == crc:
+            self.chat_reconnect_requested.emit()
+        elif action == conn:
+            self.connectivity_dialog_requested.emit()
         elif action == about:
             self.about_dialog_requested.emit()
 

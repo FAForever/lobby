@@ -1,7 +1,3 @@
-from PyQt5 import QtWidgets
-import util
-from config import Settings
-
 """
 Setting Model class.
 All Event Types (Notifications) are customizable.
@@ -11,6 +7,9 @@ connect on clicked event some actions, e.g.
 
 self.button.clicked.connect(self.dialog.show)
 """
+from PyQt6 import QtWidgets
+
+from config import Settings
 
 
 class NsHook():
@@ -22,12 +21,16 @@ class NsHook():
         self.button.setEnabled(False)
 
     def loadSettings(self):
-        self.popup = Settings.get(self._settings_key + '/popup', True, type=bool)
-        self.sound = Settings.get(self._settings_key + '/sound', True, type=bool)
+        self.popup = Settings.get(
+            self._settings_key + '/popup', True, type=bool,
+        )
+        self.sound = Settings.get(
+            self._settings_key + '/sound', True, type=bool,
+        )
 
     def saveSettings(self):
-        Settings.set(self._settings_key+'/popup', self.popup)
-        Settings.set(self._settings_key+'/sound', self.sound)
+        Settings.set(self._settings_key + '/popup', self.popup)
+        Settings.set(self._settings_key + '/sound', self.sound)
 
     def getEventDisplayName(self):
         return self.eventType

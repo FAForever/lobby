@@ -11,9 +11,10 @@
 *.pydev*
 *.vcproj
 .idea/
-lib/faf-uid
-lib/faf-uid.exe
+lib/
+natives/
 build/
+build_setup/
 dist/
 Thumbs.db
 .DS_Store

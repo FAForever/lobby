@@ -1,165 +1,152 @@
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
+
+from model.modelitem import ModelItem
+from model.rating import RatingType
+from model.transaction import transactional
 
 
-class Player(QObject):
-    updated = pyqtSignal(object, object)
+class Player(ModelItem):
     newCurrentGame = pyqtSignal(object, object, object)
 
     """
     Represents a player the client knows about.
     """
-    def __init__(self,
-                 id_,
-                 login,
-                 global_rating=(1500, 500),
-                 ladder_rating=(1500, 500),
-                 number_of_games=0,
-                 avatar=None,
-                 country=None,
-                 clan=None,
-                 league=None):
-        QObject.__init__(self)
+
+    def __init__(
+        self,
+        id_,
+        login,
+        ratings={},
+        avatar=None,
+        country=None,
+        clan=None,
+        league=None,
+        **kwargs
+    ):
+        ModelItem.__init__(self)
         """
         Initialize a Player
         """
         # Required fields
+        # Login should be mutable, but we look up things by login right now
         self.id = int(id_)
         self.login = login
 
-        self.global_rating = global_rating
-        self.ladder_rating = ladder_rating
-        self.number_of_games = number_of_games
-        self.avatar = avatar
-        self.country = country
-        self.clan = clan
-        self.league = league
+        self.add_field("avatar", avatar)
+        self.add_field("country", country)
+        self.add_field("clan", clan)
+        self.add_field("league", league)
+        self.add_field("ratings", ratings)
 
         # The game the player is currently playing
         self._currentGame = None
 
+    @property
+    def id_key(self):
+        return self.id
+
     def copy(self):
-        s = self
-        p = Player(s.id, s.login, s.global_rating, s.ladder_rating,
-                   s.number_of_games, s.avatar, s.country, s.clan, s.league)
-        p.currentGame = self._currentGame
+        p = Player(self.id, self.login, **self.field_dict)
+        p.currentGame = self.currentGame
         return p
 
-    def update(self,
-               id_=None,
-               login=None,
-               global_rating=None,
-               ladder_rating=None,
-               number_of_games=None,
-               avatar=None,
-               country=None,
-               clan=None,
-               league=None):
+    @transactional
+    def update(self, **kwargs):
+        _transaction = kwargs.pop("_transaction")
 
         old_data = self.copy()
-        # Ignore id and login (they are be immutable)
-        # Login should be mutable, but we look up things by login right now
-        if global_rating is not None:
-            self.global_rating = global_rating
-        if ladder_rating is not None:
-            self.ladder_rating = ladder_rating
-        if number_of_games is not None:
-            self.number_of_games = number_of_games
-        if avatar is not None:
-            self.avatar = avatar
-        if country is not None:
-            self.country = country
-        if clan is not None:
-            self.clan = clan
-        if league is not None:
-            self.league = league
-
-        self.updated.emit(self, old_data)
-
-    def __hash__(self):
-        """
-        Index by id
-        """
-        return self.id.__hash__()
+        ModelItem.update(self, **kwargs)
+        self.emit_update(old_data, _transaction)
 
     def __index__(self):
         return self.id
 
-    def __eq__(self, other):
-        """
-        Equality by id
+    @property
+    def global_estimate(self):
+        return self.rating_estimate()
 
-        :param other: player object to compare with
-        """
-        if not isinstance(other, Player):
-            return False
-        return other.id == self.id
-
-    def rounded_rating_estimate(self):
-        """
-        Get the conservative estimate of the players global trueskill rating,
-        rounded to nearest 100
-        """
-        return round((self.rating_estimate()/100))*100
-
-    def rating_estimate(self):
-        """
-        Get the conservative estimate of the players global trueskill rating
-        """
-        return int(max(0, (self.global_rating[0] - 3 * self.global_rating[1])))
-
+    @property
     def ladder_estimate(self):
-        """
-        Get the conservative estimate of the players ladder trueskill rating
-        """
-        return int(max(0, (self.ladder_rating[0] - 3 * self.ladder_rating[1])))
+        return self.rating_estimate(RatingType.LADDER.value)
 
     @property
-    def rating_mean(self):
-        return self.global_rating[0]
+    def global_rating_mean(self):
+        return self.rating_mean()
 
     @property
-    def rating_deviation(self):
-        return self.global_rating[1]
+    def global_rating_deviation(self):
+        return self.rating_deviation()
 
     @property
     def ladder_rating_mean(self):
-        return self.ladder_rating[0]
+        return self.rating_mean(RatingType.LADDER.value)
 
     @property
     def ladder_rating_deviation(self):
-        return self.ladder_rating[1]
+        return self.rating_deviation(RatingType.LADDER.value)
+
+    @property
+    def number_of_games(self):
+        count = 0
+        for rating_type in self.ratings:
+            count += self.ratings[rating_type].get("number_of_games", 0)
+        return count
+
+    def rating_estimate(self, rating_type=RatingType.GLOBAL.value):
+        """
+        Get the conservative estimate of the player's trueskill rating
+        """
+        try:
+            mean = self.ratings[rating_type]["rating"][0]
+            deviation = self.ratings[rating_type]["rating"][1]
+            return int(max(0, (mean - 3 * deviation)))
+        except (KeyError, IndexError):
+            return 0
+
+    def rating_mean(self, rating_type=RatingType.GLOBAL.value):
+        try:
+            return round(self.ratings[rating_type]["rating"][0])
+        except (KeyError, IndexError):
+            return 1500
+
+    def rating_deviation(self, rating_type=RatingType.GLOBAL.value):
+        try:
+            return round(self.ratings[rating_type]["rating"][1])
+        except (KeyError, IndexError):
+            return 500
+
+    def game_count(self, rating_type=RatingType.GLOBAL.value):
+        try:
+            return int(self.ratings[rating_type]["number_of_games"])
+        except KeyError:
+            return 0
 
     def __repr__(self):
         return self.__str__()
 
     def __str__(self):
-        return ("Player(id={}, login={}, global_rating={}, "
-                "ladder_rating={})").format(
+        return (
+            "Player(id={}, login={}, global_rating={}, ladder_rating={})"
+        ).format(
             self.id,
             self.login,
-            self.global_rating,
-            self.ladder_rating
+            (self.global_rating_mean, self.global_rating_deviation),
+            (self.ladder_rating_mean, self.ladder_rating_deviation),
         )
 
     @property
     def currentGame(self):
         return self._currentGame
 
-    @currentGame.setter
-    def currentGame(self, game):
-        self.set_current_game_defer_signal(game)()
-
-    def set_current_game_defer_signal(self, game):
+    @transactional
+    def set_currentGame(self, game, _transaction=None):
         if self.currentGame == game:
-            return lambda: None
-
+            return
         old = self._currentGame
         self._currentGame = game
-        return lambda: self._emit_game_change(game, old)
+        _transaction.emit(self.newCurrentGame, self, game, old)
 
-    def _emit_game_change(self, game, old):
-        self.newCurrentGame.emit(self, game, old)
-        if old is not None:
-            old.ingamePlayerRemoved.emit(old, self)
-        if game is not None:
-            game.ingamePlayerAdded.emit(game, self)
+    @currentGame.setter
+    def currentGame(self, val):
+        # CAVEAT: this will emit signals immediately!
+        self.set_currentGame(val)

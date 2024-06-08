@@ -4,15 +4,27 @@ from model.player import Player
 from model.playerset import Playerset
 
 DEFAULT_DICT = {
-    "id_":  17,
+    "id_": 17,
     "login": "TesterNoob",
-    "global_rating": (1455, 160),
-    "ladder_rating": (1192, 216),
-    "number_of_games": 374,
+    "ratings": {
+        "global": {
+            "rating": (1455, 160),
+            "number_of_games": 374,
+        },
+        "ladder_1v1": {
+            "rating": (1192, 216),
+            "number_of_games": 374,
+        },
+        "tmm_2v2": {
+            "rating": (888, 88),
+            "number_of_games": 88,
+        },
+    },
     "avatar": {
         'url': 'http://content.faforever.com/faf/avatars/GW_Cybran.png',
-        'tooltip': 'Liberate !'},
-    "country":  "PL",
+        'tooltip': 'Liberate !',
+    },
+    "country": "PL",
 }
 
 
@@ -25,10 +37,10 @@ def test_add_remove(mocker):
 
     newplayer = mocker.Mock()
     goneplayer = mocker.Mock()
-    ps.playerAdded.connect(newplayer)
-    ps.playerAdded.connect(test_player_signal)
-    ps.playerRemoved.connect(goneplayer)
-    ps.playerRemoved.connect(test_player_signal)
+    ps.added.connect(newplayer)
+    ps.added.connect(test_player_signal)
+    ps.removed.connect(goneplayer)
+    ps.removed.connect(test_player_signal)
 
     ps[p.id] = p
     assert newplayer.called

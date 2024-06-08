@@ -1,207 +1,105 @@
-from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QSize
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QListWidgetItem
+from PyQt6.QtWidgets import QPushButton
 
-import base64, zlib, os
-import util
+from downloadManager import DownloadRequest
 
 
-class PlayerAvatar(QtWidgets.QDialog):
-    def __init__(self, users=[], idavatar=0, parent=None, *args, **kwargs):
-        QtWidgets.QDialog.__init__(self, *args, **kwargs)
+class AvatarWidget(QObject):
+    def __init__(
+        self, parent_widget, lobby_connection, lobby_info, avatar_dler, theme,
+    ):
+        QObject.__init__(self, parent_widget)
 
-        self.parent = parent
-        self.users = users
-        self.checkBox = {}
-        self.idavatar = idavatar
+        self._parent_widget = parent_widget
+        self._lobby_connection = lobby_connection
+        self._lobby_info = lobby_info
+        self._avatar_dler = avatar_dler
 
-        self.setStyleSheet(self.parent.styleSheet())
+        self.items = {}
+        self.requests = {}
+        self.buttons = {}
 
-        self.grid = QtWidgets.QGridLayout(self)
-        self.userlist = None
+        self.set_theme(theme)
 
-        self.removeButton = QtWidgets.QPushButton("&Remove users")
-        self.grid.addWidget(self.removeButton, 1, 0)
+        self._lobby_info.avatarList.connect(self.set_avatar_list)
+        self.base.finished.connect(self.clean)
 
-        self.removeButton.clicked.connect(self.remove_them)
+    @classmethod
+    def builder(
+        cls, parent_widget, lobby_connection, lobby_info, avatar_dler,
+        theme, **kwargs,
+    ):
+        return lambda: cls(
+            parent_widget, lobby_connection, lobby_info, avatar_dler, theme,
+        )
 
-        self.setWindowTitle("Users using this avatar")
-        self.resize(480, 320)         
+    def set_theme(self, theme):
+        formc, basec = theme.loadUiType("dialogs/avatar.ui")
+        self.form = formc()
+        self.base = basec(self._parent_widget)
+        self.form.setupUi(self.base)
 
-    def process_list(self, users, idavatar):
-        self.checkBox = {}
-        self.users = users
-        self.idavatar = idavatar
-        self.userlist = self.create_user_selection()
-        self.grid.addWidget(self.userlist, 0, 0)
+    @property
+    def avatar_list(self):
+        return self.form.avatarList
 
-    def remove_them(self):
-        for user in self.checkBox :
-            if self.checkBox[user].checkState() == 2:
-                self.parent.lobby_connection.send(dict(command="admin", action="remove_avatar", iduser=user, idavatar=self.idavatar))
-        self.close()
+    def show(self):
+        self._lobby_connection.send({
+            "command": "avatar",
+            "action": "list_avatar",
+        })
+        self.base.show()
 
-    def create_user_selection(self):
-        groupBox = QtWidgets.QGroupBox("Select the users you want to remove this avatar :")
-        vbox = QtWidgets.QVBoxLayout()
+    def select_avatar(self, val):
+        self._lobby_connection.send({
+            "command": "avatar",
+            "action": "select",
+            "avatar": val,
+        })
+        self.base.close()
 
-        for user in self.users:
-            self.checkBox[user["iduser"]] = QtWidgets.QCheckBox(user["login"])
-            vbox.addWidget(self.checkBox[user["iduser"]])
+    def set_avatar_list(self, avatars):
+        self.avatar_list.clear()
 
-        vbox.addStretch(1)
-        groupBox.setLayout(vbox)
-
-        return groupBox
-            
-
-class AvatarWidget(QtWidgets.QDialog):
-    def __init__(self, parent, user, personal=False, *args, **kwargs):
-
-        QtWidgets.QDialog.__init__(self, *args, **kwargs)
-
-        self.user = user
-        self.personal = personal
-        self.parent = parent
-
-        self.setStyleSheet(self.parent.styleSheet())
-        self.setWindowTitle("Avatar manager")
-
-        self.groupLayout = QtWidgets.QVBoxLayout(self)
-        self.avatarList = QtWidgets.QListWidget()
-
-        self.avatarList.setWrapping(1)
-        self.avatarList.setSpacing(5)
-        self.avatarList.setResizeMode(1)
-
-        self.groupLayout.addWidget(self.avatarList)
-
-        if not self.personal:
-            self.addAvatarButton = QtWidgets.QPushButton("Add/Edit avatar")
-            self.addAvatarButton.clicked.connect(self.add_avatar)
-            self.groupLayout.addWidget(self.addAvatarButton)
-
-        self.item = []
-        self.parent.lobby_info.avatarList.connect(self.avatar_list)
-        self.parent.lobby_info.playerAvatarList.connect(self.do_player_avatar_list)
-
-        self.playerList = PlayerAvatar(parent=self.parent)
-
-        self.nams = {}
-        self.avatars = {}
-
-        self.finished.connect(self.cleaning)
-
-    def showEvent(self, event):
-        self.parent.requestAvatars(self.personal)
-
-    def add_avatar(self):
-
-        options = QtWidgets.QFileDialog.Options()
-        options |= QtWidgets.QFileDialog.DontUseNativeDialog
-
-        fileName = QtWidgets.QFileDialog.getOpenFileName(self, "Select the PNG file", "", "png Files (*.png)", options)
-        if fileName:
-            # check the properties of that file
-            pixmap = QtGui.QPixmap(fileName)
-            if pixmap.height() == 20 and pixmap.width() == 40:
-
-                text, ok = QtWidgets.QInputDialog.getText(self, "Avatar description",
-                                                          "Please enter the tooltip :", QtWidgets.QLineEdit.Normal, "")
-
-                if ok and text != '':
-
-                    file = QtCore.QFile(fileName)
-                    file.open(QtCore.QIODevice.ReadOnly)
-                    fileDatas = base64.b64encode(zlib.compress(file.readAll()))
-                    file.close()
-
-                    self.parent.lobby_connection.send(dict(command="avatar", action="upload_avatar",
-                                                           name=os.path.basename(fileName), description=text,
-                                                           file=fileDatas))
-
+        self._add_avatar_item(None)
+        for avatar in avatars:
+            self._add_avatar_item(avatar)
+            url = avatar["url"]
+            icon = self._avatar_dler.avatars.get(url, None)
+            if icon is not None:
+                self._set_avatar_icon(url, icon)
             else:
-                QtWidgets.QMessageBox.warning(self, "Bad image", "The image must be in png, format is 40x20 !")
+                req = DownloadRequest()
+                req.done.connect(self._handle_avatar_download)
+                self.requests[url] = req
+                self._avatar_dler.download_avatar(url, req)
 
-    def finish_request(self, reply):
-
-        if reply.url().toString() in self.avatars:
-            img = QtGui.QImage()
-            img.loadFromData(reply.readAll())
-            pix = QtGui.QPixmap(img)
-            self.avatars[reply.url().toString()].setIcon(QtGui.QIcon(pix))
-            self.avatars[reply.url().toString()].setIconSize(pix.rect().size())     
-
-            util.addrespix(reply.url().toString(), QtGui.QPixmap(img))
-
-    def clicked(self):
-        self.doit(None)
-        self.close()
-
-    def create_connect(self, x):
-        return lambda: self.doit(x)
-
-    def doit(self, val):
-        if self.personal:
-            self.parent.lobby_connection.send(dict(command="avatar", action="select", avatar=val))
-            self.close()
-
-        else:
-            if self.user is None:
-                self.parent.lobby_connection.send(dict(command="admin", action="list_avatar_users", avatar=val))
-            else:
-                self.parent.lobby_connection.send(dict(command="admin", action="add_avatar", user=self.user, avatar=val))
-                self.close()
-
-    def do_player_avatar_list(self, message):
-        self.playerList = PlayerAvatar(parent=self.parent)
-        player_avatar_list = message["player_avatar_list"]
-        idavatar = message["avatar_id"]
-        self.playerList.process_list(player_avatar_list, idavatar)
-        self.playerList.show()
-
-    def avatar_list(self, avatar_list):
-        self.avatarList.clear()
-        button = QtWidgets.QPushButton()
-        self.avatars["None"] = button
-
-        item = QtWidgets.QListWidgetItem()
-        item.setSizeHint(QtCore.QSize(40,20))
-
-        self.item.append(item)
-
-        self.avatarList.addItem(item)
-        self.avatarList.setItemWidget(item, button)
-
-        button.clicked.connect(self.clicked)
-
-        for avatar in avatar_list:
-
-            avatarPix = util.respix(avatar["url"])
-            button = QtWidgets.QPushButton()
-
-            button.clicked.connect(self.create_connect(avatar["url"]))
-
-            item = QtWidgets.QListWidgetItem()
-            item.setSizeHint(QtCore.QSize(40, 20))
-            self.item.append(item)
-
-            self.avatarList.addItem(item)
-
+    def _add_avatar_item(self, avatar):
+        val = None if avatar is None else avatar["url"]
+        button = QPushButton()
+        button.clicked.connect(lambda: self.select_avatar(val))
+        self.buttons[val] = button
+        if avatar is not None:
             button.setToolTip(avatar["tooltip"])
-            url = QtCore.QUrl(avatar["url"])            
-            self.avatars[avatar["url"]] = button
 
-            self.avatarList.setItemWidget(item, self.avatars[avatar["url"]])
+        item = QListWidgetItem()
+        item.setSizeHint(QSize(40, 20))
+        self.items[val] = item
 
-            if not avatarPix:
-                self.nams[url] = QNetworkAccessManager(button)
-                self.nams[url].finished.connect(self.finish_request)
-                self.nams[url].get(QNetworkRequest(url))
-            else:
-                self.avatars[avatar["url"]].setIcon(QtGui.QIcon(avatarPix))
-                self.avatars[avatar["url"]].setIconSize(avatarPix.rect().size())           
+        self.avatar_list.addItem(item)
+        self.avatar_list.setItemWidget(item, button)
 
-    def cleaning(self):
-        if self != self.parent.avatarAdmin:
-            self.parent.lobby_info.avatarList.disconnect(self.avatar_list)
-            self.parent.lobby_info.playerAvatarList.disconnect(self.do_player_avatar_list)
+    def _set_avatar_icon(self, val, icon):
+        button = self.buttons[val]
+        button.setIcon(QIcon(icon))
+        button.setIconSize(icon.rect().size())
+
+    def _handle_avatar_download(self, url, icon):
+        del self.requests[url]
+        self._set_avatar_icon(url, icon)
+
+    def clean(self):
+        self.setParent(None)    # let ourselves get GC'd
