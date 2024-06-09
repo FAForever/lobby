@@ -169,9 +169,9 @@ class AliasSearchWindow:
         self._alias_window.view_aliases(name)
         self._search_window = None
 
-    def run(self):
+    def run(self) -> None:
         self._search_window = QtWidgets.QInputDialog(self._parent_widget)
-        self._search_window.setInputMode(QtWidgets.QInputDialog.TextInput)
+        self._search_window.setInputMode(QtWidgets.QInputDialog.InputMode.TextInput)
         self._search_window.textValueSelected.connect(self.search_alias)
         self._search_window.setLabelText("User name / alias:")
         self._search_window.setWindowTitle("Alias search")
