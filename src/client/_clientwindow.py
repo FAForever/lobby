@@ -1454,6 +1454,7 @@ class ClientWindow(FormClass, BaseClass):
         maximized = util.settings.value("maximized", defaultValue=False, type=bool)
         util.settings.endGroup()
         if maximized:
+            self.is_window_maximized = True
             self.setGeometry(self.screen().availableGeometry())
         elif geometry:
             self.restoreGeometry(geometry)
