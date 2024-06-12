@@ -79,6 +79,20 @@ QMenuBar::item
      height: 13px;
  }
 
+QTabWidget
+{
+    background-color:#383838;
+    color: silver;
+    min-width: 80px;
+    padding:4px;
+}
+
+QTabWidget::pane
+{
+    border: none;
+    background-color: #2f2f2f;
+}
+
 QTabWidget#matchmakerQueues::pane
 {
     background-color: none;

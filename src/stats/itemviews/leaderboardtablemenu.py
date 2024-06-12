@@ -3,6 +3,8 @@ from enum import Enum
 from PyQt6 import QtWidgets
 from PyQt6.QtGui import QAction
 
+from src.client.playerinfodialog import PlayerInfoDialog
+
 
 class LeaderboardTableMenuItems(Enum):
     VIEW_ALIASES = "View aliases"
@@ -12,6 +14,7 @@ class LeaderboardTableMenuItems(Enum):
     REMOVE_FRIEND = "Remove friend"
     REMOVE_FOE = "Remove foe"
     COPY_USERNAME = "Copy username"
+    SHOW_USER_INFO = "Show user info"
 
 
 class LeaderboardTableMenu:
@@ -40,6 +43,7 @@ class LeaderboardTableMenu:
 
     def playerActions(self):
         yield LeaderboardTableMenuItems.VIEW_REPLAYS
+        yield LeaderboardTableMenuItems.SHOW_USER_INFO
 
     def friendActions(self, name, uid, is_me):
         if is_me:
@@ -80,6 +84,8 @@ class LeaderboardTableMenu:
             return lambda: self.viewAliases(name)
         elif kind == Items.VIEW_REPLAYS:
             return lambda: self.viewReplays(name)
+        elif kind == Items.SHOW_USER_INFO:
+            return lambda: self.show_user_info(name, uid)
         elif kind in [
             Items.ADD_FRIEND, Items.ADD_FOE, Items.REMOVE_FRIEND,
             Items.REMOVE_FOE,
@@ -107,3 +113,7 @@ class LeaderboardTableMenu:
             ctl.foes.add(uid)
         elif kind == Items.REMOVE_FOE:
             ctl.foes.remove(uid)
+
+    def show_user_info(self, name: str, uid: str) -> None:
+        dialog = PlayerInfoDialog(name, uid)
+        dialog.run()

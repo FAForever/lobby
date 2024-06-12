@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QMenu
 
 from model.game import GameState
+from src.client.playerinfodialog import PlayerInfoDialog
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class ChatterMenuItems(Enum):
     COPY_USERNAME = "Copy username"
     INVITE_TO_PARTY = "Invite to party"
     KICK_FROM_PARTY = "Kick from party"
+    SHOW_USER_INFO = "Show user info"
 
 
 class ChatterMenu:
@@ -47,7 +49,7 @@ class ChatterMenu:
     @classmethod
     def build(
         cls, me, power_tools, parent_widget, avatar_widget_builder,
-        alias_viewer, client_window, game_runner, **kwargs
+        alias_viewer, client_window, game_runner, **kwargs,
     ):
         return cls(
             me, power_tools, parent_widget, avatar_widget_builder,
@@ -94,6 +96,7 @@ class ChatterMenu:
                 yield ChatterMenuItems.VIEW_LIVEREPLAY
 
         if player is not None:
+            yield ChatterMenuItems.SHOW_USER_INFO
             if player.ladder_estimate != 0:
                 yield ChatterMenuItems.VIEW_IN_LEADERBOARDS
             yield ChatterMenuItems.VIEW_REPLAYS
@@ -188,6 +191,8 @@ class ChatterMenu:
             self._handle_chatterboxes(chatter, player, kind)
         elif kind == Items.VIEW_ALIASES:
             self._view_aliases(chatter)
+        elif kind == Items.SHOW_USER_INFO:
+            self._show_user_info(player)
         elif kind == Items.VIEW_REPLAYS:
             self._client_window.view_replays(player.login)
         elif kind == Items.VIEW_IN_LEADERBOARDS:
@@ -230,3 +235,7 @@ class ChatterMenu:
 
     def _view_aliases(self, chatter):
         self._alias_viewer.view_aliases(chatter.name)
+
+    def _show_user_info(self, player) -> None:
+        dialog = PlayerInfoDialog(player.login, player.id)
+        dialog.run()
