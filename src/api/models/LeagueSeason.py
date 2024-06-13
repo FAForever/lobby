@@ -1,7 +1,6 @@
 from api.models.ConfiguredModel import ConfiguredModel
 from api.models.LeagueLeaderboard import LeagueLeaderboard
 from pydantic import Field
-from pydantic import field_validator
 
 
 class LeagueSeason(ConfiguredModel):
@@ -13,10 +12,3 @@ class LeagueSeason(ConfiguredModel):
     start_date:         str                = Field(alias="startDate")
 
     leaderboard:        LeagueLeaderboard | None = Field(None)
-
-    @classmethod
-    @field_validator("leaderboard", mode="before")
-    def validate_LeagueLeaderboard(cls, value: dict) -> LeagueLeaderboard | None:
-        if not value:
-            return None
-        return LeagueLeaderboard(**value)
