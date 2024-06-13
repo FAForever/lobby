@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QMenu
 
 from model.game import GameState
-from src.client.playerinfodialog import PlayerInfoDialog
+from playercard.playerinfodialog import PlayerInfoDialog
 
 logger = logging.getLogger(__name__)
 

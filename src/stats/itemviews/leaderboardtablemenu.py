@@ -3,7 +3,7 @@ from enum import Enum
 from PyQt6 import QtWidgets
 from PyQt6.QtGui import QAction
 
-from src.client.playerinfodialog import PlayerInfoDialog
+from playercard.playerinfodialog import PlayerInfoDialog
 
 
 class LeaderboardTableMenuItems(Enum):

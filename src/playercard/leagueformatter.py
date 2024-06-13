@@ -25,7 +25,7 @@ class LegueFormatter(FormClass, BaseClass):
         self.load_stylesheet()
 
         self.divisionLabel.setText("Unlisted")
-        icon = util.THEME.pixmap("client/unlistedd.png")
+        icon = util.THEME.pixmap("player_card/unlisted.png")
         self.iconLabel.setPixmap(icon.scaled(80, 80))
 
         self.gamesLabel.setText(f"{rating.total_games:.0f} Games")

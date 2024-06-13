@@ -16,7 +16,7 @@ from api.stats_api import LeaderboardApiConnector
 from api.stats_api import LeaderboardRatingApiConnector
 from api.stats_api import LeaderboardRatingJournalApiConnector
 from api.stats_api import LeagueSeasonScoreApiConnector
-from client.leagueformatter import LegueFormatter
+from src.playercard.leagueformatter import LegueFormatter
 
 FormClass, BaseClass = util.THEME.loadUiType("player_card/playercard.ui")
 
