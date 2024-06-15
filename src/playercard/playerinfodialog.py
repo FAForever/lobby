@@ -12,6 +12,8 @@ from api.models.Leaderboard import Leaderboard
 from api.models.LeaderboardRating import LeaderboardRating
 from api.models.LeaderboardRatingJournal import LeaderboardRatingJournal
 from api.models.LeagueSeasonScore import LeagueSeasonScore
+from api.models.Player import Player
+from api.player_api import PlayerApiConnector
 from api.stats_api import LeaderboardApiConnector
 from api.stats_api import LeaderboardRatingApiConnector
 from api.stats_api import LeaderboardRatingJournalApiConnector
@@ -139,13 +141,15 @@ class Crosshairs:
 
 
 class PlayerInfoDialog(FormClass, BaseClass):
-    def __init__(self, login: str, xd: str) -> None:
+    def __init__(self, player_id: str) -> None:
         BaseClass.__init__(self)
         self.setupUi(self)
         self.load_stylesheet()
 
-        self.player_login = login
-        self.player_id = xd
+        self.player_id = player_id
+
+        self.player_api = PlayerApiConnector()
+        self.player_api.player_ready.connect(self.process_player)
 
         self.leaderboards_api = LeaderboardApiConnector()
         self.leaderboards_api.data_ready.connect(self.populate_leaderboards)
@@ -176,6 +180,7 @@ class PlayerInfoDialog(FormClass, BaseClass):
 
     def run(self) -> None:
         self.leaderboards_api.requestData()
+        self.player_api.request_player(self.player_id)
         self.exec()
 
     def populate_leaderboards(self, message: dict[str, list[Leaderboard]]) -> None:
@@ -195,6 +200,7 @@ class PlayerInfoDialog(FormClass, BaseClass):
     def get_chart_series(self, ratings: list[LeaderboardRatingJournal]) -> tuple[list, list]:
         xvals, yvals = [], []
         for entry in ratings:
+            assert entry.player_stats is not None
             score_time = QDateTime.fromString(entry.player_stats.score_time, Qt.DateFormat.ISODate)
             xvals.append(score_time.toSecsSinceEpoch())
             yvals.append(entry.mean_after - 3 * entry.deviation_after)
@@ -213,3 +219,11 @@ class PlayerInfoDialog(FormClass, BaseClass):
     def process_player_ratings(self, ratings: dict[str, list[LeaderboardRating]]) -> None:
         for rating in ratings["values"]:
             self.leaguesLayout.addWidget(LegueFormatter(self.player_id, rating, self.leagues_api))
+
+    def process_player(self, player: Player) -> None:
+        self.nicknameLabel.setText(player.login)
+        self.idLabel.setText(player.xd)
+        registered = QDateTime.fromString(player.create_time, Qt.DateFormat.ISODate).toLocalTime()
+        self.registeredLabel.setText(registered.toString("yyyy-MM-dd hh:mm"))
+        last_login = QDateTime.fromString(player.update_time, Qt.DateFormat.ISODate).toLocalTime()
+        self.lastLoginLabel.setText(last_login.toString("yyyy-MM-dd hh:mm"))

@@ -85,7 +85,7 @@ class LeaderboardTableMenu:
         elif kind == Items.VIEW_REPLAYS:
             return lambda: self.viewReplays(name)
         elif kind == Items.SHOW_USER_INFO:
-            return lambda: self.show_user_info(name, uid)
+            return lambda: self.show_user_info(uid)
         elif kind in [
             Items.ADD_FRIEND, Items.ADD_FOE, Items.REMOVE_FRIEND,
             Items.REMOVE_FOE,
@@ -114,6 +114,6 @@ class LeaderboardTableMenu:
         elif kind == Items.REMOVE_FOE:
             ctl.foes.remove(uid)
 
-    def show_user_info(self, name: str, uid: str) -> None:
-        dialog = PlayerInfoDialog(name, uid)
+    def show_user_info(self, uid: str) -> None:
+        dialog = PlayerInfoDialog(uid)
         dialog.run()

@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QMenu
 
 from model.game import GameState
+from model.player import Player
 from playercard.playerinfodialog import PlayerInfoDialog
 
 logger = logging.getLogger(__name__)
@@ -236,6 +237,6 @@ class ChatterMenu:
     def _view_aliases(self, chatter):
         self._alias_viewer.view_aliases(chatter.name)
 
-    def _show_user_info(self, player) -> None:
-        dialog = PlayerInfoDialog(player.login, player.id)
+    def _show_user_info(self, player: Player) -> None:
+        dialog = PlayerInfoDialog(str(player.id))
         dialog.run()

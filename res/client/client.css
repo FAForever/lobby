@@ -93,6 +93,13 @@ QTabWidget::pane
     background-color: #2f2f2f;
 }
 
+QTabWidget > QTabBar::tab
+{
+    background-color:#383838;
+    color: silver;
+    min-width: 80px;
+}
+
 QTabWidget#matchmakerQueues::pane
 {
     background-color: none;
