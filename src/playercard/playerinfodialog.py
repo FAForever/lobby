@@ -11,7 +11,6 @@ import util
 from api.models.Leaderboard import Leaderboard
 from api.models.LeaderboardRating import LeaderboardRating
 from api.models.LeaderboardRatingJournal import LeaderboardRatingJournal
-from api.models.LeagueSeasonScore import LeagueSeasonScore
 from api.models.Player import Player
 from api.player_api import PlayerApiConnector
 from api.stats_api import LeaderboardApiConnector
@@ -164,7 +163,6 @@ class PlayerInfoDialog(FormClass, BaseClass):
         self.crosshairs = None
 
         self.leagues_api = LeagueSeasonScoreApiConnector()
-        self.leagues_api.data_ready.connect(self.on_leagues_ready)
 
         self.ratings_api = LeaderboardRatingApiConnector()
         self.ratings_api.player_ratings_ready.connect(self.process_player_ratings)
@@ -172,11 +170,6 @@ class PlayerInfoDialog(FormClass, BaseClass):
 
     def load_stylesheet(self) -> None:
         self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
-
-    def on_leagues_ready(self, message: dict[str, list[LeagueSeasonScore]]) -> None:
-        for score in message["values"]:
-            if score.subdivision is None:
-                continue
 
     def run(self) -> None:
         self.leaderboards_api.requestData()
