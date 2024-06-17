@@ -10,7 +10,9 @@ class ConfiguredModel(BaseModel):
 
     @field_validator("*", mode="before")
     @classmethod
-    def ensure_not_empty_dict(cls, v: Any) -> Any:
+    def ensure_not_empty_or_none(cls, v: Any) -> Any:
         if isinstance(v, dict) and not v:
+            return None
+        elif isinstance(v, list) and not v:
             return None
         return v
