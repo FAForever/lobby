@@ -30,7 +30,11 @@ class PlayerApiConnector(DataApiAccessor):
         self.alias_info.emit(message)
 
     def request_player(self, player_id: str) -> None:
-        self.get_by_query({"filter": f"id=={player_id}"}, self.handle_player)
+        query = {
+            "include": "avatarAssignments.avatar",
+            "filter": f"id=={player_id}",
+        }
+        self.get_by_query(query, self.handle_player)
 
     def handle_player(self, message: dict) -> None:
         player, = message["data"]

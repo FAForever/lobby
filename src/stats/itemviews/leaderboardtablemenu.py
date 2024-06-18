@@ -115,5 +115,5 @@ class LeaderboardTableMenu:
             ctl.foes.remove(uid)
 
     def show_user_info(self, uid: str) -> None:
-        dialog = PlayerInfoDialog(uid)
+        dialog = PlayerInfoDialog(self.client, uid)
         dialog.run()

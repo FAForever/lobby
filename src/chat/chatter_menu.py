@@ -238,5 +238,5 @@ class ChatterMenu:
         self._alias_viewer.view_aliases(chatter.name)
 
     def _show_user_info(self, player: Player) -> None:
-        dialog = PlayerInfoDialog(str(player.id))
+        dialog = PlayerInfoDialog(self._client_window, str(player.id))
         dialog.run()

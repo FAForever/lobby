@@ -1,13 +1,22 @@
+from __future__ import annotations
+
 from bisect import bisect_left
+from typing import TYPE_CHECKING
 
 import pyqtgraph as pg
 from PyQt6.QtCore import QDateTime
 from PyQt6.QtCore import QPointF
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import QListWidget
+from PyQt6.QtWidgets import QListWidgetItem
 from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
 
 import util
+from api.models.Avatar import Avatar
+from api.models.AvatarAssignment import AvatarAssignment
 from api.models.Leaderboard import Leaderboard
 from api.models.LeaderboardRating import LeaderboardRating
 from api.models.LeaderboardRatingJournal import LeaderboardRatingJournal
@@ -17,7 +26,12 @@ from api.stats_api import LeaderboardApiConnector
 from api.stats_api import LeaderboardRatingApiConnector
 from api.stats_api import LeaderboardRatingJournalApiConnector
 from api.stats_api import LeagueSeasonScoreApiConnector
+from downloadManager import AvatarDownloader
+from downloadManager import DownloadRequest
 from src.playercard.leagueformatter import LegueFormatter
+
+if TYPE_CHECKING:
+    from client._clientwindow import ClientWindow
 
 FormClass, BaseClass = util.THEME.loadUiType("player_card/playercard.ui")
 
@@ -140,10 +154,12 @@ class Crosshairs:
 
 
 class PlayerInfoDialog(FormClass, BaseClass):
-    def __init__(self, player_id: str) -> None:
+    def __init__(self, client_window: ClientWindow, player_id: str) -> None:
         BaseClass.__init__(self)
         self.setupUi(self)
         self.load_stylesheet()
+
+        self.avatar_handler = AvatarHandler(self.avatarList, client_window.avatar_downloader)
 
         self.player_id = player_id
 
@@ -220,3 +236,45 @@ class PlayerInfoDialog(FormClass, BaseClass):
         self.registeredLabel.setText(registered.toString("yyyy-MM-dd hh:mm"))
         last_login = QDateTime.fromString(player.update_time, Qt.DateFormat.ISODate).toLocalTime()
         self.lastLoginLabel.setText(last_login.toString("yyyy-MM-dd hh:mm"))
+        self.add_avatars(player.avatar_assignments)
+
+    def add_avatars(self, avatar_assignments: list[AvatarAssignment] | None) -> None:
+        self.avatar_handler.populate_avatars(avatar_assignments)
+
+
+class AvatarHandler:
+    def __init__(self, avatar_list: QListWidget, avatar_downloader: AvatarDownloader) -> None:
+        self.avatar_list = avatar_list
+        self.avatar_dler = avatar_downloader
+        self.requests = {}
+
+    def populate_avatars(self, avatar_assignments: list[AvatarAssignment] | None) -> None:
+        if avatar_assignments is None:
+            return
+
+        for assignment in avatar_assignments:
+            pix = self.avatar_dler.avatars.get(assignment.avatar.filename, None)
+            if pix is None:
+                self._download_avatar(assignment.avatar)
+            else:
+                self._add_avatar_item(pix, assignment.avatar.tooltip)
+
+    def _prepare_avatar_dl_request(self, avatar: Avatar) -> DownloadRequest:
+        req = DownloadRequest()
+        req.done.connect(self._handle_avatar_download)
+        self.requests[avatar.url] = (req, avatar.tooltip)
+        return req
+
+    def _download_avatar(self, avatar: Avatar) -> None:
+        req = self._prepare_avatar_dl_request(avatar)
+        self.avatar_dler.download_avatar(avatar.url, req)
+
+    def _add_avatar_item(self, pixmap: QPixmap, description: str) -> None:
+        icon = QIcon(pixmap.scaled(40, 20))
+        avatar_item = QListWidgetItem(icon, description)
+        self.avatar_list.addItem(avatar_item)
+
+    def _handle_avatar_download(self, url: str, pixmap: QPixmap) -> None:
+        _, tooltip = self.requests[url]
+        self._add_avatar_item(pixmap, tooltip)
+        del self.requests[url]

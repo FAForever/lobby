@@ -23,7 +23,7 @@ class LeaderboardRatingApiConnector(DataApiAccessor):
 
     def get_player_ratings(self, pid: str) -> None:
         query = {
-            "include": "player,leaderboard",
+            "include": "leaderboard",
             "filter": f"player.id=={pid}",
         }
         self.get_by_query(query, self.handle_player_ratings)

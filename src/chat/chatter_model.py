@@ -220,11 +220,12 @@ class ChatterItemFormatter:
 
     def chatter_avatar_icon(self, data):
         avatar_url = data.avatar_url()
+        avatar_name = QtCore.QUrl(avatar_url).fileName()
         if avatar_url is None:
             return None
-        if avatar_url not in self._avatars.avatars:
+        if avatar_name not in self._avatars.avatars:
             return
-        return QIcon(self._avatars.avatars[avatar_url])
+        return QIcon(self._avatars.avatars[avatar_name])
 
     def chatter_country(self, data):
         if data.player is None:

@@ -5,7 +5,7 @@ import os
 import zipfile
 from io import BytesIO
 
-from PyQt6 import QtGui
+from PyQt6.QtCore import QByteArray
 from PyQt6.QtCore import QEventLoop
 from PyQt6.QtCore import QFile
 from PyQt6.QtCore import QIODevice
@@ -13,11 +13,14 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtCore import QTimer
 from PyQt6.QtCore import QUrl
 from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtNetwork import QNetworkAccessManager
 from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
 from config import Settings
+from util import CACHE_DIR
+from util.qt import qopen
 
 logger = logging.getLogger(__name__)
 
@@ -420,6 +423,13 @@ class AvatarDownloader:
         self._requests = {}
         self.avatars = {}
         self._nam.finished.connect(self._avatar_download_finished)
+        self.cache_dir = os.path.join(CACHE_DIR, "avatars")
+        self.load_cache()
+
+    def load_cache(self) -> None:
+        for filename in os.listdir(self.cache_dir):
+            filepath = os.path.join(self.cache_dir, filename)
+            self.avatars[filename] = QPixmap(filepath)
 
     def download_avatar(self, url, req):
         self._add_request(url, req)
@@ -430,13 +440,20 @@ class AvatarDownloader:
         if should_download:
             self._nam.get(QNetworkRequest(QUrl(url)))
 
-    def _avatar_download_finished(self, reply):
-        img = QtGui.QImage()
-        img.loadFromData(reply.readAll())
-        url = reply.url().toString()
-        if url not in self.avatars:
-            self.avatars[url] = QtGui.QPixmap(img)
+    def _avatar_download_finished(self, reply: QNetworkReply) -> None:
+        url_str = reply.url().toString()
+        avatar_name = reply.url().fileName()
+        avatar_path = self._save_avatar_to_cache(avatar_name, reply.readAll())
 
-        reqs = self._requests.pop(url, [])
+        if avatar_name not in self.avatars:
+            self.avatars[avatar_name] = QPixmap(avatar_path)
+
+        reqs = self._requests.pop(url_str, [])
         for req in reqs:
-            req.finished(url, self.avatars[url])
+            req.finished(url_str, self.avatars[avatar_name])
+
+    def _save_avatar_to_cache(self, name: str, qbytes: QByteArray) -> str:
+        filepath = os.path.join(self.cache_dir, name)
+        with qopen(filepath, QFile.OpenModeFlag.WriteOnly) as file:
+            file.write(qbytes.data())
+        return filepath

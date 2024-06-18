@@ -1,5 +1,6 @@
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import QSize
+from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QListWidgetItem
 from PyQt6.QtWidgets import QPushButton
@@ -68,7 +69,8 @@ class AvatarWidget(QObject):
         for avatar in avatars:
             self._add_avatar_item(avatar)
             url = avatar["url"]
-            icon = self._avatar_dler.avatars.get(url, None)
+            avatar_name = QUrl(url).fileName()
+            icon = self._avatar_dler.avatars.get(avatar_name, None)
             if icon is not None:
                 self._set_avatar_icon(url, icon)
             else:
