@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from bisect import bisect_left
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 import pyqtgraph as pg
@@ -80,7 +81,7 @@ class Crosshairs:
     def is_visible(self) -> bool:
         return self._visible
 
-    def _closest_index(self, lst: list[float], value: float) -> int:
+    def _closest_index(self, lst: Sequence[float | int], value: float | int) -> int:
         pos = bisect_left(lst, value)
         if pos == 0:
             return pos
