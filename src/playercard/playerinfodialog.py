@@ -254,11 +254,10 @@ class AvatarHandler:
             return
 
         for assignment in avatar_assignments:
-            pix = self.avatar_dler.avatars.get(assignment.avatar.filename, None)
-            if pix is None:
-                self._download_avatar(assignment.avatar)
+            if self.avatar_dler.has_avatar(assignment.avatar.filename):
+                self._add_avatar(assignment.avatar)
             else:
-                self._add_avatar_item(pix, assignment.avatar.tooltip)
+                self._download_avatar(assignment.avatar)
 
     def _prepare_avatar_dl_request(self, avatar: Avatar) -> DownloadRequest:
         req = DownloadRequest()
@@ -269,6 +268,9 @@ class AvatarHandler:
     def _download_avatar(self, avatar: Avatar) -> None:
         req = self._prepare_avatar_dl_request(avatar)
         self.avatar_dler.download_avatar(avatar.url, req)
+
+    def _add_avatar(self, avatar: Avatar) -> None:
+        self._add_avatar_item(self.avatar_dler.get_avatar(avatar.filename), avatar.tooltip)
 
     def _add_avatar_item(self, pixmap: QPixmap, description: str) -> None:
         icon = QIcon(pixmap.scaled(40, 20))

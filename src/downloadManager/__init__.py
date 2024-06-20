@@ -431,6 +431,20 @@ class AvatarDownloader:
             filepath = os.path.join(self.cache_dir, filename)
             self.avatars[filename] = QPixmap(filepath)
 
+    def avatar_name(self, url: QUrl | str) -> str:
+        return QUrl(url).fileName(QUrl.ComponentFormattingOption.EncodeSpaces)
+
+    def has_avatar(self, name_or_url: str) -> bool:
+        return self.get_avatar(name_or_url) is not None
+
+    def get_avatar(self, name_or_url: str) -> QPixmap:
+        return self.avatars.get(self.avatar_name(name_or_url), None)
+
+    def download_if_needed(self, url: str | None, req: DownloadRequest) -> None:
+        if url is None or self.has_avatar(url):
+            return
+        self.download_avatar(url, req)
+
     def download_avatar(self, url, req):
         self._add_request(url, req)
 
@@ -442,7 +456,7 @@ class AvatarDownloader:
 
     def _avatar_download_finished(self, reply: QNetworkReply) -> None:
         url_str = reply.url().toString()
-        avatar_name = reply.url().fileName()
+        avatar_name = self.avatar_name(reply.url())
         avatar_path = self._save_avatar_to_cache(avatar_name, reply.readAll())
 
         if avatar_name not in self.avatars:

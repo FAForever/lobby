@@ -1,7 +1,6 @@
 from urllib import parse
 
 from PyQt6.QtCore import QObject
-from PyQt6.QtCore import QUrl
 from PyQt6.QtCore import pyqtSignal
 
 from downloadManager import DownloadRequest
@@ -41,7 +40,7 @@ class ChatterModelItem(QObject):
 
     @classmethod
     def builder(
-        cls, map_preview_dler, avatar_dler, relation_trackers, **kwargs
+        cls, map_preview_dler, avatar_dler, relation_trackers, **kwargs,
     ):
         def make(cc):
             return cls(cc, map_preview_dler, avatar_dler, relation_trackers)
@@ -125,13 +124,7 @@ class ChatterModelItem(QObject):
         return self.game.mapname.lower()
 
     def _download_avatar_if_needed(self):
-        avatar_url = self.avatar_url()
-        avatar_name = QUrl(avatar_url).fileName()
-        if avatar_url is None:
-            return
-        if avatar_name in self._avatar_dler.avatars:
-            return
-        self._avatar_dler.download_avatar(avatar_url, self._avatar_request)
+        self._avatar_dler.download_if_needed(self.avatar_url(), self._avatar_request)
 
     def avatar_url(self):
         try:
