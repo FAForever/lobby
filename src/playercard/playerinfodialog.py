@@ -13,6 +13,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QListWidget
 from PyQt6.QtWidgets import QListWidgetItem
+from PyQt6.QtWidgets import QTabWidget
 from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
 
 import util
@@ -36,14 +37,15 @@ if TYPE_CHECKING:
 
 FormClass, BaseClass = util.THEME.loadUiType("player_card/playercard.ui")
 
+Numeric = float | int
+
 
 class Crosshairs:
-    def __init__(self, plotwidget: pg.PlotWidget, xseries: list[int], yseries: list[float]) -> None:
+    def __init__(self, plotwidget: pg.PlotWidget, series: LineSeries) -> None:
         self.plotwidget = plotwidget
         self.plotwidget.scene().sigMouseMoved.connect(self.update_lines_and_text)
 
-        self.xseries = xseries
-        self.yseries = yseries
+        self.series = series
 
         pen = pg.mkPen("green", width=3)
         self.xLine = pg.InfiniteLine(angle=90, pen=pen)
@@ -62,12 +64,19 @@ class Crosshairs:
         self.plotwidget.plotItem.getAxis("left").setWidth(40)
         self._visible = True
 
+    def set_series(self, series: LineSeries) -> None:
+        self.series = series
+
     def set_visible(self, visible: bool) -> None:
         self.xLine.setVisible(visible)
         self.yLine.setVisible(visible)
         self.xText.setVisible(visible)
         self.yText.setVisible(visible)
-        self._visible = visible
+
+    def display(self, *, seen: bool) -> None:
+        if not self._visible:
+            return
+        self.set_visible(seen)
 
     def hide(self) -> None:
         self.set_visible(False)
@@ -76,12 +85,14 @@ class Crosshairs:
         self.set_visible(True)
 
     def change_visibility(self) -> None:
-        self.set_visible(not self._visible)
+        new_state = not self._visible
+        self.set_visible(new_state)
+        self._visible = new_state
 
     def is_visible(self) -> bool:
         return self._visible
 
-    def _closest_index(self, lst: Sequence[float | int], value: float | int) -> int:
+    def _closest_index(self, lst: Sequence[Numeric], value: Numeric) -> int:
         pos = bisect_left(lst, value)
         if pos == 0:
             return pos
@@ -98,8 +109,8 @@ class Crosshairs:
     def map_to_data(self, pos: QPointF) -> QPointF:
         view = self.plotwidget.plotItem.getViewBox()
         value_pos = view.mapSceneToView(pos)
-        point_index = self._closest_index(self.xseries, value_pos.x())
-        return QPointF(self.xseries[point_index], self.yseries[point_index])
+        point_index = self._closest_index(self.series.x(), value_pos.x())
+        return self.series.point_at(point_index)
 
     def get_xtext_pos(self, scene_point: QPointF) -> tuple[float, float]:
         scene_width = self.plotwidget.sceneBoundingRect().width()
@@ -122,7 +133,7 @@ class Crosshairs:
         return x, y
 
     def update_lines_and_text(self, pos: QPointF) -> None:
-        if not self.xseries:
+        if not self.series.x():
             return
 
         data_point = self.map_to_data(pos)
@@ -151,7 +162,7 @@ class Crosshairs:
 
     def show_at_pos(self, pos: QPointF) -> None:
         seen = self.plotwidget.sceneBoundingRect().contains(pos)
-        self.set_visible(seen)
+        self.display(seen=seen)
 
 
 class PlayerInfoDialog(FormClass, BaseClass):
@@ -160,24 +171,13 @@ class PlayerInfoDialog(FormClass, BaseClass):
         self.setupUi(self)
         self.load_stylesheet()
 
+        self.tab_widget_ctrl = RatingTabWidgetController(player_id, self.tabWidget)
         self.avatar_handler = AvatarHandler(self.avatarList, client_window.avatar_downloader)
 
         self.player_id = player_id
 
         self.player_api = PlayerApiConnector()
         self.player_api.player_ready.connect(self.process_player)
-
-        self.leaderboards_api = LeaderboardApiConnector()
-        self.leaderboards_api.data_ready.connect(self.populate_leaderboards)
-
-        self.ratings_history_api = LeaderboardRatingJournalApiConnector()
-        self.ratings_history_api.ratings_ready.connect(self.process_rating_history)
-
-        self.plotWidget.setBackground("#202025")
-        self.plotWidget.setAxisItems({"bottom": DateAxisItem()})
-
-        self.ratingComboBox.currentTextChanged.connect(self.get_ratings)
-        self.crosshairs = None
 
         self.leagues_api = LeagueSeasonScoreApiConnector()
 
@@ -189,42 +189,9 @@ class PlayerInfoDialog(FormClass, BaseClass):
         self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
 
     def run(self) -> None:
-        self.leaderboards_api.requestData()
         self.player_api.request_player(self.player_id)
+        self.tab_widget_ctrl.run()
         self.exec()
-
-    def populate_leaderboards(self, message: dict[str, list[Leaderboard]]) -> None:
-        for leaderboard in message["values"]:
-            self.ratingComboBox.addItem(leaderboard.technical_name)
-
-    def clear_graphics(self) -> None:
-        self.plotWidget.clear()
-        if self.crosshairs is not None:
-            self.crosshairs.hide()
-            self.crosshairs = None
-
-    def get_ratings(self, leaderboard_name: str) -> None:
-        self.ratingComboBox.setEnabled(False)
-        self.ratings_history_api.get_full_history(self.player_id, leaderboard_name)
-
-    def get_chart_series(self, ratings: list[LeaderboardRatingJournal]) -> tuple[list, list]:
-        xvals, yvals = [], []
-        for entry in ratings:
-            assert entry.player_stats is not None
-            score_time = QDateTime.fromString(entry.player_stats.score_time, Qt.DateFormat.ISODate)
-            xvals.append(score_time.toSecsSinceEpoch())
-            yvals.append(entry.mean_after - 3 * entry.deviation_after)
-        return xvals, yvals
-
-    def draw_ratings(self, ratings: tuple[list, list]) -> None:
-        self.plotWidget.plot(*ratings, pen=pg.mkPen("orange"))
-        self.crosshairs = Crosshairs(self.plotWidget, *ratings)
-        self.plotWidget.autoRange()
-
-    def process_rating_history(self, ratings: dict[str, list[LeaderboardRatingJournal]]) -> None:
-        self.clear_graphics()
-        self.draw_ratings(self.get_chart_series(ratings["values"]))
-        self.ratingComboBox.setEnabled(True)
 
     def process_player_ratings(self, ratings: dict[str, list[LeaderboardRating]]) -> None:
         for rating in ratings["values"]:
@@ -281,3 +248,109 @@ class AvatarHandler:
         _, tooltip = self.requests[url]
         self._add_avatar_item(pixmap, tooltip)
         del self.requests[url]
+
+
+class LineSeries:
+    def __init__(self) -> None:
+        self._x: list[Numeric] = []
+        self._y: list[Numeric] = []
+
+    def x(self) -> list[Numeric]:
+        return self._x
+
+    def y(self) -> list[Numeric]:
+        return self._y
+
+    def append(self, x: Numeric, y: Numeric) -> None:
+        self._x.append(x)
+        self._y.append(y)
+
+    def point_at(self, index: int) -> QPointF:
+        return QPointF(self._x[index], self._y[index])
+
+
+class RatingsPlotTab:
+    def __init__(self, player_id: str, leaderboard: Leaderboard, plot: PlotController) -> None:
+        self.player_id = player_id
+        self.leaderboard = leaderboard
+        self.ratings_history_api = LeaderboardRatingJournalApiConnector()
+        self.ratings_history_api.ratings_ready.connect(self.process_rating_history)
+        self.plot = plot
+        self._loaded = False
+
+    def enter(self) -> None:
+        if self._loaded:
+            return
+        self.ratings_history_api.get_full_history(self.player_id, self.leaderboard.technical_name)
+
+    def get_plot_series(self, ratings: list[LeaderboardRatingJournal]) -> LineSeries:
+        series = LineSeries()
+        for entry in ratings:
+            assert entry.player_stats is not None
+            score_time = QDateTime.fromString(entry.player_stats.score_time, Qt.DateFormat.ISODate)
+            series.append(
+                score_time.toSecsSinceEpoch(),
+                entry.mean_after - 3 * entry.deviation_after,
+            )
+        return series
+
+    def process_rating_history(self, ratings: dict[str, list[LeaderboardRatingJournal]]) -> None:
+        self.plot.draw_series(self.get_plot_series(ratings["values"]))
+        self._loaded = True
+
+
+class RatingTabWidgetController:
+    def __init__(self, player_id: str, tab_widget: QTabWidget) -> None:
+        self.player_id = player_id
+        self.widget = tab_widget
+        self.widget.currentChanged.connect(self.on_tab_changed)
+
+        self.leaderboards_api = LeaderboardApiConnector()
+        self.leaderboards_api.data_ready.connect(self.populate_leaderboards)
+        self.tabs: dict[int, RatingsPlotTab] = {}
+
+    def run(self) -> None:
+        self.leaderboards_api.requestData()
+
+    def populate_leaderboards(self, message: dict[str, list[Leaderboard]]) -> None:
+        for index, leaderboard in enumerate(message["values"]):
+            widget = pg.PlotWidget()
+            tab = RatingsPlotTab(self.player_id, leaderboard, PlotController(widget))
+            self.tabs[index] = tab
+            self.widget.insertTab(index, widget, leaderboard.technical_name)
+
+    def on_tab_changed(self, index: int) -> None:
+        self.tabs[index].enter()
+
+
+class PlotController:
+    def __init__(self, widget: pg.PlotWidget) -> None:
+        self.widget = widget
+        self.widget.setBackground("#202025")
+        self.widget.setAxisItems({"bottom": DateAxisItem()})
+        self.crosshairs = Crosshairs(self.widget, LineSeries())
+        self.hide_irrelevant_plot_actions()
+        self.add_custom_menu_actions()
+
+    def clear(self) -> None:
+        self.widget.clear()
+
+    def draw_series(self, series: LineSeries) -> None:
+        self.widget.plot(series.x(), series.y(), pen=pg.mkPen("orange"))
+        self.crosshairs.set_series(series)
+        self.widget.autoRange()
+
+    def hide_irrelevant_plot_actions(self) -> None:
+        for action in ("Transforms", "Downsample", "Average", "Alpha", "Points"):
+            self.widget.plotItem.setContextMenuActionVisible(action, visible=False)
+
+    def add_custom_menu_actions(self) -> None:
+        viewbox = self.widget.plotItem.getViewBox()
+        if viewbox is None:
+            return
+
+        menu = viewbox.getMenu(ev=None)
+        if menu is None:
+            return
+
+        menu.addAction("Show/Hide crosshair", self.crosshairs.change_visibility)
