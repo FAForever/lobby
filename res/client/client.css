@@ -100,6 +100,18 @@ QTabWidget > QTabBar::tab
     min-width: 80px;
 }
 
+QTabWidget > QTabBar::tab::hover
+{
+    color: silver;
+    background-color: #808080;
+}
+
+QTabWidget > QTabBar::tab::selected
+{
+    color: white;
+    background-color: #758fa0;
+}
+
 QTabWidget#matchmakerQueues::pane
 {
     background-color: none;
@@ -929,4 +941,10 @@ QFrame#settingsFrame {
     border-top-left-radius : 5px;
     border-bottom-left-radius : 5px;
     border-bottom-right-radius : 5px;
+}
+
+
+#line
+{
+    background-color: #202025;
 }
