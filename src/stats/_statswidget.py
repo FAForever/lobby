@@ -71,8 +71,6 @@ class StatsWidget(BaseClass, FormClass, BusyWidget):
             self.refreshLeaderboards()
 
     def refreshLeaderboards(self):
-        while self.client.replays.leaderboardList.count() != 1:
-            self.client.replays.leaderboardList.removeItem(1)
         self.leaderboards.blockSignals(True)
         while self.leaderboards.widget(0) is not None:
             self.leaderboards.widget(0).deleteLater()
@@ -244,15 +242,13 @@ class StatsWidget(BaseClass, FormClass, BusyWidget):
 
     def process_leaderboards_info(self, message: dict[str, list[Leaderboard]]) -> None:
         self.leaderboardNames.clear()
-        for leaderboard in message["values"]:
+        for index, leaderboard in enumerate(message["values"]):
             self.leaderboardNames.append(leaderboard.technical_name)
-        for index, name in enumerate(self.leaderboardNames):
             self.leaderboards.insertTab(
                 index,
-                LeaderboardWidget(self.client, self, name),
-                name.capitalize().replace("_", " "),
+                LeaderboardWidget(self.client, self, leaderboard.technical_name),
+                leaderboard.pretty_name,
             )
-            self.client.replays.leaderboardList.addItem(name)
         self.leaderboards.setCurrentIndex(1)
         self.leaderboards.currentChanged.connect(self.leaderboardsTabChanged)
 

@@ -3,7 +3,6 @@ import logging
 import os
 import time
 
-from pydantic import ValidationError
 from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
@@ -14,11 +13,14 @@ from PyQt6.QtNetwork import QNetworkRequest
 import client
 import fa
 import util
+from api.models.Leaderboard import Leaderboard
 from api.replaysapi import ReplaysApiConnector
+from api.stats_api import LeaderboardApiConnector
 from config import Settings
 from downloadManager import DownloadRequest
 from fa.replay import replay
 from model.game import GameState
+from pydantic import ValidationError
 from replays.models import MetadataModel
 from replays.replayitem import ReplayItem
 from replays.replayitem import ReplayItemDelegate
@@ -642,6 +644,7 @@ class ReplayVaultWidgetHandler(object):
         self._w = widget
         self._dispatcher = dispatcher
         self.client = client
+        self.client.authorized.connect(self.on_authorized)
         self._gameset = gameset
         self._playerset = playerset
 
@@ -649,6 +652,10 @@ class ReplayVaultWidgetHandler(object):
         self.selectedReplay = None
         self.apiConnector = ReplaysApiConnector()
         self.apiConnector.data_ready.connect(self.process_replays_data)
+
+        self.leaderboard_api = LeaderboardApiConnector()
+        self.leaderboard_api.data_ready.connect(self.process_leaderboards)
+
         self.replayDownload = QNetworkAccessManager()
         self.replayDownload.finished.connect(self.onDownloadFinished)
         self.toolboxHandler = ReplayToolboxHandler(
@@ -696,6 +703,15 @@ class ReplayVaultWidgetHandler(object):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.stopSearchVault)
 
+    def on_authorized(self) -> None:
+        if self._w.leaderboardList.count() == 1:
+            self.refresh_leaderboards()
+
+    def refresh_leaderboards(self) -> None:
+        while self._w.leaderboardList.count() != 1:
+            self._w.leaderboardList.removeItem(1)
+        self.leaderboard_api.requestData()
+
     def showToolTip(self, widget, msg):
         """
         Default tooltips are too slow and disappear when user starts typing
@@ -714,14 +730,14 @@ class ReplayVaultWidgetHandler(object):
 
     def searchVault(
         self,
-        minRating=None,
-        mapName=None,
-        playerName=None,
-        leaderboardId=None,
-        modListIndex=None,
-        quantity=None,
-        reset=None,
-        exactPlayerName=None,
+        minRating: int | None = None,
+        mapName: str | None = None,
+        playerName: str | None = None,
+        leaderboardListItemIndex: int | None = None,
+        modListIndex: int | None = None,
+        quantity: int | None = None,
+        reset: bool | None = None,
+        exactPlayerName: bool | None = None,
     ):
         w = self._w
         timePeriod = None
@@ -749,8 +765,8 @@ class ReplayVaultWidgetHandler(object):
                 w.mapName.setText(mapName)
             if playerName is not None:
                 w.playerName.setText(playerName)
-            if leaderboardId is not None:
-                w.leaderboardList.setCurrentIndex(leaderboardId)
+            if leaderboardListItemIndex is not None:
+                w.leaderboardList.setCurrentIndex(leaderboardListItemIndex)
             if modListIndex is not None:
                 w.modList.setCurrentIndex(modListIndex)
             if quantity is not None:
@@ -768,7 +784,7 @@ class ReplayVaultWidgetHandler(object):
             w.minRating.value(),
             w.mapName.text(),
             w.playerName.text(),
-            w.leaderboardList.currentIndex(),
+            w.leaderboardList.currentData(),
             w.modList.currentText(),
             timePeriod,
             exactPlayerName,
@@ -792,13 +808,13 @@ class ReplayVaultWidgetHandler(object):
 
     def prepareFilters(
         self,
-        minRating,
-        mapName,
-        playerName,
-        leaderboardId,
-        modListIndex,
-        timePeriod=None,
-        exactPlayerName=None,
+        minRating: int | None,
+        mapName: str | None,
+        playerName: str | None,
+        leaderboardName: str | None,
+        modListIndex: int | None,
+        timePeriod: list[str] | None = None,
+        exactPlayerName: bool | None = None,
     ):
         '''
         Making filter string here + some logic to exclude "heavy" requests
@@ -811,10 +827,10 @@ class ReplayVaultWidgetHandler(object):
         if self.hide_unranked:
             filters.append('validity=="VALID"')
 
-        if leaderboardId:
+        if leaderboardName not in (None, "All"):
             filters.append(
-                'playerStats.ratingChanges.leaderboard.id=="{}"'
-                .format(leaderboardId),
+                'playerStats.ratingChanges.leaderboard.technicalName=="{}"'
+                .format(leaderboardName),
             )
 
         if minRating and minRating > 0:
@@ -1022,6 +1038,10 @@ class ReplayVaultWidgetHandler(object):
                 "<font color='gold'><b>No replays found</b></font>",
             )
 
+    def process_leaderboards(self, message: dict[str, list[Leaderboard]]) -> None:
+        for leaderboard in message["values"]:
+            self._w.leaderboardList.addItem(leaderboard.pretty_name, leaderboard.technical_name)
+
     def updateOnlineTree(self):
         self.selectedReplay = None  # clear, it won't be part of the new tree
         self._w.replayInfos.clear()
@@ -1068,17 +1088,16 @@ class ReplaysWidget(BaseClass, FormClass):
 
         logger.info("Replays Widget instantiated.")
 
-    def set_player(self, name, leaderboardName=None):
+    def refresh_leaderboards(self) -> None:
+        self.vaultManager.refresh_leaderboards()
+
+    def set_player(self, name: str, leaderboard_name: str | None = None) -> None:
         self.setCurrentIndex(2)  # focus on Online Fault
-        if leaderboardName is not None:
-            leaderboardId = self.leaderboardList.findText(leaderboardName)
-            self.vaultManager.searchVault(
-                0, "", name, leaderboardId, 0, 100, exactPlayerName=True,
-            )
+        if leaderboard_name is not None:
+            item_index = self.leaderboardList.findData(leaderboard_name)
+            self.vaultManager.searchVault(0, "", name, item_index, 0, 100, exactPlayerName=True)
         else:
-            self.vaultManager.searchVault(
-                0, "", name, 0, 0, 100, exactPlayerName=True,
-            )
+            self.vaultManager.searchVault(0, "", name, 0, 0, 100, exactPlayerName=True)
 
     def focusEvent(self, event):
         self.localManager.updatemyTree()

@@ -9,4 +9,7 @@ class LeaderboardRatingParser:
 
     @staticmethod
     def parse_many(api_result: dict) -> list[LeaderboardRating]:
-        return [LeaderboardRatingParser.parse(entry) for entry in api_result["data"]]
+        return sorted(
+            [LeaderboardRatingParser.parse(entry) for entry in api_result["data"]],
+            key=lambda rating: rating.leaderboard.order() if rating.leaderboard is not None else 0,
+        )

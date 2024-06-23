@@ -1,3 +1,5 @@
+from operator import methodcaller
+
 from api.models.Leaderboard import Leaderboard
 
 
@@ -9,4 +11,7 @@ class LeaderboardParser:
 
     @staticmethod
     def parse_many(api_result: dict) -> list[Leaderboard]:
-        return [LeaderboardParser.parse(entry) for entry in api_result["data"]]
+        return sorted(
+            [LeaderboardParser.parse(entry) for entry in api_result["data"]],
+            key=methodcaller("order"),
+        )

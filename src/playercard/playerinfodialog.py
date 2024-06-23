@@ -317,7 +317,7 @@ class RatingTabWidgetController:
             widget = pg.PlotWidget()
             tab = RatingsPlotTab(self.player_id, leaderboard, PlotController(widget))
             self.tabs[index] = tab
-            self.widget.insertTab(index, widget, leaderboard.technical_name)
+            self.widget.insertTab(index, widget, leaderboard.pretty_name)
 
     def on_tab_changed(self, index: int) -> None:
         self.tabs[index].enter()

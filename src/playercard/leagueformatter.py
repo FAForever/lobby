@@ -32,14 +32,19 @@ class LegueFormatter(FormClass, BaseClass):
         # chr(0xB1) = +-
         rating_str = f"{rating.rating:.0f} [{rating.mean:.0f}\xb1{rating.deviation:.0f}]"
         self.ratingLabel.setText(rating_str)
-        self.leaderboardLabel.setText(rating.leaderboard.technical_name)
+
+        assert rating.leaderboard is not None
+
+        self.leaderboardLabel.setText(rating.leaderboard.pretty_name)
         self.league_score_api = league_score_api
         self.league_score_api.score_ready.connect(self.on_league_score_ready)
 
-        self.leaderboard = rating.leaderboard.technical_name
-        self.league_score_api.get_player_score_in_leaderboard(player_id, self.leaderboard)
+        self.leaderboard = rating.leaderboard
+        self.league_score_api.get_player_score_in_leaderboard(
+            player_id, self.leaderboard.technical_name,
+        )
 
-        self.leaderboardLabel.setText(self.leaderboard)
+        self.leaderboardLabel.setText(self.leaderboard.pretty_name)
 
         self._downloader = Downloader(os.path.join(util.CACHE_DIR, "divisions"))
         self._images_dl_request = DownloadRequest()
@@ -49,7 +54,7 @@ class LegueFormatter(FormClass, BaseClass):
         self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
 
     def on_league_score_ready(self, score: LeagueSeasonScore) -> None:
-        if score.season.leaderboard.technical_name != self.leaderboard:
+        if score.season.leaderboard.technical_name != self.leaderboard.technical_name:
             return
 
         if score.score is None:
