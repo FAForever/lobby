@@ -46,7 +46,7 @@ class LegueFormatter(FormClass, BaseClass):
 
         self.leaderboardLabel.setText(self.leaderboard.pretty_name)
 
-        self._downloader = Downloader(os.path.join(util.CACHE_DIR, "divisions"))
+        self._downloader = Downloader(util.DIVISIONS_CACHE_DIR)
         self._images_dl_request = DownloadRequest()
         self._images_dl_request.done.connect(self.on_image_downloaded)
 

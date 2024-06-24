@@ -19,7 +19,7 @@ from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
 from config import Settings
-from util import CACHE_DIR
+from util import AVATARS_CACHE_DIR
 from util.qt import qopen
 
 logger = logging.getLogger(__name__)
@@ -423,7 +423,7 @@ class AvatarDownloader:
         self._requests = {}
         self.avatars = {}
         self._nam.finished.connect(self._avatar_download_finished)
-        self.cache_dir = os.path.join(CACHE_DIR, "avatars")
+        self.cache_dir = AVATARS_CACHE_DIR
         self.load_cache()
 
     def load_cache(self) -> None:
