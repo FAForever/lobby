@@ -6,8 +6,10 @@ from typing import TYPE_CHECKING
 
 import pyqtgraph as pg
 from PyQt6.QtCore import QDateTime
+from PyQt6.QtCore import QObject
 from PyQt6.QtCore import QPointF
 from PyQt6.QtCore import Qt
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QColor
 from PyQt6.QtGui import QIcon
 from PyQt6.QtGui import QPixmap
@@ -269,8 +271,18 @@ class LineSeries:
         return QPointF(self._x[index], self._y[index])
 
 
-class RatingsPlotTab:
-    def __init__(self, player_id: str, leaderboard: Leaderboard, plot: PlotController) -> None:
+class RatingsPlotTab(QObject):
+    name_changed = pyqtSignal(int, str)
+
+    def __init__(
+            self,
+            index: int,
+            player_id: str,
+            leaderboard: Leaderboard,
+            plot: PlotController,
+    ) -> None:
+        super().__init__()
+        self.index = index
         self.player_id = player_id
         self.leaderboard = leaderboard
         self.ratings_history_api = LeaderboardRatingJournalApiConnector()
@@ -281,6 +293,7 @@ class RatingsPlotTab:
     def enter(self) -> None:
         if self._loaded:
             return
+        self.name_changed.emit(self.index, "Loading...")
         self.ratings_history_api.get_full_history(self.player_id, self.leaderboard.technical_name)
 
     def get_plot_series(self, ratings: list[LeaderboardRatingJournal]) -> LineSeries:
@@ -297,6 +310,7 @@ class RatingsPlotTab:
     def process_rating_history(self, ratings: dict[str, list[LeaderboardRatingJournal]]) -> None:
         self.plot.draw_series(self.get_plot_series(ratings["values"]))
         self._loaded = True
+        self.name_changed.emit(self.index, self.leaderboard.pretty_name)
 
 
 class RatingTabWidgetController:
@@ -315,7 +329,8 @@ class RatingTabWidgetController:
     def populate_leaderboards(self, message: dict[str, list[Leaderboard]]) -> None:
         for index, leaderboard in enumerate(message["values"]):
             widget = pg.PlotWidget()
-            tab = RatingsPlotTab(self.player_id, leaderboard, PlotController(widget))
+            tab = RatingsPlotTab(index, self.player_id, leaderboard, PlotController(widget))
+            tab.name_changed.connect(self.widget.setTabText)
             self.tabs[index] = tab
             self.widget.insertTab(index, widget, leaderboard.pretty_name)
 
