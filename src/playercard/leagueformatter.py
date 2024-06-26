@@ -1,6 +1,5 @@
 import os
 
-from PyQt6.QtGui import QImage
 from PyQt6.QtGui import QPixmap
 
 import util
@@ -73,8 +72,7 @@ class LegueFormatter(FormClass, BaseClass):
             self.download_league_icon(subdivision.image_url)
 
     def set_league_icon(self, image_path: str) -> None:
-        image = QImage(image_path)
-        self.iconLabel.setPixmap(QPixmap(image).scaled(160, 80))
+        self.iconLabel.setPixmap(QPixmap(image_path).scaled(160, 80))
 
     def download_league_icon(self, url: str) -> None:
         name = os.path.basename(url)
