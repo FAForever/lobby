@@ -1,4 +1,8 @@
+from __future__ import annotations
+
+import random
 from enum import Enum
+from typing import NamedTuple
 
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
@@ -9,23 +13,127 @@ import util
 FormClass, BaseClass = util.THEME.loadUiType("games/mapgen.ui")
 
 
+class Common(Enum):
+    RANDOM = "RANDOM"
+
+
+class Density(NamedTuple):
+    minval: int
+    maxval: int
+
+    def value(self) -> float:
+        return random.randrange(self.minval, self.maxval + 1) / 100
+
+
+class GenerationType(Enum):
+    CASUAL = "CASUAL"
+    TOURNAMENT = "TOURNAMENT"
+    BLIND = "BLIND"
+    UNEXPLORED = "UNEXPLORED"
+
+
+class TerrainSymmtery(Enum):
+    RANDOM = "RANDOM"
+
+    POINT2 = "POINT2"
+    POINT3 = "POINT3"
+    POINT4 = "POINT4"
+    POINT5 = "POINT5"
+    POINT6 = "POINT6"
+    POINT7 = "POINT7"
+    POINT8 = "POINT8"
+    POINT9 = "POINT9"
+    POINT10 = "POINT10"
+    POINT11 = "POINT11"
+    POINT12 = "POINT12"
+    POINT13 = "POINT13"
+    POINT14 = "POINT14"
+    POINT15 = "POINT15"
+    POINT16 = "POINT16"
+    XZ = "XZ"
+    ZX = "ZX"
+    X = "X"
+    Z = "Z"
+    QUAD = "QUAD"
+    DIAG = "DIAG"
+    NONE = "NONE"
+
+
 class MapStyle(Enum):
     RANDOM = "RANDOM"
-    DEFAULT = "DEFAULT"
-    ONE_ISLAND = "ONE_ISLAND"
+
+    BASIC = "BASIC"
     BIG_ISLANDS = "BIG_ISLANDS"
-    SMALL_ISLANDS = "SMALL_ISLANDS"
     CENTER_LAKE = "CENTER_LAKE"
-    VALLEY = "VALLEY"
     DROP_PLATEAU = "DROP_PLATEAU"
+    FLOODED = "FLOODED"
+    HIGH_RECLAIM = "HIGH_RECLAIM"
+    LAND_BRIDGE = "LAND_BRIDGE"
+    LITTLE_MOUNTAIN = "LITTLE_MOUNTAIN"
+    LOW_MEX = "LOW_MEX"
+    MOUNTAIN_RANGE = "MOUNTAIN_RANGE"
+    ONE_ISLAND = "ONE_ISLAND"
+    SMALL_ISLANDS = "SMALL_ISLANDS"
+    VALLEY = "VALLEY"
+
+    @staticmethod
+    def get_by_index(index: int) -> MapStyle:
+        return list(MapStyle)[index]
+
+
+class TerrainStyle(Enum):
+    RANDOM = "RANDOM"
+
+    BASIC = "BASIC"
+    BIG_ISLANDS = "BIG_ISLANDS"
+    CENTER_LAKE = "CENTER_LAKE"
+    DROP_PLATEAU = "DROP_PLATEAU"
+    FLOODED = "FLOODED"
+    LAND_BRIDGE = "LAND_BRIDGE"
     LITTLE_MOUNTAIN = "LITTLE_MOUNTAIN"
     MOUNTAIN_RANGE = "MOUNTAIN_RANGE"
-    LAND_BRIDGE = "LAND_BRIDGE"
-    LOW_MEX = "LOW_MEX"
-    FLOODED = "FLOODED"
+    ONE_ISLAND = "ONE_ISLAND"
+    SMALL_ISLANDS = "SMALL_ISLANDS"
+    VALLEY = "VALLEY"
 
-    def getMapStyle(index):
-        return list(MapStyle)[index]
+
+class PropStyle(Enum):
+    RANDOM = "RANDOM"
+
+    BASIC = "BASIC"
+    BOULDER_FIELD = "BOULDER_FIELD"
+    ENEMY_CIV = "ENEMY_CIV"
+    HIGH_RECLAIM = "HIGH_RECLAIM"
+    LARGE_BATTLE = "LARGE_BATTLE"
+    NAVY_WRECKS = "NAVY_WRECKS"
+    NEUTRAL_CIV = "NEUTRAL_CIV"
+    ROCK_FIELD = "ROCK_FIELD"
+    SMALL_BATTLE = "SMALL_BATTLE"
+
+
+class ResourceStyle(Enum):
+    RANDOM = "RANDOM"
+
+    BASIC = "BASIC"
+    LOW_MEX = "LOW_MEX"
+    WATER_MEX = "WATER_MEX"
+
+
+class TextureStyle(Enum):
+    RANDOM = "RANDOM"
+
+    BRIMSTONE = "BRIMSTONE"
+    DESERT = "DESERT"
+    EARLYAUTUMN = "EARLYAUTUMN"
+    FRITHEN = "FRITHEN"
+    MARS = "MARS"
+    MOONLIGHT = "MOONLIGHT"
+    PRAYER = "PRAYER"
+    STONES = "STONES"
+    SUNSET = "SUNSET"
+    SYRTIS = "SYRTIS"
+    WINDINGRIVER = "WINDINGRIVER"
+    WONDER = "WONDER"
 
 
 class MapGenDialog(FormClass, BaseClass):
@@ -35,71 +143,128 @@ class MapGenDialog(FormClass, BaseClass):
         self.setupUi(self)
 
         util.THEME.stylesheets_reloaded.connect(self.load_stylesheet)
+
         self.load_stylesheet()
 
         self.parent = parent
 
-        self.generationType.currentIndexChanged.connect(
-            self.generationTypeChanged,
+        self.useCustomStyleCheckBox.checkStateChanged.connect(self.on_custom_style)
+        self.useCustomStyleCheckBox.setChecked(
+            config.Settings.get("mapGenerator/useCustomStyle", type=bool, default=False),
         )
-        self.numberOfSpawns.currentIndexChanged.connect(
-            self.numberOfSpawnsChanged,
-        )
-        self.mapSize.valueChanged.connect(self.mapSizeChanged)
-        self.mapStyle.currentIndexChanged.connect(self.mapStyleChanged)
-        self.generateMapButton.clicked.connect(self.generateMap)
-        self.saveMapGenSettingsButton.clicked.connect(self.saveMapGenPrefs)
-        self.resetMapGenSettingsButton.clicked.connect(self.resetMapGenPrefs)
 
-        self.random_buttons = [
-            self.landRandomDensity,
-            self.plateausRandomDensity,
-            self.mountainsRandomDensity,
-            self.rampsRandomDensity,
-            self.mexRandomDensity,
-            self.reclaimRandomDensity,
-        ]
-        self.sliders = [
-            self.landDensity,
-            self.plateausDensity,
-            self.mountainsDensity,
-            self.rampsDensity,
-            self.mexDensity,
-            self.reclaimDensity,
+        self.generationType.currentIndexChanged.connect(self.gen_type_changed)
+        self.numberOfSpawns.currentIndexChanged.connect(self.num_spawns_changed)
+        self.mapSize.valueChanged.connect(self.map_size_changed)
+        self.mapStyle.currentIndexChanged.connect(self.map_style_changed)
+        self.generateMapButton.clicked.connect(self.generate_map)
+        self.saveMapGenSettingsButton.clicked.connect(self.save_mapgen_prefs)
+        self.resetMapGenSettingsButton.clicked.connect(self.reset_mapgen_prefs)
+
+        self.spinners = [
+            self.minResourceDensity,
+            self.maxResourceDensity,
+            self.minReclaimDensity,
+            self.maxReclaimDensity,
         ]
 
-        self.option_frames = [
-            self.landOptions,
-            self.plateausOptions,
-            self.mountainsOptions,
-            self.rampsOptions,
-            self.mexOptions,
-            self.reclaimOptions,
-        ]
-
-        for random_button in self.random_buttons:
-            random_button.setChecked(
-                config.Settings.get(
-                    "mapGenerator/{}".format(random_button.objectName()),
-                    type=bool,
-                    default=True,
-                ),
-            )
-            random_button.toggled.connect(self.configOptionFrames)
-
-        for slider in self.sliders:
-            slider.setValue(
-                config.Settings.get(
-                    "mapGenerator/{}".format(slider.objectName()),
-                    type=int,
-                    default=0,
-                ),
-            )
-
-        self.generation_type = "casual"
+        self.generation_type = GenerationType.CASUAL
         self.number_of_spawns = 2
         self.map_size = 256
         self.map_style = MapStyle.RANDOM
+        self.populate_options()
+        self.load_preferences()
+
+    @QtCore.pyqtSlot(QtCore.Qt.CheckState)
+    def on_custom_style(self, state: QtCore.Qt.CheckState) -> None:
+        self.customStyleGroupBox.setEnabled(state == QtCore.Qt.CheckState.Checked)
+        self.mapStyle.setEnabled(state == QtCore.Qt.CheckState.Unchecked)
+
+    def load_stylesheet(self):
+        self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
+
+    def keyPressEvent(self, event):
+        if (
+            event.key() == QtCore.Qt.Key.Key_Enter
+            or event.key() == QtCore.Qt.Key.Key_Return
+        ):
+            return
+        QtWidgets.QDialog.keyPressEvent(self, event)
+
+    @QtCore.pyqtSlot(int)
+    def num_spawns_changed(self, index: int) -> None:
+        self.number_of_spawns = 2 * (index + 1)
+
+    @staticmethod
+    def nearest_to_multiple(value: float, to: float) -> float:
+        return ((value + to / 2) // to) * to
+
+    @QtCore.pyqtSlot(float)
+    def map_size_changed(self, value):
+        if (value % 1.25):
+            value = self.nearest_to_multiple(value, 1.25)
+            self.mapSize.blockSignals(True)
+            self.mapSize.setValue(value)
+            self.mapSize.blockSignals(False)
+        self.map_size = int(value * 51.2)
+
+    @QtCore.pyqtSlot(int)
+    def gen_type_changed(self, index: int) -> None:
+        if index == -1 or index == 0:
+            self.generation_type = GenerationType.CASUAL
+        elif index == 1:
+            self.generation_type = GenerationType.TOURNAMENT
+        elif index == 2:
+            self.generation_type = GenerationType.BLIND
+        elif index == 3:
+            self.generation_type = GenerationType.UNEXPLORED
+
+        if index == -1 or index == 0:
+            self.casualOptionsFrame.setEnabled(True)
+            self.mapStyle.setCurrentIndex(
+                config.Settings.get(
+                    "mapGenerator/mapStyleIndex", type=int, default=0,
+                ),
+            )
+        else:
+            self.casualOptionsFrame.setEnabled(False)
+
+    @QtCore.pyqtSlot(int)
+    def map_style_changed(self, index: int) -> None:
+        if index == -1 or index == 0:
+            self.map_style = MapStyle.RANDOM
+        else:
+            self.map_style = MapStyle.get_by_index(index)
+
+        self.checkRandomButtons()
+
+    @QtCore.pyqtSlot()
+    def checkRandomButtons(self):
+        self.customStyleGroupBox.setEnabled(self.useCustomStyleCheckBox.isChecked())
+
+    def populate_options(self) -> None:
+        controls = (
+            self.terrainStyle,
+            self.terrainSymmetry,
+            self.mapStyle,
+            self.textureStyle,
+            self.resourceGenerator,
+            self.propGenerator,
+        )
+        control_classes = (
+            TerrainStyle,
+            TerrainSymmtery,
+            MapStyle,
+            TextureStyle,
+            ResourceStyle,
+            PropStyle,
+        )
+        for control, control_cls in zip(controls, control_classes):
+            for style in iter(control_cls):
+                control.addItem(style.value, style)
+
+    @QtCore.pyqtSlot()
+    def load_preferences(self) -> None:
         self.generationType.setCurrentIndex(
             config.Settings.get(
                 "mapGenerator/generationTypeIndex", type=int, default=0,
@@ -121,98 +286,63 @@ class MapGenDialog(FormClass, BaseClass):
             ),
         )
 
-        self.configOptionFrames()
-
-    def load_stylesheet(self):
-        self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
-
-    def keyPressEvent(self, event):
-        if (
-            event.key() == QtCore.Qt.Key.Key_Enter
-            or event.key() == QtCore.Qt.Key.Key_Return
-        ):
-            return
-        QtWidgets.QDialog.keyPressEvent(self, event)
-
-    @QtCore.pyqtSlot(int)
-    def numberOfSpawnsChanged(self, index):
-        self.number_of_spawns = 2 * (index + 1)
-
-    @QtCore.pyqtSlot(float)
-    def mapSizeChanged(self, value):
-        if (value % 1.25):
-            # nearest to multiple of 1.25
-            value = ((value + 0.625) // 1.25) * 1.25
-            self.mapSize.blockSignals(True)
-            self.mapSize.setValue(value)
-            self.mapSize.blockSignals(False)
-        self.map_size = int(value * 51.2)
-
-    @QtCore.pyqtSlot(int)
-    def generationTypeChanged(self, index):
-        if index == -1 or index == 0:
-            self.generation_type = "casual"
-        elif index == 1:
-            self.generation_type = "tournament"
-        elif index == 2:
-            self.generation_type = "blind"
-        elif index == 3:
-            self.generation_type = "unexplored"
-
-        if index == -1 or index == 0:
-            self.mapStyle.setEnabled(True)
-            self.mapStyle.setCurrentIndex(
+        for spinner in self.spinners:
+            spinner.setValue(
                 config.Settings.get(
-                    "mapGenerator/mapStyleIndex", type=int, default=0,
+                    f"mapGenerator/{spinner.objectName()}",
+                    type=int,
+                    default=spinner.value(),
                 ),
             )
-        else:
-            self.mapStyle.setEnabled(False)
-            self.mapStyle.setCurrentIndex(0)
 
-        self.checkRandomButtons()
-
-    @QtCore.pyqtSlot(int)
-    def mapStyleChanged(self, index):
-        if index == -1 or index == 0:
-            self.map_style = MapStyle.RANDOM
-        else:
-            self.map_style = MapStyle.getMapStyle(index)
-
-        self.checkRandomButtons()
+        self.useCustomStyleCheckBox.setChecked(
+            config.Settings.get(
+                "mapGenerator/useCustomStyle",
+                type=bool,
+                default=False,
+            ),
+        )
+        self.terrainStyle.setCurrentText(
+            config.Settings.get(
+                "mapGenerator/terrainStyle",
+                default=Common.RANDOM.value,
+            ),
+        )
+        self.textureStyle.setCurrentText(
+            config.Settings.get(
+                "mapGenerator/textureStyle",
+                default=Common.RANDOM.value,
+            ),
+        )
+        self.propGenerator.setCurrentText(
+            config.Settings.get(
+                "mapGenerator/propGenerator",
+                default=Common.RANDOM.value,
+            ),
+        )
+        self.resourceGenerator.setCurrentText(
+            config.Settings.get(
+                "mapGenerator/resourceGenerator",
+                default=Common.RANDOM.value,
+            ),
+        )
+        self.terrainSymmetry.setCurrentText(
+            config.Settings.get(
+                "mapGenerator/terrainSymmetry",
+                default=Common.RANDOM.value,
+            ),
+        )
+        for spinner in self.spinners:
+            spinner.setValue(
+                config.Settings.get(
+                    f"mapGenerator/{spinner.objectName()}",
+                    type=int,
+                    default=spinner.value(),
+                ),
+            )
 
     @QtCore.pyqtSlot()
-    def checkRandomButtons(self):
-        for random_button in self.random_buttons:
-            if (
-                self.generation_type != "casual"
-                or self.map_style != MapStyle.RANDOM
-            ):
-                random_button.setEnabled(False)
-                random_button.setChecked(True)
-            else:
-                random_button.setEnabled(True)
-                random_button.setChecked(
-                    config.Settings.get(
-                        "mapGenerator/{}".format(random_button.objectName()),
-                        type=bool,
-                        default=True,
-                    ),
-                )
-
-    @QtCore.pyqtSlot()
-    def configOptionFrames(self):
-        for random_button in self.random_buttons:
-            option_frame = self.option_frames[
-                self.random_buttons.index(random_button)
-            ]
-            if random_button.isChecked():
-                option_frame.setEnabled(False)
-            else:
-                option_frame.setEnabled(True)
-
-    @QtCore.pyqtSlot()
-    def saveMapGenPrefs(self):
+    def save_mapgen_prefs(self) -> None:
         config.Settings.set(
             "mapGenerator/generationTypeIndex",
             self.generationType.currentIndex(),
@@ -229,76 +359,120 @@ class MapGenDialog(FormClass, BaseClass):
             "mapGenerator/mapStyleIndex",
             self.mapStyle.currentIndex(),
         )
-        for random_button in self.random_buttons:
+        config.Settings.set(
+            "mapGenerator/useCustomStyle",
+            self.useCustomStyleCheckBox.isChecked(),
+        )
+
+        config.Settings.set(
+            "mapGenerator/terrainStyle",
+            self.terrainStyle.currentText(),
+        )
+        config.Settings.set(
+            "mapGenerator/textureStyle",
+            self.textureStyle.currentText(),
+        )
+        config.Settings.set(
+            "mapGenerator/propGenerator",
+            self.propGenerator.currentText(),
+        )
+        config.Settings.set(
+            "mapGenerator/resourceGenerator",
+            self.resourceGenerator.currentText(),
+        )
+        config.Settings.set(
+            "mapGenerator/terrainSymmetry",
+            self.terrainSymmetry.currentText(),
+        )
+        config.Settings.set(
+            "mapGenerator/minResourceDensity",
+            self.minResourceDensity.value(),
+        )
+        config.Settings.set(
+            "mapGenerator/maxResourceDensity",
+            self.maxResourceDensity.value(),
+        )
+        config.Settings.set(
+            "mapGenerator/minReclaimDensity",
+            self.minReclaimDensity.value(),
+        )
+        config.Settings.set(
+            "mapGenerator/maxReclaimDensity",
+            self.maxReclaimDensity.value(),
+        )
+        for spinner in self.spinners:
             config.Settings.set(
-                "mapGenerator/{}".format(random_button.objectName()),
-                random_button.isChecked(),
-            )
-        for slider in self.sliders:
-            config.Settings.set(
-                "mapGenerator/{}".format(slider.objectName()), slider.value(),
+                f"mapGenerator/{spinner.objectName()}",
+                spinner.value(),
             )
         self.done(1)
 
     @QtCore.pyqtSlot()
-    def resetMapGenPrefs(self):
+    def reset_mapgen_prefs(self) -> None:
         self.generationType.setCurrentIndex(0)
         self.mapSize.setValue(5.0)
         self.numberOfSpawns.setCurrentIndex(0)
         self.mapStyle.setCurrentIndex(0)
 
-        for random_button in self.random_buttons:
-            random_button.setChecked(True)
-        for slider in self.sliders:
-            slider.setValue(0)
+        for spinner in self.spinners:
+            spinner.setValue(0)
 
     @QtCore.pyqtSlot()
-    def generateMap(self):
+    def generate_map(self):
         map_ = self.parent.client.map_generator.generateMap(
-            args=self.setArguments(),
+            args=self.set_arguments(),
         )
         if map_:
             self.parent.setupMapList()
             self.parent.set_map(map_)
-            self.saveMapGenPrefs()
+            self.save_mapgen_prefs()
 
-    def setArguments(self):
+    def get_density(self, minval: int, maxval: int) -> float:
+        return random.randrange(minval, maxval + 1) / 100
+
+    def set_arguments(self) -> list[str]:
         args = []
         args.append("--map-size")
         args.append(str(self.map_size))
         args.append("--spawn-count")
         args.append(str(self.number_of_spawns))
 
-        if self.map_style != MapStyle.RANDOM:
-            args.append("--style")
-            args.append(self.map_style.value)
-        else:
-            if self.generation_type == "tournament":
-                args.append("--tournament-style")
-            elif self.generation_type == "blind":
-                args.append("--blind")
-            elif self.generation_type == "unexplored":
-                args.append("--unexplored")
+        if self.generation_type != GenerationType.CASUAL:
+            args.append(f"--{self.generation_type.value}")
+            return args
 
-            slider_args = [
-                ["--land-density", None],
-                ["--plateau-density", None],
-                ["--mountain-density", None],
-                ["--ramp-density", None],
-                ["--mex-density", None],
-                ["--reclaim-density", None],
-            ]
-            for index, slider in enumerate(self.sliders):
-                if slider.isEnabled():
-                    if slider == self.landDensity:
-                        value = float(1 - (slider.value() / 127))
-                    else:
-                        value = float(slider.value() / 127)
-                    slider_args[index][1] = value
+        if (symmetry := self.terrainSymmetry.currentData()) != TerrainSymmtery.RANDOM:
+            args.append("--terrain-symmetry")
+            args.append(symmetry.value)
 
-            for arg_key, arg_value in slider_args:
-                if arg_value is not None:
-                    args.append(arg_key)
-                    args.append(str(arg_value))
+        if not self.useCustomStyleCheckBox.isChecked():
+            if self.map_style != MapStyle.RANDOM:
+                args.append("--style")
+                args.append(self.map_style.value)
+            return args
+
+        resource_density = Density(
+            self.minResourceDensity.value(),
+            self.maxResourceDensity.value(),
+        )
+        args.append("--resource-density")
+        args.append(str(resource_density.value()))
+
+        reclaim_density = Density(
+            self.minReclaimDensity.value(),
+            self.maxReclaimDensity.value(),
+        )
+        args.append("--reclaim-density")
+        args.append(str(reclaim_density.value()))
+
+        for control, control_cls, argname in zip(
+            (self.terrainStyle, self.textureStyle, self.resourceGenerator, self.propGenerator),
+            (TerrainStyle, TextureStyle, ResourceStyle, PropStyle),
+            ("--terrain-style", "--texture-style", "--resource-style", "--prop-style"),
+        ):
+            if control.currentData() == control_cls.RANDOM:
+                continue
+            args.append(argname)
+            args.append(control.currentData().value)
 
         return args
