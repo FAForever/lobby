@@ -43,6 +43,8 @@ class MapGeneratorProcess(object):
         self.map_generator_process.readyReadStandardError.connect(
             self.on_error_ready,
         )
+        self._error_msgs_received = 0
+
         self.map_generator_process.finished.connect(self.on_exit)
         self.map_name = None
 
@@ -90,16 +92,24 @@ class MapGeneratorProcess(object):
                 self.progressCounter += 1
                 self._progress.setValue(self.progressCounter)
 
-    def on_error_ready(self):
-        standard_error = str(self.map_generator_process.readAllStandardError())
-        for line in standard_error.splitlines():
-            generatorLogger.error("Error: " + line)
+    def on_error_ready(self) -> None:
+        self._error_msgs_received += 1
+
+        message = self.map_generator_process.readAllStandardError().data().decode()
+        generatorLogger.error(message)
+
+        if self._error_msgs_received > 1:
+            # Happens on wrong command line usage when the first message
+            # is useful and the next is output of --help command
+            return
+
         self.close()
         QMessageBox.critical(
             None,
             "Map generator error",
             "Something went wrong. Probably because of bad combination of "
-            "generator options. Please retry with different options",
+            "generator options. Please retry with different options:\n\n"
+            f"{message}",
         )
 
     def on_exit(self, code, status):
