@@ -421,7 +421,20 @@ def export_preview_from_map(
 iconExtensions = ["png"]
 
 
-def preview(mapname, pixmap=False):
+def get_preview_for_generated_map(mapname: str) -> QtGui.QIcon:
+    mapdir = os.path.join(getUserMapsFolder(), mapname)
+    preview_name = f"{mapname}_preview.png"
+    preview_path = os.path.join(mapdir, preview_name)
+
+    if os.path.isfile(preview_path):
+        return util.THEME.icon(preview_path)
+
+    return util.THEME.icon("games/generated_map.png")
+
+
+def preview(mapname: str, *, pixmap: bool = False) -> QtGui.QIcon | QtGui.QPixmap | None:
+    if isGeneratedMap(mapname):
+        return get_preview_for_generated_map(mapname)
     try:
         # Try to load directly from cache
         for extension in iconExtensions:
@@ -444,14 +457,9 @@ def preview(mapname, pixmap=False):
         ):
             logger.debug("Using fresh preview image for: " + mapname)
             return util.THEME.icon(img['cache'], False, pixmap)
-
-        if isGeneratedMap(mapname):
-            return util.THEME.icon("games/generated_map.png")
-
-        return None
-    except BaseException:
-        logger.debug("Error raised in maps.preview(...) for " + mapname)
-        logger.debug("Map Preview Exception", exc_info=sys.exc_info())
+    except Exception:
+        logger.debug(f"Map Preview Exception ({mapname!r})", exc_info=sys.exc_info())
+    return None
 
 
 def downloadMap(name: str, silent: bool = False) -> bool:
