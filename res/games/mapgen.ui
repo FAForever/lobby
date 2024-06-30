@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>550</width>
+    <width>584</width>
     <height>475</height>
    </rect>
   </property>
@@ -594,28 +594,8 @@
           </font>
          </property>
          <property name="currentText">
-          <string>Casual</string>
+          <string/>
          </property>
-         <item>
-          <property name="text">
-           <string>Casual</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Tournament</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Blind</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Unexplored</string>
-          </property>
-         </item>
         </widget>
        </item>
       </layout>
@@ -654,10 +634,13 @@
           <double>2.500000000000000</double>
          </property>
          <property name="maximum">
-          <double>40.000000000000000</double>
+          <double>80.000000000000000</double>
          </property>
          <property name="singleStep">
           <double>1.250000000000000</double>
+         </property>
+         <property name="value">
+          <double>5.000000000000000</double>
          </property>
         </widget>
        </item>
@@ -673,60 +656,72 @@
           </font>
          </property>
          <property name="text">
-          <string>Number of Spawns</string>
+          <string>Spawns</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QComboBox" name="numberOfSpawns">
+        <widget class="QSpinBox" name="numberOfSpawns">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="font">
           <font>
            <pointsize>10</pointsize>
           </font>
          </property>
-         <property name="minimumContentsLength">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>1000</number>
+         </property>
+         <property name="value">
           <number>2</number>
          </property>
-         <item>
-          <property name="text">
-           <string>2</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>4</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>6</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>8</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>10</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>12</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>14</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>16</string>
-          </property>
-         </item>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QLabel" name="labelNumberOfTeams">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Teams</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="numberOfTeams">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>1000</number>
+         </property>
+         <property name="value">
+          <number>2</number>
+         </property>
         </widget>
        </item>
       </layout>
