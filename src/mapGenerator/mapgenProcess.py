@@ -6,6 +6,7 @@ from PyQt6.QtCore import QProcess
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QProgressBar
 from PyQt6.QtWidgets import QProgressDialog
 
 import fafpath
@@ -30,8 +31,11 @@ class MapGeneratorProcess(object):
         )
         self._progress.setAutoReset(False)
         self._progress.setModal(1)
-        self._progress.setMinimum(0)
-        self._progress.setMaximum(30)
+        bar = QProgressBar()
+        bar.setMinimum(0)
+        bar.setMaximum(0)
+        bar.setTextVisible(False)
+        self._progress.setBar(bar)
         self._progress.canceled.connect(self.close)
         self.progressCounter = 1
 
@@ -89,8 +93,6 @@ class MapGeneratorProcess(object):
             # Kinda fake progress bar. Better than nothing :)
             if len(line) > 4:
                 self._progress.setLabelText(line[:25] + "...")
-                self.progressCounter += 1
-                self._progress.setValue(self.progressCounter)
 
     def on_error_ready(self) -> None:
         self._error_msgs_received += 1
