@@ -3,11 +3,11 @@ import logging
 from PyQt6 import QtCore
 
 import fa.check
-import games.mapgenoptionsdialog as MapGenDialog
 import util
 import vaults.modvault.utils
 from fa import maps
 from games.gamemodel import GameModel
+from games.mapgenoptionsdialog import MapGenDialog
 from model.game import Game
 from model.game import GameState
 from model.game import GameVisibility
@@ -252,9 +252,15 @@ class HostGameWidget(FormClass, BaseClass):
         util.settings.endGroup()
 
     @QtCore.pyqtSlot()
-    def generateMap(self):
-        dialog = MapGenDialog.MapGenDialog(self)
+    def generateMap(self) -> None:
+        dialog = MapGenDialog(self.client.map_generator)
+        dialog.map_generated.connect(self.on_map_generated)
         dialog.exec()
+        dialog.deleteLater()
+
+    def on_map_generated(self, mapname: str) -> None:
+        self.setupMapList()
+        self.set_map(mapname)
 
 
 def build_launcher(playerset, me, client, view_builder, map_preview_dler):

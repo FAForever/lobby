@@ -16,12 +16,15 @@ from games.mapgenoptionsvalues import Sentinel
 from games.mapgenoptionsvalues import TerrainStyle
 from games.mapgenoptionsvalues import TerrainSymmetry
 from games.mapgenoptionsvalues import TextureStyle
+from mapGenerator.mapgenManager import MapGeneratorManager
 
 FormClass, BaseClass = util.THEME.loadUiType("games/mapgen.ui")
 
 
 class MapGenDialog(FormClass, BaseClass):
-    def __init__(self, parent, *args, **kwargs):
+    map_generated = QtCore.pyqtSignal(str)
+
+    def __init__(self, mapgen_manager: MapGeneratorManager, *args, **kwargs) -> None:
         BaseClass.__init__(self, *args, **kwargs)
 
         self.setupUi(self)
@@ -30,7 +33,7 @@ class MapGenDialog(FormClass, BaseClass):
 
         self.load_stylesheet()
 
-        self.parent = parent
+        self.mapgen_manager = mapgen_manager
 
         self.useCustomStyleCheckBox.checkStateChanged.connect(self.on_custom_style)
         self.generationType.currentTextChanged.connect(self.gen_type_changed)
@@ -164,13 +167,11 @@ class MapGenDialog(FormClass, BaseClass):
 
     @QtCore.pyqtSlot()
     def generate_map(self) -> None:
-        map_ = self.parent.client.map_generator.generateMap(
-            args=self.set_arguments(),
-        )
-        if map_:
-            self.parent.setupMapList()
-            self.parent.set_map(map_)
+        if result := self.mapgen_manager.generateMap(args=self.set_arguments()):
+            self.map_generated.emit(result)
             self.save_preferences_and_quit()
+        else:
+            self.save_preferences()
 
     def set_arguments(self) -> list[str]:
         args = []
