@@ -35,6 +35,7 @@ class MapGenDialog(FormClass, BaseClass):
 
         self.mapgen_manager = mapgen_manager
 
+        self.mapNamePlainTextEdit.textChanged.connect(self.user_mapname_changed)
         self.useCustomStyleCheckBox.checkStateChanged.connect(self.on_custom_style)
         self.generationType.currentTextChanged.connect(self.gen_type_changed)
         self.mapSize.valueChanged.connect(self.map_size_changed)
@@ -100,6 +101,11 @@ class MapGenDialog(FormClass, BaseClass):
             ),
         ]
         self.load_preferences()
+
+    @QtCore.pyqtSlot()
+    def user_mapname_changed(self) -> None:
+        mapname = self.mapNamePlainTextEdit.toPlainText()
+        self.optionsFrame.setEnabled(mapname.strip() == "")
 
     @QtCore.pyqtSlot(QtCore.Qt.CheckState)
     def on_custom_style(self, state: QtCore.Qt.CheckState) -> None:
@@ -175,11 +181,14 @@ class MapGenDialog(FormClass, BaseClass):
 
     def set_arguments(self) -> list[str]:
         args = []
-        for option in self.cmd_options:
-            if option.name == "map-size":
-                args.append("--map-size")
-                size_px = int(option.value() * 51.2)
-                args.append(str(size_px))
-            elif option.active():
-                args.extend(option.as_cmd_arg())
+        if mapname := self.mapNamePlainTextEdit.toPlainText().strip():
+            args.extend(["--map-name", mapname])
+        else:
+            for option in self.cmd_options:
+                if option.name == "map-size":
+                    args.append("--map-size")
+                    size_px = int(option.value() * 51.2)
+                    args.append(str(size_px))
+                elif option.active():
+                    args.extend(option.as_cmd_arg())
         return args
