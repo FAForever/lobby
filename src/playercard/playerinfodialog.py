@@ -242,7 +242,10 @@ class AvatarHandler:
         self._add_avatar_item(self.avatar_dler.get_avatar(avatar.filename), avatar.tooltip)
 
     def _add_avatar_item(self, pixmap: QPixmap, description: str) -> None:
-        icon = QIcon(pixmap.scaled(40, 20))
+        if pixmap.isNull():
+            icon = util.THEME.icon("chat/avatar/avatar_blank.png")
+        else:
+            icon = QIcon(pixmap.scaled(40, 20))
         avatar_item = QListWidgetItem(icon, description)
         self.avatar_list.addItem(avatar_item)
 
