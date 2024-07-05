@@ -15,6 +15,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QListWidget
 from PyQt6.QtWidgets import QListWidgetItem
+from PyQt6.QtWidgets import QTableWidgetItem
 from PyQt6.QtWidgets import QTabWidget
 from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
 
@@ -24,6 +25,7 @@ from api.models.AvatarAssignment import AvatarAssignment
 from api.models.Leaderboard import Leaderboard
 from api.models.LeaderboardRating import LeaderboardRating
 from api.models.LeaderboardRatingJournal import LeaderboardRatingJournal
+from api.models.NameRecord import NameRecord
 from api.models.Player import Player
 from api.player_api import PlayerApiConnector
 from api.stats_api import LeaderboardApiConnector
@@ -207,6 +209,18 @@ class PlayerInfoDialog(FormClass, BaseClass):
         last_login = QDateTime.fromString(player.update_time, Qt.DateFormat.ISODate).toLocalTime()
         self.lastLoginLabel.setText(last_login.toString("yyyy-MM-dd hh:mm"))
         self.add_avatars(player.avatar_assignments)
+        self.add_names(player.names)
+
+    def add_names(self, names: list[NameRecord] | None) -> None:
+        if names is None:
+            return
+        self.tableWidget.setRowCount(len(names))
+        for row, name_record in enumerate(names):
+            name = QTableWidgetItem(name_record.name)
+            change_time = QDateTime.fromString(name_record.change_time, Qt.DateFormat.ISODate)
+            used_until = QTableWidgetItem(change_time.toString("yyyy-MM-dd hh:mm"))
+            self.tableWidget.setItem(row, 0, name)
+            self.tableWidget.setItem(row, 1, used_until)
 
     def add_avatars(self, avatar_assignments: list[AvatarAssignment] | None) -> None:
         self.avatar_handler.populate_avatars(avatar_assignments)

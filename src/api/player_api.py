@@ -31,7 +31,7 @@ class PlayerApiConnector(DataApiAccessor):
 
     def request_player(self, player_id: str) -> None:
         query = {
-            "include": "avatarAssignments.avatar",
+            "include": "avatarAssignments.avatar,names",
             "filter": f"id=={player_id}",
         }
         self.get_by_query(query, self.handle_player)
