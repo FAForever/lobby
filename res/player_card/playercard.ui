@@ -222,12 +222,15 @@
         </attribute>
         <layout class="QGridLayout" name="gridLayout_5">
          <item row="0" column="0">
-          <widget class="QTableWidget" name="tableWidget">
+          <widget class="QTableWidget" name="nameHistoryTableWidget">
            <property name="editTriggers">
             <set>QAbstractItemView::NoEditTriggers</set>
            </property>
            <property name="alternatingRowColors">
             <bool>true</bool>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::NoSelection</enum>
            </property>
            <property name="selectionBehavior">
             <enum>QAbstractItemView::SelectRows</enum>

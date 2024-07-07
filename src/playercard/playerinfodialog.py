@@ -214,13 +214,13 @@ class PlayerInfoDialog(FormClass, BaseClass):
     def add_names(self, names: list[NameRecord] | None) -> None:
         if names is None:
             return
-        self.tableWidget.setRowCount(len(names))
+        self.nameHistoryTableWidget.setRowCount(len(names))
         for row, name_record in enumerate(names):
             name = QTableWidgetItem(name_record.name)
             change_time = QDateTime.fromString(name_record.change_time, Qt.DateFormat.ISODate)
             used_until = QTableWidgetItem(change_time.toString("yyyy-MM-dd hh:mm"))
-            self.tableWidget.setItem(row, 0, name)
-            self.tableWidget.setItem(row, 1, used_until)
+            self.nameHistoryTableWidget.setItem(row, 0, name)
+            self.nameHistoryTableWidget.setItem(row, 1, used_until)
 
     def add_avatars(self, avatar_assignments: list[AvatarAssignment] | None) -> None:
         self.avatar_handler.populate_avatars(avatar_assignments)

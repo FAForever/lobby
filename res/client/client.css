@@ -482,6 +482,12 @@ QTableWidget::item::hover
     border-radius: 3px;
 }
 
+QTableWidget#nameHistoryTableWidget::item::hover
+{
+    background: none;
+    border-radius: 0px;
+}
+
 
 QTableWidget::item:selected, QListWidget::item:previously-selected, QListView::item:previously-selected
 {
