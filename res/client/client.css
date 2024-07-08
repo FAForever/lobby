@@ -759,18 +759,20 @@ QCheckBox#spoilerCheckbox, #automaticCheckbox, #showLatestCheckbox, #hideUnrChec
 QCheckBox#spoilerCheckbox::indicator:unchecked, #automaticCheckbox::indicator:unchecked, #showLatestCheckbox::indicator:unchecked,
 #hideUnrCheckbox::indicator:unchecked, #matchUsernameCheckbox::indicator:unchecked,
 #landRandomDensity::indicator::unchecked, #resourceRandomGenerator::indicator::unchecked, #mountainsRandomDensity::indicator::unchecked,
-#rampsRandomDensity::indicator::unchecked, #mexRandomDensity::indicator::unchecked ,#reclaimRandomDensity::indicator::unchecked
+#rampsRandomDensity::indicator::unchecked, #mexRandomDensity::indicator::unchecked ,#reclaimRandomDensity::indicator::unchecked,
+#useCustomStyleCheckBox::indicator::unchecked
 {
     image: url('%THEMEPATH%/client/chboxUncheked.png');
- }
+}
 
  QCheckBox#spoilerCheckbox::indicator:checked, #automaticCheckbox::indicator:checked, #showLatestCheckbox::indicator:checked,
  #hideUnrCheckbox::indicator:checked, #matchUsernameCheckbox::indicator:checked,
  #landRandomDensity::indicator::checked, #plateausRandomDensity::indicator::checked, #mountainsRandomDensity::indicator::checked,
- #rampsRandomDensity::indicator::checked, #mexRandomDensity::indicator::checked ,#reclaimRandomDensity::indicator::checked
- {
-     image: url('%THEMEPATH%/client/chboxCheked.png');
-    }
+ #rampsRandomDensity::indicator::checked, #mexRandomDensity::indicator::checked ,#reclaimRandomDensity::indicator::checked,
+ #useCustomStyleCheckBox::indicator::checked
+{
+    image: url('%THEMEPATH%/client/chboxCheked.png');
+}
 
 QCheckBox::enabled
 {
@@ -779,12 +781,12 @@ QCheckBox::enabled
 
 QCheckBox::indicator:unchecked
 {
-    image: url('%THEMEPATH%/client/chboxUncheked.png');
+    image: url('%THEMEPATH%/client/chboxUnchecked.png');
 }
 
 QCheckBox::indicator:checked
 {
-    image: url('%THEMEPATH%/client/chboxCheked.png');
+    image: url('%THEMEPATH%/client/chboxChecked.png');
 }
 
 /* Used for Ranked Buttons only at the moment*/
@@ -935,7 +937,7 @@ QPushButton#showAllButton
     border-radius: 2px;
 }
 
-QSpinBox
+QSpinBox, QDoubleSpinBox
 {
     color:orange;
     selection-color:orange;
@@ -946,7 +948,7 @@ QSpinBox
 
 }
 
-QSpinBox::disabled
+QSpinBox::disabled, QDoubleSpinBox::disabled
 {
     color:gray;
     selection-color:gray;
@@ -958,7 +960,7 @@ QSpinBox::disabled
 }
 
 
-QComboBox, QComboBox:selected, QDoubleSpinBox#mapSize
+QComboBox, QComboBox:selected
 {
     color:orange;
     selection-color:orange;
@@ -971,13 +973,6 @@ QComboBox::disabled
     color:gray;
 }
 
-QDoubleSpinBox#mapSize
-{
-    border: 1 solid;
-    border-color: #555450;
-    selection-color: white;
-    selection-background-color: slateblue;
-}
 
 QComboBox QAbstractItemView {
     border: 2px solid darkgray;
