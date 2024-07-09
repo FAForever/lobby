@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from enum import Enum
 
 from PyQt6 import QtWidgets
@@ -27,9 +28,13 @@ class LeaderboardTableMenu:
     def build(cls, parent, client, leaderboardName):
         return cls(parent, client, leaderboardName)
 
-    def actions(self, name, uid):
+    def actions(
+            self,
+            name: str,
+            uid: str,
+    ) -> Generator[list[LeaderboardTableMenuItems], None, None]:
+        yield list(self.player_actions())
         yield list(self.usernameActions())
-        yield list(self.playerActions())
 
         if self.client.me.player is None:
             return
@@ -41,9 +46,9 @@ class LeaderboardTableMenu:
         yield LeaderboardTableMenuItems.COPY_USERNAME
         yield LeaderboardTableMenuItems.VIEW_ALIASES
 
-    def playerActions(self):
-        yield LeaderboardTableMenuItems.VIEW_REPLAYS
+    def player_actions(self) -> Generator[LeaderboardTableMenuItems, None, None]:
         yield LeaderboardTableMenuItems.SHOW_USER_INFO
+        yield LeaderboardTableMenuItems.VIEW_REPLAYS
 
     def friendActions(self, name, uid, is_me):
         if is_me:

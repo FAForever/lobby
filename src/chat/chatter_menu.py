@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Generator
 from enum import Enum
 
 from PyQt6.QtGui import QAction
@@ -67,6 +68,7 @@ class ChatterMenu:
         else:
             is_me = player.id == self._me.player.id
 
+        yield list(self.user_actions(player))
         yield list(self.me_actions(is_me))
         yield list(self.power_actions(self._power_tools.power))
         yield list(self.chatter_actions())
@@ -74,6 +76,10 @@ class ChatterMenu:
         yield list(self.friend_actions(player, chatter, cc, is_me))
         yield list(self.ignore_actions(player, chatter, cc, is_me))
         yield list(self.party_actions(player, is_me))
+
+    def user_actions(self, player: Player | None) -> Generator[ChatterMenuItems, None, None]:
+        if player is not None:
+            yield ChatterMenuItems.SHOW_USER_INFO
 
     def chatter_actions(self):
         yield ChatterMenuItems.COPY_USERNAME
@@ -97,7 +103,6 @@ class ChatterMenu:
                 yield ChatterMenuItems.VIEW_LIVEREPLAY
 
         if player is not None:
-            yield ChatterMenuItems.SHOW_USER_INFO
             if player.ladder_estimate != 0:
                 yield ChatterMenuItems.VIEW_IN_LEADERBOARDS
             yield ChatterMenuItems.VIEW_REPLAYS
