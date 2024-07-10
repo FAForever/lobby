@@ -39,6 +39,8 @@ class MapGenDialog(FormClass, BaseClass):
         self.useCustomStyleCheckBox.checkStateChanged.connect(self.on_custom_style)
         self.generationType.currentTextChanged.connect(self.gen_type_changed)
         self.mapSize.valueChanged.connect(self.map_size_changed)
+        self.propGenerator.currentTextChanged.connect(self.prop_generator_changed)
+        self.resourceGenerator.currentTextChanged.connect(self.resource_generator_changed)
         self.generateMapButton.clicked.connect(self.generate_map)
         self.saveMapGenSettingsButton.clicked.connect(self.save_preferences_and_quit)
         self.resetMapGenSettingsButton.clicked.connect(self.reset_mapgen_prefs)
@@ -139,6 +141,16 @@ class MapGenDialog(FormClass, BaseClass):
     @QtCore.pyqtSlot(str)
     def gen_type_changed(self, text: str) -> None:
         self.casualOptionsFrame.setEnabled(text == GenerationType.CASUAL.value)
+
+    @QtCore.pyqtSlot(str)
+    def resource_generator_changed(self, text: str) -> None:
+        self.minResourceDensity.setEnabled(text != Sentinel.RANDOM.value)
+        self.maxResourceDensity.setEnabled(text != Sentinel.RANDOM.value)
+
+    @QtCore.pyqtSlot(str)
+    def prop_generator_changed(self, text: str) -> None:
+        self.minReclaimDensity.setEnabled(text != Sentinel.RANDOM.value)
+        self.maxReclaimDensity.setEnabled(text != Sentinel.RANDOM.value)
 
     @QtCore.pyqtSlot()
     def load_preferences(self) -> None:
