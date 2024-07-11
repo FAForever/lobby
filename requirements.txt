@@ -7,6 +7,7 @@ pathlib
 pydantic
 pyqt6
 pyqt6-networkauth
+pyqtgraph
 pytest
 pytest-cov
 pytest-mock
