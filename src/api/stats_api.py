@@ -8,6 +8,7 @@ from api.ApiAccessors import DataApiAccessor
 from api.models.Leaderboard import Leaderboard
 from api.models.LeaderboardRatingJournal import LeaderboardRatingJournal
 from api.models.LeagueSeasonScore import LeagueSeasonScore
+from api.models.PlayerEvent import PlayerEvent
 from api.parsers.LeaderboardParser import LeaderboardParser
 from api.parsers.LeaderboardRatingJournalParser import LeaderboardRatingJournalParser
 from api.parsers.LeaderboardRatingParser import LeaderboardRatingParser
@@ -109,3 +110,20 @@ class LeagueSeasonScoreApiConnector(DataApiAccessor):
         )
         query_params = {"include": ",".join(include), "filter": ";".join(filters)}
         self.get_by_query(query_params, self.handle_score)
+
+
+class PlayerEventApiAccessor(DataApiAccessor):
+    events_ready = pyqtSignal(list)
+
+    def __init__(self) -> None:
+        super().__init__("/data/playerEvent")
+
+    def get_player_events(self, player_id: str) -> None:
+        query = {
+            "include": "event",
+            "filter": f"player.id=={player_id}",
+        }
+        self.get_by_query(query, self.handle_player_events)
+
+    def handle_player_events(self, message: dict) -> None:
+        self.events_ready.emit([PlayerEvent(**entry) for entry in message["data"]])

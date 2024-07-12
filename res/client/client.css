@@ -992,8 +992,12 @@ QFrame#settingsFrame {
     border-bottom-right-radius : 5px;
 }
 
-
 #line
 {
     background-color: #202025;
+}
+
+QWidget#scrollAreaWidgetContents
+{
+    background-color: #383838;
 }

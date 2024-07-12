@@ -6,6 +6,7 @@ jinja2
 pathlib
 pydantic
 pyqt6
+pyqt6-charts
 pyqt6-networkauth
 pyqtgraph
 pytest
