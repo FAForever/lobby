@@ -223,6 +223,8 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
         if not fa.instance.available():
             return
 
+        self.client.games.stopSearch()
+
         if not fa.check.check(game.featured_mod, game.mapname, sim_mods=game.sim_mods):
             return
 
