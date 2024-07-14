@@ -391,7 +391,7 @@ class ChatterItemDelegate(QtWidgets.QStyledItemDelegate):
         if option.state & QtWidgets.QStyle.StateFlag.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight)
 
-    def _draw_nick(self, painter: QtGui.QPainter, data: str) -> None:
+    def _draw_nick(self, painter: QtGui.QPainter, data: ChatterModelItem) -> None:
         text = self._formatter.chatter_name(data)
         color = QColor(self._formatter.chatter_color(data))
         clip = QRect(self.layout.sizes[ChatterLayoutElements.NICK])
