@@ -9,6 +9,7 @@ from PyQt6 import QtWidgets
 from PyQt6.QtNetwork import QNetworkAccessManager
 from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
+from PyQt6.QtWidgets import QTreeWidgetItem
 
 import client
 import fa
@@ -902,10 +903,12 @@ class ReplayVaultWidgetHandler(object):
         self._w.replayScoreLayout.addWidget(scoreboard)
         self.adjust_scoreboard_size(scoreboard.width(), scoreboard.height())
 
-    def online_tree_clicked(self, item: ReplayItem) -> None:
+    def online_tree_clicked(self, item: ReplayItem | QTreeWidgetItem) -> None:
+        if not isinstance(item, ReplayItem):
+            return
+
         if QtWidgets.QApplication.mouseButtons() == QtCore.Qt.MouseButton.RightButton:
-            if isinstance(item.parent, ReplaysWidget):  # FIXME - hack
-                item.pressed(item)
+            item.pressed()
         else:
             self.selectedReplay = item
             self.add_scoreboard(item)

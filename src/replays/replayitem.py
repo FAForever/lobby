@@ -17,6 +17,7 @@ from PyQt6.QtCore import QRect
 from PyQt6.QtCore import QSize
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QAction
 from PyQt6.QtGui import QIcon
 from PyQt6.QtGui import QPainter
 from PyQt6.QtGui import QPen
@@ -774,9 +775,9 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
         scoreboard.setup()
         return scoreboard
 
-    def pressed(self, item):
+    def pressed(self) -> None:
         menu = QtWidgets.QMenu(self.parent)
-        actionDownload = QtWidgets.QAction("Download replay", menu)
+        actionDownload = QAction("Download replay", menu)
         actionDownload.triggered.connect(self.downloadReplay)
         menu.addAction(actionDownload)
         menu.popup(QtGui.QCursor.pos())
