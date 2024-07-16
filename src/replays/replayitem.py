@@ -1,17 +1,472 @@
-import os
+from __future__ import annotations
+
 import time
 from datetime import datetime
 from datetime import timezone
+from enum import Enum
+from typing import Any
+from typing import Callable
+from typing import Iterable
 
 from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
+from PyQt6.QtCore import QModelIndex
+from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QRect
+from PyQt6.QtCore import QSize
+from PyQt6.QtCore import Qt
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QPainter
+from PyQt6.QtGui import QPen
+from PyQt6.QtWidgets import QHBoxLayout
+from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLayout
+from PyQt6.QtWidgets import QListView
+from PyQt6.QtWidgets import QStyle
+from PyQt6.QtWidgets import QStyledItemDelegate
+from PyQt6.QtWidgets import QStyleOptionViewItem
+from PyQt6.QtWidgets import QVBoxLayout
+from PyQt6.QtWidgets import QWidget
 
 import util
 from config import Settings
 from downloadManager import DownloadRequest
 from fa import maps
 from games.moditem import mods
+from util.qt import qpainter
+from util.qt_list_model import QtListModel
+
+
+class GameResult(Enum):
+    WIN = "Win"
+    LOSE = "Lose"
+    PLAYING = "Playing"
+    UNKNOWN = "???"
+
+
+class ScoreboardModelItem(QObject):
+    updated = pyqtSignal()
+
+    def __init__(self, player: dict, mod: str | None) -> None:
+        QObject.__init__(self)
+        self.player = player
+        self.mod = mod or ""
+
+        if len(self.player["ratingChanges"]) > 0:
+            self.rating_stats = self.player["ratingChanges"][0]
+        else:
+            self.rating_stats = None
+
+    @classmethod
+    def builder(cls, mod: str | None) -> Callable[[dict], ScoreboardModelItem]:
+        def build(data: dict) -> ScoreboardModelItem:
+            return cls(data, mod)
+        return build
+
+    def score(self) -> int:
+        return self.player["score"]
+
+    def login(self) -> str:
+        return self.player["player"]["login"]
+
+    def rating_before(self) -> int:
+        # gamePlayerStats' fields 'before*' and 'after*' can be removed
+        # at any time and 'ratingChanges' can be absent if game result is
+        # undefined
+        if self.rating_stats is not None:
+            return round(self.rating_stats["meanBefore"] - self.rating_stats["deviationBefore"] * 3)
+        elif self.player.get("beforeMean") and self.player.get("beforeDeviation"):
+            return round(self.player["beforeMean"] - self.player["beforeDeviation"] * 3)
+        return 0
+
+    def rating_after(self) -> int:
+        if self.rating_stats is not None:
+            return round(self.rating_stats["meanAfter"] - self.rating_stats["deviationAfter"] * 3)
+        elif self.player.get("afterMean") and self.player.get("afterDeviation"):
+            return round(self.player["afterMean"] - self.player["afterDeviation"] * 3)
+        return 0
+
+    def rating(self) -> int | None:
+        if self.rating_stats is None and "beforeMean" not in self.player:
+            return None
+        return self.rating_before()
+
+    def rating_change(self) -> int:
+        if self.rating_stats is None:
+            return 0
+        return self.rating_after() - self.rating_before()
+
+    def faction_name(self) -> str:
+        if "faction" in self.player:
+            if self.player["faction"] == 1:
+                faction = "UEF"
+            elif self.player["faction"] == 2:
+                faction = "Aeon"
+            elif self.player["faction"] == 3:
+                faction = "Cybran"
+            elif self.player["faction"] == 4:
+                faction = "Seraphim"
+            elif self.player["faction"] == 5:
+                if self.mod == "nomads":
+                    faction = "Nomads"
+                else:
+                    faction = "Random"
+            elif self.player["faction"] == 6:
+                if self.mod == "nomads":
+                    faction = "Random"
+                else:
+                    faction = "broken"
+            else:
+                faction = "broken"
+        else:
+            faction = "Missing"
+        return faction
+
+    def icon(self) -> QIcon:
+        return util.THEME.icon(f"replays/{self.faction_name()}.png")
+
+
+class ScoreboardModel(QtListModel):
+    def __init__(
+            self,
+            spoiled: bool,
+            alignment: Qt.AlignmentFlag,
+            item_builder: Callable[[Any], QObject],
+    ) -> None:
+        QtListModel.__init__(self, item_builder)
+        self.spoiled = spoiled
+        self.alignment = alignment
+
+    def get_alignment(self) -> Qt.AlignmentFlag:
+        return self.alignment
+
+    def add_player(self, player: dict) -> None:
+        self._add_item(player, player["player"]["id"])
+
+
+class ScoreboardItemDelegate(QStyledItemDelegate):
+    def __init__(self) -> None:
+        QStyledItemDelegate.__init__(self)
+        self._row_height = 22
+
+    def row_height(self) -> int:
+        return self._row_height
+
+    def sizeHint(self, option, index) -> QSize:
+        size = QStyledItemDelegate.sizeHint(self, option, index)
+        return QSize(size.width(), self._row_height)
+
+    def _draw_score(
+            self,
+            painter: QPainter,
+            rect: QRect,
+            player_data: ScoreboardModelItem,
+            alignment: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft,
+    ) -> QRect:
+        score = f"{player_data.score()}"
+        score_rect = QRect(rect)
+        score_rect.setWidth(20)
+        if alignment == Qt.AlignmentFlag.AlignRight:
+            score_rect.moveLeft(rect.width() - score_rect.width())
+        painter.drawText(score_rect, Qt.AlignmentFlag.AlignCenter, score)
+        return score_rect
+
+    def _draw_icon(
+            self,
+            painter: QPainter,
+            rect: QRect,
+            player_data: ScoreboardModelItem,
+            alignment: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft,
+    ) -> QRect:
+        icon = player_data.icon()
+        icon_rect = QRect(rect)
+        icon_rect.setWidth(40)
+        icon_rect.setHeight(20)
+        if alignment == Qt.AlignmentFlag.AlignRight:
+            icon_rect.moveLeft(rect.width() - icon_rect.width())
+        icon.paint(painter, icon_rect)
+        return icon_rect
+
+    def _draw_nick_and_rating(
+        self,
+        painter: QPainter,
+        rect: QRect,
+        player_data: ScoreboardModelItem,
+        alignment: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft,
+    ) -> QRect:
+        rating = player_data.rating()
+        rating_str = f"{rating}" if rating is not None else "???"
+        text = self._get_elided_text(painter, f"{player_data.login()} ({rating_str})", rect.width())
+        painter.drawText(rect, alignment, text)
+        return rect
+
+    def _draw_rating_change(
+        self,
+        painter: QPainter,
+        rect: QRect,
+        player_data: ScoreboardModelItem,
+        alignment: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft,
+    ) -> QRect:
+        change = player_data.rating_change()
+        rating_change_rect = QRect(rect)
+        rating_change_rect.setWidth(30)
+        if alignment == Qt.AlignmentFlag.AlignRight:
+            rating_change_rect.moveLeft(rect.width() - rating_change_rect.width())
+        color = painter.pen().color()
+        if change > 0:
+            color = Qt.GlobalColor.green
+        elif change < 0:
+            color = Qt.GlobalColor.red
+        with qpainter(painter):
+            painter.setPen(QPen(color))
+            painter.drawText(rating_change_rect, Qt.AlignmentFlag.AlignCenter, f"{change:+}")
+        return rating_change_rect
+
+    def _draw_clear_option(self, painter: QPainter, option: QStyleOptionViewItem) -> None:
+        option.text = ""
+        control_element = QStyle.ControlElement.CE_ItemViewItem
+        option.widget.style().drawControl(control_element, option, painter, option.widget)
+
+    def _shrink_rect_along(
+            self,
+            rect: QRect,
+            adjustment: int,
+            alignment: Qt.AlignmentFlag,
+    ) -> QRect:
+        """
+        Returns a new rect shrinked from left or right side
+        by given adjustment
+        """
+        direction = 1 if alignment == Qt.AlignmentFlag.AlignLeft else -1
+        index = 0 if alignment == Qt.AlignmentFlag.AlignLeft else 2
+        adjustments = [0, 0, 0, 0]
+        adjustments[index] = adjustment * direction
+        return rect.adjusted(*adjustments)
+
+    def _get_elided_text(self, painter: QPainter, text: str, width: int) -> str:
+        metrics = painter.fontMetrics()
+        return metrics.elidedText(text, Qt.TextElideMode.ElideRight, width)
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+        player_data: ScoreboardModelItem = index.data()
+        team_model: ScoreboardModel = index.model()
+        team_alignment = team_model.get_alignment()
+        rect = QRect(option.rect)
+
+        with qpainter(painter):
+            self._draw_clear_option(painter, option)
+
+            if team_model.spoiled:
+                score_rect = self._draw_score(painter, rect, player_data, team_alignment)
+                rect = self._shrink_rect_along(rect, score_rect.width(), team_alignment)
+
+                diff_rect = self._draw_rating_change(painter, rect, player_data, team_alignment)
+                rect = self._shrink_rect_along(rect, diff_rect.width(), team_alignment)
+
+            icon_rect = self._draw_icon(painter, rect, player_data, team_alignment)
+            rect = self._shrink_rect_along(rect, icon_rect.width() + 3, team_alignment)
+
+            self._draw_nick_and_rating(painter, rect, player_data, team_alignment)
+
+
+class Scoreboard(QWidget):
+    GAME_RESULT_RESERVED_HEIGHT = 30
+    TITLE_RESERVED_HEIGHT = 30
+
+    def __init__(
+            self,
+            mod: str | None,
+            winner: dict | None,
+            spoiled: bool,
+            duration: str | None,
+            teamwin: dict | None,
+            uid: str,
+            teams: dict,
+    ) -> None:
+        super().__init__()
+        self.winner = winner
+        self.spoiled = spoiled
+        self.duration = duration or ""
+        self.teamwin = teamwin
+        self.uid = uid
+        self.teams = teams
+        self.num_teams = len(self.teams)
+        self.biggest_team = max(len(team) for team in self.teams.values()) if self.teams else 0
+
+        self.main_layout = QVBoxLayout()
+        if self.num_teams == 2:
+            self.teams_layout = QHBoxLayout()
+        else:
+            self.teams_layout = QVBoxLayout()
+        self.setLayout(self.main_layout)
+        self.mod = mod
+        self._height = 0
+        self._team_heights = []
+
+    def create_teamlist_view(self) -> QListView:
+        team_view = QListView()
+        team_view.setObjectName("replayScoreTeamList")
+        return team_view
+
+    def _create_team_result_label(self, text: str) -> QLabel:
+        result_label = QLabel(text)
+        result_label.setObjectName("replayGameResult")
+        result_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        font = result_label.font()
+        font.setPointSize(font.pointSize() + 4)
+        result_label.setFont(font)
+
+        return result_label
+
+    def add_result_label(self, text: str, layout: QLayout) -> None:
+        result_label = self._create_team_result_label(text)
+        layout.addWidget(result_label)
+
+    def teamview_rows(self, view: QListView) -> int:
+        model: ScoreboardModel = view.model()
+        if self.num_teams == 2:
+            return self.biggest_team
+        return model.rowCount(QModelIndex())
+
+    def teamview_height(self, view: QListView) -> int:
+        row_count = self.teamview_rows(view)
+        delegate: ScoreboardItemDelegate = view.itemDelegate()
+        return row_count * delegate.row_height()
+
+    def adjust_teamview_height(self, view: QListView, height: int) -> None:
+        view.setMinimumHeight(height)
+        view.setMaximumHeight(height)
+
+    def add_team_score(
+            self,
+            alignment: Qt.AlignmentFlag,
+            team_result: GameResult,
+            players: Iterable[dict],
+    ) -> None:
+        team_layout = QVBoxLayout()
+        self.add_result_label(team_result.value, team_layout)
+
+        model = ScoreboardModel(self.spoiled, alignment, ScoreboardModelItem.builder(self.mod))
+        for player in players:
+            model.add_player(player)
+
+        team_view = self.create_teamlist_view()
+        team_view.setModel(model)
+        team_view.setItemDelegate(ScoreboardItemDelegate())
+        team_layout.addWidget(team_view)
+
+        view_height = self.teamview_height(team_view)
+        self.adjust_teamview_height(team_view, view_height)
+        self._team_heights.append(self.GAME_RESULT_RESERVED_HEIGHT + view_height)
+
+        self.teams_layout.addLayout(team_layout)
+
+    def add_team_score_if_needed(
+            self,
+            alignment: Qt.AlignmentFlag,
+            team_result: GameResult,
+            players: Iterable[dict],
+    ) -> None:
+        if len(list(players)) == 0:
+            return
+        self.add_team_score(alignment, team_result, players)
+
+    def height(self) -> int:
+        # there must be a way to dissect all of the layouts and widgets
+        # with all of their paddings, spacings, margins etc. to determine
+        # scoreboard's precise height, but this works good enough
+        magic = 40
+        if len(self.teams) == 2:
+            return self._height + max(self._team_heights) + magic
+        return sum((self._height, *self._team_heights, magic))
+
+    def width(self) -> int:
+        if len(self.teams) == 2:
+            return 560 if self.spoiled else 500
+        return 335 if self.spoiled else 275
+
+    def one_team_layout(self) -> None:
+        team = list(self.teams.values())[0]
+        alignment = Qt.AlignmentFlag.AlignLeft
+        if self.spoiled:
+            winners, losers = [], []
+            for player in team:
+                if self.winner is not None and player["score"] == self.winner["score"]:
+                    winners.append(player)
+                else:
+                    losers.append(player)
+            self.add_team_score_if_needed(alignment, self.game_result(is_winner=True), winners)
+            self.add_team_score_if_needed(alignment, self.game_result(is_winner=False), losers)
+        else:
+            self.add_team_score_if_needed(alignment, self.game_result(is_winner=False), team)
+        self.main_layout.addLayout(self.teams_layout)
+
+    def default_layout(self) -> None:
+        alignment = Qt.AlignmentFlag.AlignLeft
+        for team in self.teams:
+            game_result = self.game_result(is_winner=(team == self.teamwin))
+            self.add_team_score(alignment, game_result, self.teams[team])
+        self.main_layout.addLayout(self.teams_layout)
+
+    def game_result(self, *, is_winner: bool) -> GameResult:
+        if not self.spoiled:
+            return GameResult.UNKNOWN
+        if "playing" in self.duration:
+            return GameResult.PLAYING
+        return (GameResult.LOSE, GameResult.WIN)[is_winner]
+
+    def two_teams_layout(self) -> None:
+        for index, team_num in enumerate(self.teams):
+            alignment = (Qt.AlignmentFlag.AlignLeft, Qt.AlignmentFlag.AlignRight)[index]
+            is_winner = team_num == self.teamwin
+            game_result = self.game_result(is_winner=is_winner)
+            self.add_team_score(alignment, game_result, self.teams[team_num])
+            if index == 0:
+                self.add_vs_label()
+        self.main_layout.addLayout(self.teams_layout)
+
+    def create_title_label(self) -> QLabel:
+        title_label = QLabel(f"Replay UID: {self.uid}")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+
+        title_font = title_label.font()
+        title_font.setPointSize(title_font.pointSize() + 4)
+        title_font.setBold(True)
+        title_label.setFont(title_font)
+
+        return title_label
+
+    def add_title_label(self) -> None:
+        self.main_layout.addWidget(self.create_title_label())
+        self._height += self.TITLE_RESERVED_HEIGHT
+
+    def create_vs_label(self) -> QLabel:
+        vs_label = QLabel("VS")
+        vs_label.setObjectName("VSLabel")
+        vs_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        font = vs_label.font()
+        font.setPointSize(font.pointSize() + 13)
+        vs_label.setFont(font)
+
+        return vs_label
+
+    def add_vs_label(self) -> None:
+        self.teams_layout.addWidget(self.create_vs_label())
+
+    def setup(self) -> None:
+        self.add_title_label()
+
+        if self.num_teams == 1:
+            self.one_team_layout()
+        elif self.num_teams == 2:
+            self.two_teams_layout()
+        else:
+            self.default_layout()
 
 
 class ReplayItemDelegate(QtWidgets.QStyledItemDelegate):
@@ -143,8 +598,7 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
         self.duration = None
         self.live_delay = False
 
-        self.moreInfo = False
-        self.replayInfo = False
+        self.extra_info_loaded = False
         self.spoiled = False
         self.url = "{}/{}".format(Settings.get('replay_vault/host'), self.uid)
 
@@ -248,14 +702,14 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
         self.icon = util.THEME.icon(path, is_local)
         self.setIcon(0, self.icon)
 
-    def infoPlayers(self):
+    def load_extra_info(self) -> None:
         """
         processes information from the server about a replay into readable
         extra information for the user, also calls method to show the
         information
         """
 
-        self.moreInfo = True
+        self.extra_info_loaded = True
         playersList = self.replay['playerStats']
         self.numberplayers = len(playersList)
 
@@ -276,6 +730,9 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
                 team = 1
             else:
                 team = int(player["team"])
+
+            if team == -1:
+                continue
 
             if "score" in player:
                 if team in scores:
@@ -306,203 +763,16 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
                     self.teamWin = team
                     mvt = scores[team]
 
-        self.generateInfoPlayersHtml()
-
-    def generateInfoPlayersHtml(self):
-        """
-        Creates the ui and extra information about a replay,
-        Either teamWin or winner must be set if the replay is to be spoiled
-        """
-
-        teams = ""
-        winnerHTML = ""
-
+    def generate_scoreboard(self) -> Scoreboard:
+        if not self.extra_info_loaded:
+            self.load_extra_info()
         self.spoiled = not self.parent.spoilerCheckbox.isChecked()
-
-        i = 0
-        for team in self.teams:
-            if team != -1:
-                i += 1
-
-                if len(self.teams[team]) > self.biggestTeam:
-                    self.biggestTeam = len(self.teams[team])
-
-                players = ""
-                for player in self.teams[team]:
-                    alignment, playerIcon, playerLabel, playerScore = (
-                        self.generatePlayerHTML(i, player)
-                    )
-
-                    if (
-                        self.winner is not None
-                        and player["score"] == self.winner["score"]
-                        and self.spoiled
-                    ):
-                        winnerHTML += (
-                            "<tr>{}{}{}</tr>".format(
-                                playerScore,
-                                playerIcon,
-                                playerLabel,
-                            )
-                        )
-                    elif alignment == "left":
-                        players += (
-                            "<tr>{}{}{}</tr>".format(
-                                playerScore,
-                                playerIcon,
-                                playerLabel,
-                            )
-                        )
-                    else:  # alignment == "right"
-                        players += (
-                            "<tr>{}{}{}</tr>".format(
-                                playerLabel,
-                                playerIcon,
-                                playerScore,
-                            )
-                        )
-
-                if self.spoiled:
-                    if self.winner is not None:  # FFA in rows: Win... Lose...
-                        teams += self.FORMATTER_REPLAY_FFA_SPOILED.format(
-                            winner=winnerHTML, players=players,
-                        )
-                    else:
-                        if "playing" in self.duration:
-                            teamTitle = "Playing"
-                        elif self.teamWin == team:
-                            teamTitle = "Win"
-                        else:
-                            teamTitle = "Lose"
-
-                        if len(self.teams) == 2:  # pack team in <table>
-                            teams += (
-                                self.FORMATTER_REPLAY_TEAM2_SPOILED.format(
-                                    title=teamTitle, players=players,
-                                )
-                            )
-                        else:  # just row on
-                            teams += self.FORMATTER_REPLAY_TEAM_SPOILED.format(
-                                title=teamTitle, players=players,
-                            )
-                else:
-                    if len(self.teams) == 2:  # pack team in <table>
-                        teams += self.FORMATTER_REPLAY_TEAM2.format(
-                            players=players,
-                        )
-                    else:  # just row on
-                        teams += players
-
-                if len(self.teams) == 2 and i == 1:  # add the 'vs'
-                    teams += (
-                        "<td align='center' valign='middle' "
-                        "height='100%'><font color='black' size='+4'>"
-                        "VS</font></td>"
-                    )
-
-        # prepare the package to 'fit in' with its <td>s
-        if len(self.teams) == 2:
-            teams = "<tr>{}</tr>".format(teams)
-
-        self.replayInfo = self.FORMATTER_REPLAY_INFORMATION.format(
-            uid=self.uid, teams=teams,
+        scoreboard = Scoreboard(
+            self.mod, self.winner, self.spoiled,
+            self.duration, self.teamWin, self.uid, self.teams,
         )
-
-        if self.isSelected():
-            self.parent.replayInfos.clear()
-            self.resize()
-            self.parent.replayInfos.setHtml(self.replayInfo)
-
-    def generatePlayerHTML(self, i, player):
-        if i == 2 and len(self.teams) == 2:
-            alignment = "right"
-        else:
-            alignment = "left"
-
-        if "login" not in player["player"]:
-            player["player"]["login"] = "No data"
-
-        playerRating = int(
-            round((player["beforeMean"] - player["beforeDeviation"] * 3) / 100)
-            * 100,
-        )
-        playerLabel = self.FORMATTER_REPLAY_PLAYER_LABEL.format(
-            player_name=player["player"]["login"],
-            player_rating=playerRating,
-            alignment=alignment,
-        )
-
-        iconPath = os.path.join(
-            util.COMMON_DIR,
-            "replays/{}.png".format(
-                self.retrieveIconFaction(player, self.mod),
-            ),
-        )
-        iconUrl = QtCore.QUrl.fromLocalFile(iconPath).url()
-
-        playerIcon = self.FORMATTER_REPLAY_PLAYER_ICON.format(
-            faction_icon_uri=iconUrl,
-        )
-
-        if self.spoiled and not self.mod == "ladder1v1":
-            playerScore = self.FORMATTER_REPLAY_PLAYER_SCORE.format(
-                player_score=player["score"],
-            )
-        else:  # no score for ladder
-            playerScore = self.FORMATTER_REPLAY_PLAYER_SCORE.format(
-                player_score=" ",
-            )
-
-        return alignment, playerIcon, playerLabel, playerScore
-
-    @staticmethod
-    def retrieveIconFaction(player, mod):
-        if "faction" in player:
-            if player["faction"] == 1:
-                faction = "UEF"
-            elif player["faction"] == 2:
-                faction = "Aeon"
-            elif player["faction"] == 3:
-                faction = "Cybran"
-            elif player["faction"] == 4:
-                faction = "Seraphim"
-            elif player["faction"] == 5:
-                if mod == "nomads":
-                    faction = "Nomads"
-                else:
-                    faction = "Random"
-            elif player["faction"] == 6:
-                if mod == "nomads":
-                    faction = "Random"
-                else:
-                    faction = "Broken"
-            else:
-                faction = "Broken"
-        else:
-            faction = "Missing"
-        return faction
-
-    def resize(self):
-        if self.isSelected():
-            if self.extraInfoWidth == 0 or self.extraInfoHeight == 0:
-                if len(self.teams) == 1:  # ladder, FFA
-                    self.extraInfoWidth = 275
-                    # + 1 -> second title
-                    self.extraInfoHeight = 75 + (self.numberplayers + 1) * 25
-                elif len(self.teams) == 2:  # Team vs Team
-                    self.extraInfoWidth = 500
-                    self.extraInfoHeight = 75 + self.biggestTeam * 22
-                else:  # FAF
-                    self.extraInfoWidth = 275
-                    self.extraInfoHeight = (
-                        75 + (self.numberplayers + len(self.teams)) * 25
-                    )
-
-            self.parent.replayInfos.setMinimumWidth(self.extraInfoWidth)
-            self.parent.replayInfos.setMaximumWidth(600)
-
-            self.parent.replayInfos.setMinimumHeight(self.extraInfoHeight)
-            self.parent.replayInfos.setMaximumHeight(self.extraInfoHeight)
+        scoreboard.setup()
+        return scoreboard
 
     def pressed(self, item):
         menu = QtWidgets.QMenu(self.parent)

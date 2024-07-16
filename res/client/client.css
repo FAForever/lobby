@@ -170,6 +170,17 @@ QWidget#centralwidget, QProgressDialog, QWindow, QWizard
     background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #FFFFFF, stop:0.1 #000000, stop:1 #1F1F1F);
 }
 
+QWidget#replayScore
+{
+    background-color: #202025;
+    background: #202025;
+    padding: 0px;
+}
+
+QWidget#scrollAreaWidgetContents
+{
+    background-color: #383838;
+}
 
 QTabWidget#mainTabs::pane
 { /* The tab widget frame */
@@ -380,6 +391,21 @@ QTextEdit, QPlainTextEdit, QLineEdit, QListWidget, QListView, QTableWidget, QTre
     border-top-left-radius : 5px;
     border-bottom-left-radius : 5px;
     border-bottom-right-radius : 5px;
+}
+
+QListView#replayScoreTeamList
+{
+    border-width:0px;
+    border-color:#353535;
+    color:silver;
+    padding:0px;
+    background-color:#202025;
+    alternate-background-color: #303035;
+    border-top-right-radius : 0px;
+    border-top-left-radius : 0px;
+    border-bottom-left-radius : 0px;
+    border-bottom-right-radius : 0px;
+
 }
 
 QPlainTextEdit#mapNamePlainTextEdit
@@ -597,6 +623,16 @@ QScrollArea
     border-bottom-right-radius : 5px;
 }
 
+QScrollArea#replayScoreScrollArea
+{
+    background-color: #202025;
+    background: #202025;
+    color:#202025;
+    border-width: 0px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    padding: 0px;
+}
 
 /* Scrollbars*/
 QScrollBar:horizontal {
@@ -715,6 +751,14 @@ QLabel#labelLoading,#labelAutomatchInfo
 {
     color: gold;
 }
+
+QLabel#VSLabel
+{
+    color: black;
+    background-color: #202025;
+    margin: 0px;
+}
+
 
 QGroupBox
 {
@@ -995,9 +1039,4 @@ QFrame#settingsFrame {
 #line
 {
     background-color: #202025;
-}
-
-QWidget#scrollAreaWidgetContents
-{
-    background-color: #383838;
 }

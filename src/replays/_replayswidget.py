@@ -671,14 +671,14 @@ class ReplayVaultWidgetHandler(object):
             "sort": "-startTime",
             "include": (
                 "featuredMod,mapVersion,mapVersion.map,playerStats,"
-                "playerStats.player"
+                "playerStats.player,playerStats.ratingChanges"
             ),
         }
 
         _w = self._w
         _w.onlineTree.setItemDelegate(ReplayItemDelegate(_w))
         _w.onlineTree.itemDoubleClicked.connect(self.onlineTreeDoubleClicked)
-        _w.onlineTree.itemPressed.connect(self.onlineTreeClicked)
+        _w.onlineTree.itemPressed.connect(self.online_tree_clicked)
 
         _w.searchButton.pressed.connect(self.searchVault)
         _w.playerName.returnPressed.connect(self.searchVault)
@@ -690,7 +690,7 @@ class ReplayVaultWidgetHandler(object):
         _w.showLatestCheckbox.stateChanged.connect(
             self.showLatestCheckboxchange,
         )
-        _w.spoilerCheckbox.stateChanged.connect(self.spoilerCheckboxchange)
+        _w.spoilerCheckbox.checkStateChanged.connect(self.spoiler_checkbox_change)
         _w.hideUnrCheckbox.stateChanged.connect(self.hideUnrCheckboxchange)
         _w.RefreshResetButton.pressed.connect(self.resetRefreshPressed)
 
@@ -885,22 +885,30 @@ class ReplayVaultWidgetHandler(object):
             if self.automatic or self.onlineReplays == {}:
                 self.searchVault(reset=True)
 
-    def onlineTreeClicked(self, item):
+    def clear_scoreboard(self) -> None:
+        if (layout_item := self._w.replayScoreLayout.itemAt(0)) is not None:
+            scoreboard = layout_item.widget()
+            scoreboard.setParent(None)
+            self._w.replayScoreLayout.removeWidget(scoreboard)
+            scoreboard.deleteLater()
+
+    def adjust_scoreboard_size(self, width: int, height: int) -> None:
+        self._w.replayScoreScrollArea.setMaximumWidth(width)
+        self._w.replayScoreScrollArea.setMaximumHeight(height)
+
+    def add_scoreboard(self, item: ReplayItem) -> None:
+        self.clear_scoreboard()
+        scoreboard = item.generate_scoreboard()
+        self._w.replayScoreLayout.addWidget(scoreboard)
+        self.adjust_scoreboard_size(scoreboard.width(), scoreboard.height())
+
+    def online_tree_clicked(self, item: ReplayItem) -> None:
         if QtWidgets.QApplication.mouseButtons() == QtCore.Qt.MouseButton.RightButton:
-            if isinstance(item.parent, ReplaysWidget):      # FIXME - hack
+            if isinstance(item.parent, ReplaysWidget):  # FIXME - hack
                 item.pressed(item)
         else:
             self.selectedReplay = item
-            if hasattr(item, "moreInfo"):
-                if item.moreInfo is False:
-                    item.infoPlayers()
-                elif item.spoiled != self._w.spoilerCheckbox.isChecked():
-                    self._w.replayInfos.clear()
-                    self._w.replayInfos.setHtml(item.replayInfo)
-                    item.resize()
-                else:
-                    self._w.replayInfos.clear()
-                    item.generateInfoPlayersHtml()
+            self.add_scoreboard(item)
             if self.toolboxHandler.mapPreview:
                 self.toolboxHandler.updateMapPreview()
 
@@ -970,14 +978,14 @@ class ReplayVaultWidgetHandler(object):
     def automaticCheckboxchange(self, state):
         self.automatic = state
 
-    def spoilerCheckboxchange(self, state):
-        self.spoiler_free = state
+    def spoiler_checkbox_change(self, state: QtCore.Qt.CheckState) -> None:
+        self.spoiler_free = state == QtCore.Qt.CheckState.Checked
         # if something is selected in the tree to the left
         if self.selectedReplay:
             # and if it is a game
             if isinstance(self.selectedReplay, ReplayItem):
                 # then we redo it
-                self.selectedReplay.generateInfoPlayersHtml()
+                self.add_scoreboard(self.selectedReplay)
 
     def showLatestCheckboxchange(self, state):
         self.showLatest = state
@@ -1020,7 +1028,7 @@ class ReplayVaultWidgetHandler(object):
 
     def process_replays_data(self, message: dict) -> None:
         self.stopSearchVault()
-        self._w.replayInfos.clear()
+        self.clear_scoreboard()
         self.onlineReplays = {}
         replays = message["data"]
         for replay_item in replays:
@@ -1028,7 +1036,7 @@ class ReplayVaultWidgetHandler(object):
             if uid not in self.onlineReplays:
                 self.onlineReplays[uid] = ReplayItem(uid, self._w)
             self.onlineReplays[uid].update(replay_item, self.client)
-        self.updateOnlineTree()
+        self.update_online_tree()
 
         if len(message["data"]) == 0:
             self._w.searchInfoLabel.setText(
@@ -1042,9 +1050,9 @@ class ReplayVaultWidgetHandler(object):
         for leaderboard in message["values"]:
             self._w.leaderboardList.addItem(leaderboard.pretty_name, leaderboard.technical_name)
 
-    def updateOnlineTree(self):
+    def update_online_tree(self) -> None:
         self.selectedReplay = None  # clear, it won't be part of the new tree
-        self._w.replayInfos.clear()
+        self.clear_scoreboard()
         self._w.onlineTree.clear()
         buckets = {}
         for uid in self.onlineReplays:
