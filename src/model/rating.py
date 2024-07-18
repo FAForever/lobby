@@ -1,6 +1,7 @@
 # TODO: fetch this from API
 
 from enum import Enum
+from typing import NamedTuple
 
 # copied from the server code according to which
 # this will need be fixed when the database
@@ -39,3 +40,11 @@ class MatchmakerQueueType(Enum):
             if ratingTypeName.replace("_", "") == matchmakerQueue.value:
                 return matchmakerQueue.value
         return MatchmakerQueueType.LADDER.value
+
+
+class Rating(NamedTuple):
+    mean: float
+    deviation: float
+
+    def displayed(self) -> float:
+        return self.mean - 3 * self.deviation

@@ -1,6 +1,7 @@
 from PyQt6.QtCore import pyqtSignal
 
 from model.modelitem import ModelItem
+from model.rating import Rating
 from model.rating import RatingType
 from model.transaction import transactional
 
@@ -99,7 +100,8 @@ class Player(ModelItem):
         try:
             mean = self.ratings[rating_type]["rating"][0]
             deviation = self.ratings[rating_type]["rating"][1]
-            return int(max(0, (mean - 3 * deviation)))
+            rating = Rating(mean, deviation)
+            return int(max(0, rating.displayed()))
         except (KeyError, IndexError):
             return 0
 

@@ -36,6 +36,7 @@ from api.stats_api import LeagueSeasonScoreApiConnector
 from api.stats_api import PlayerEventApiAccessor
 from downloadManager import AvatarDownloader
 from downloadManager import DownloadRequest
+from model.rating import Rating
 from playercard.statistics import StatsCharts
 from src.playercard.leagueformatter import LegueFormatter
 
@@ -335,7 +336,7 @@ class RatingsPlotTab(QObject):
             score_time = QDateTime.fromString(entry.player_stats.score_time, Qt.DateFormat.ISODate)
             series.append(
                 score_time.toSecsSinceEpoch(),
-                entry.mean_after - 3 * entry.deviation_after,
+                Rating(entry.mean_after, entry.deviation_after).displayed(),
             )
         return series
 

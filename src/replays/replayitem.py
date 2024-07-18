@@ -36,6 +36,7 @@ from config import Settings
 from downloadManager import DownloadRequest
 from fa import maps
 from games.moditem import mods
+from model.rating import Rating
 from util.qt import qpainter
 from util.qt_list_model import QtListModel
 
@@ -77,16 +78,32 @@ class ScoreboardModelItem(QObject):
         # at any time and 'ratingChanges' can be absent if game result is
         # undefined
         if self.rating_stats is not None:
-            return round(self.rating_stats["meanBefore"] - self.rating_stats["deviationBefore"] * 3)
+            rating = Rating(
+                self.rating_stats["meanBefore"],
+                self.rating_stats["deviationBefore"],
+            )
+            return round(rating.displayed())
         elif self.player.get("beforeMean") and self.player.get("beforeDeviation"):
-            return round(self.player["beforeMean"] - self.player["beforeDeviation"] * 3)
+            rating = Rating(
+                self.player["beforeMean"],
+                self.player["beforeDeviation"],
+            )
+            return round(rating.displayed())
         return 0
 
     def rating_after(self) -> int:
         if self.rating_stats is not None:
-            return round(self.rating_stats["meanAfter"] - self.rating_stats["deviationAfter"] * 3)
+            rating = Rating(
+                self.rating_stats["meanAfter"],
+                self.rating_stats["deviationAfter"],
+            )
+            return round(rating.displayed())
         elif self.player.get("afterMean") and self.player.get("afterDeviation"):
-            return round(self.player["afterMean"] - self.player["afterDeviation"] * 3)
+            rating = Rating(
+                self.player["afterMean"],
+                self.player["afterDeviation"],
+            )
+            return round(rating.displayed())
         return 0
 
     def rating(self) -> int | None:
