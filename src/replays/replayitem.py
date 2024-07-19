@@ -25,7 +25,6 @@ from PyQt6.QtWidgets import QHBoxLayout
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtWidgets import QLayout
 from PyQt6.QtWidgets import QListView
-from PyQt6.QtWidgets import QStyle
 from PyQt6.QtWidgets import QStyledItemDelegate
 from PyQt6.QtWidgets import QStyleOptionViewItem
 from PyQt6.QtWidgets import QVBoxLayout
@@ -39,6 +38,7 @@ from games.moditem import mods
 from model.rating import Rating
 from util.qt import qpainter
 from util.qt_list_model import QtListModel
+from util.qtstyleditemdelegate import QtStyledItemDelegate
 
 
 class GameResult(Enum):
@@ -164,9 +164,9 @@ class ScoreboardModel(QtListModel):
         self._add_item(player, player["player"]["id"])
 
 
-class ScoreboardItemDelegate(QStyledItemDelegate):
+class ScoreboardItemDelegate(QtStyledItemDelegate):
     def __init__(self) -> None:
-        QStyledItemDelegate.__init__(self)
+        QtStyledItemDelegate.__init__(self)
         self._row_height = 22
 
     def row_height(self) -> int:
@@ -208,24 +208,25 @@ class ScoreboardItemDelegate(QStyledItemDelegate):
         return icon_rect
 
     def _draw_nick_and_rating(
-        self,
-        painter: QPainter,
-        rect: QRect,
-        player_data: ScoreboardModelItem,
-        alignment: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft,
+            self,
+            painter: QPainter,
+            rect: QRect,
+            player_data: ScoreboardModelItem,
+            alignment: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft,
     ) -> QRect:
         rating = player_data.rating()
         rating_str = f"{rating}" if rating is not None else "???"
-        text = self._get_elided_text(painter, f"{player_data.login()} ({rating_str})", rect.width())
-        painter.drawText(rect, alignment, text)
+        text = f"{player_data.login()} ({rating_str})"
+        elided = self._get_elided_text(painter, text, width=rect.width())
+        painter.drawText(rect, alignment, elided)
         return rect
 
     def _draw_rating_change(
-        self,
-        painter: QPainter,
-        rect: QRect,
-        player_data: ScoreboardModelItem,
-        alignment: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft,
+            self,
+            painter: QPainter,
+            rect: QRect,
+            player_data: ScoreboardModelItem,
+            alignment: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignLeft,
     ) -> QRect:
         change = player_data.rating_change()
         rating_change_rect = QRect(rect)
@@ -242,11 +243,6 @@ class ScoreboardItemDelegate(QStyledItemDelegate):
             painter.drawText(rating_change_rect, Qt.AlignmentFlag.AlignCenter, f"{change:+}")
         return rating_change_rect
 
-    def _draw_clear_option(self, painter: QPainter, option: QStyleOptionViewItem) -> None:
-        option.text = ""
-        control_element = QStyle.ControlElement.CE_ItemViewItem
-        option.widget.style().drawControl(control_element, option, painter, option.widget)
-
     def _shrink_rect_along(
             self,
             rect: QRect,
@@ -262,10 +258,6 @@ class ScoreboardItemDelegate(QStyledItemDelegate):
         adjustments = [0, 0, 0, 0]
         adjustments[index] = adjustment * direction
         return rect.adjusted(*adjustments)
-
-    def _get_elided_text(self, painter: QPainter, text: str, width: int) -> str:
-        metrics = painter.fontMetrics()
-        return metrics.elidedText(text, Qt.TextElideMode.ElideRight, width)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex) -> None:
         player_data: ScoreboardModelItem = index.data()

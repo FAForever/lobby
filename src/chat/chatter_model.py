@@ -21,6 +21,7 @@ from fa import maps
 from model.game import GameState
 from model.rating import RatingType
 from util.qt_list_model import QtListModel
+from util.qtstyleditemdelegate import QtStyledItemDelegate
 
 
 class ChatterModel(QtListModel):
@@ -335,9 +336,9 @@ class ChatterItemFormatter:
         return self.country_tooltip(data)
 
 
-class ChatterItemDelegate(QtWidgets.QStyledItemDelegate):
+class ChatterItemDelegate(QtStyledItemDelegate):
     def __init__(self, layout, formatter):
-        QtWidgets.QStyledItemDelegate.__init__(self)
+        QtStyledItemDelegate.__init__(self)
         self.layout = layout
         self._formatter = formatter
 
@@ -376,13 +377,6 @@ class ChatterItemDelegate(QtWidgets.QStyledItemDelegate):
 
         painter.restore()
 
-    def _draw_clear_option(self, painter, option):
-        option.icon = QtGui.QIcon()
-        option.text = ""
-        option.widget.style().drawControl(
-            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
-        )
-
     def _handle_highlight(
             self,
             painter: QtGui.QPainter,
@@ -395,7 +389,7 @@ class ChatterItemDelegate(QtWidgets.QStyledItemDelegate):
         text = self._formatter.chatter_name(data)
         color = QColor(self._formatter.chatter_color(data))
         clip = QRect(self.layout.sizes[ChatterLayoutElements.NICK])
-        text = self._get_elided_text(painter, text, clip.width())
+        text = self._get_elided_text(painter, text, width=clip.width())
 
         painter.save()
         pen = painter.pen()
@@ -405,10 +399,6 @@ class ChatterItemDelegate(QtWidgets.QStyledItemDelegate):
         painter.drawText(clip, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, text)
 
         painter.restore()
-
-    def _get_elided_text(self, painter: QtGui.QPainter, text: str, width: int) -> str:
-        metrics = painter.fontMetrics()
-        return metrics.elidedText(text, Qt.TextElideMode.ElideRight, width)
 
     def _draw_status(self, painter, data):
         status = self._formatter.chatter_status(data)

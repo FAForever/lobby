@@ -8,6 +8,7 @@ from PyQt6 import QtWidgets
 
 import util
 from fa import maps
+from util.qtstyleditemdelegate import QtStyledItemDelegate
 
 
 class GameView(QtCore.QObject):
@@ -38,7 +39,7 @@ class GameView(QtCore.QObject):
         self.game_double_clicked.emit(idx.data().game)
 
 
-class GameItemDelegate(QtWidgets.QStyledItemDelegate):
+class GameItemDelegate(QtStyledItemDelegate):
     ICON_RECT = 100
     ICON_CLIP_TOP_LEFT = 3
     ICON_CLIP_BOTTOM_RIGHT = -7
@@ -54,7 +55,7 @@ class GameItemDelegate(QtWidgets.QStyledItemDelegate):
     PADDING = 10
 
     def __init__(self, formatter):
-        QtWidgets.QStyledItemDelegate.__init__(self)
+        QtStyledItemDelegate.__init__(self)
         self._formatter = formatter
         self.tooltip_filter = GameTooltipFilter(self._formatter)
 
@@ -72,13 +73,6 @@ class GameItemDelegate(QtWidgets.QStyledItemDelegate):
         self._draw_text(painter, option, text)
 
         painter.restore()
-
-    def _draw_clear_option(self, painter, option):
-        option.icon = QtGui.QIcon()
-        option.text = ""
-        option.widget.style().drawControl(
-            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
-        )
 
     def _draw_icon_shadow(self, painter, option):
         painter.fillRect(
