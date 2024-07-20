@@ -5,11 +5,11 @@ from PyQt6.QtWidgets import QStyle
 from PyQt6.QtWidgets import QStyleOptionViewItem
 from PyQt6.QtWidgets import QTableView
 
-from util.qt import qpainter
-from util.qtstyleditemdelegate import QtStyledItemDelegate
+from qt.itemviews.styleditemdelegate import StyledItemDelegate
+from qt.utils import qpainter
 
 
-class TableItemDelegate(QtStyledItemDelegate):
+class TableItemDelegate(StyledItemDelegate):
     """
     Highlights the entire row on mouse hover when table's
     SelectionBehavior is set to SelectRows

@@ -5,7 +5,7 @@ from PyQt6.QtCore import Qt
 
 from games.moditem import mod_invisible
 from model.game import GameState
-from util.qt_list_model import QtListModel
+from qt.models.qtlistmodel import QtListModel
 
 from .gamemodelitem import GameModelItem
 

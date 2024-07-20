@@ -27,8 +27,8 @@ from games.gameitem import GameViewBuilder
 from games.gamemodel import GameModel
 from games.hostgamewidget import GameLauncher
 from model.game import Game
+from qt.utils import qopen
 from ui.busy_widget import BusyWidget
-from util.qt import qopen
 
 if TYPE_CHECKING:
     from client._clientwindow import ClientWindow

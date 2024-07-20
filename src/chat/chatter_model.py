@@ -20,8 +20,8 @@ from chat.gameinfo import SensitiveMapInfoChecker
 from fa import maps
 from model.game import GameState
 from model.rating import RatingType
-from util.qt_list_model import QtListModel
-from util.qtstyleditemdelegate import QtStyledItemDelegate
+from qt.itemviews.styleditemdelegate import StyledItemDelegate
+from qt.models.qtlistmodel import QtListModel
 
 
 class ChatterModel(QtListModel):
@@ -336,9 +336,9 @@ class ChatterItemFormatter:
         return self.country_tooltip(data)
 
 
-class ChatterItemDelegate(QtStyledItemDelegate):
+class ChatterItemDelegate(StyledItemDelegate):
     def __init__(self, layout, formatter):
-        QtStyledItemDelegate.__init__(self)
+        StyledItemDelegate.__init__(self)
         self.layout = layout
         self._formatter = formatter
 

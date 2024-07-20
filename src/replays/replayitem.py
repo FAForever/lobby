@@ -36,9 +36,9 @@ from downloadManager import DownloadRequest
 from fa import maps
 from games.moditem import mods
 from model.rating import Rating
-from util.qt import qpainter
-from util.qt_list_model import QtListModel
-from util.qtstyleditemdelegate import QtStyledItemDelegate
+from qt.itemviews.styleditemdelegate import StyledItemDelegate
+from qt.models.qtlistmodel import QtListModel
+from qt.utils import qpainter
 
 
 class GameResult(Enum):
@@ -164,9 +164,9 @@ class ScoreboardModel(QtListModel):
         self._add_item(player, player["player"]["id"])
 
 
-class ScoreboardItemDelegate(QtStyledItemDelegate):
+class ScoreboardItemDelegate(StyledItemDelegate):
     def __init__(self) -> None:
-        QtStyledItemDelegate.__init__(self)
+        StyledItemDelegate.__init__(self)
         self._row_height = 22
 
     def row_height(self) -> int:

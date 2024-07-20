@@ -19,8 +19,8 @@ from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
 from config import Settings
+from qt.utils import qopen
 from util import AVATARS_CACHE_DIR
-from util.qt import qopen
 
 logger = logging.getLogger(__name__)
 

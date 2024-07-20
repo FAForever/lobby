@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QStyledItemDelegate
 from PyQt6.QtWidgets import QStyleOptionViewItem
 
 
-class QtStyledItemDelegate(QStyledItemDelegate):
+class StyledItemDelegate(QStyledItemDelegate):
     def _get_elided_text(
             self,
             painter: QPainter,

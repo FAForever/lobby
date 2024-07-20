@@ -5,7 +5,7 @@ from PyQt6.QtGui import QPainter
 from PyQt6.QtWidgets import QStyleOptionViewItem
 
 from qt.itemviews.tableitemdelegte import TableItemDelegate
-from util.qt import qpainter
+from qt.utils import qpainter
 
 
 class LeaderboardItemDelegate(TableItemDelegate):

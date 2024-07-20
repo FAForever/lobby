@@ -8,7 +8,7 @@ from PyQt6 import QtWidgets
 
 import util
 from fa import maps
-from util.qtstyleditemdelegate import QtStyledItemDelegate
+from qt.itemviews.styleditemdelegate import StyledItemDelegate
 
 
 class GameView(QtCore.QObject):
@@ -39,7 +39,7 @@ class GameView(QtCore.QObject):
         self.game_double_clicked.emit(idx.data().game)
 
 
-class GameItemDelegate(QtStyledItemDelegate):
+class GameItemDelegate(StyledItemDelegate):
     ICON_RECT = 100
     ICON_CLIP_TOP_LEFT = 3
     ICON_CLIP_BOTTOM_RIGHT = -7
@@ -55,7 +55,7 @@ class GameItemDelegate(QtStyledItemDelegate):
     PADDING = 10
 
     def __init__(self, formatter):
-        QtStyledItemDelegate.__init__(self)
+        StyledItemDelegate.__init__(self)
         self._formatter = formatter
         self.tooltip_filter = GameTooltipFilter(self._formatter)
 
