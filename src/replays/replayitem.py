@@ -98,12 +98,9 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
         self.parent = parent
         self.height = 70
         self.viewtext = None
-        self.viewtextPlayer = None
         self.mapname = None
         self.mapdisplayname = None
         self.client = None
-        self.title = None
-        self.host = None
 
         self.startDate = None
         self.duration = None
@@ -114,20 +111,16 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
         self.url = "{}/{}".format(Settings.get('replay_vault/host'), self.uid)
 
         self.teams = {}
-        self.access = None
         self.mod = None
         self.moddisplayname = None
 
         self.options = []
         self.players = []
         self.numberplayers = 0
-        self.biggestTeam = 0
         self.winner = None
         self.teamWin = None
 
         self.setHidden(True)
-        self.extraInfoWidth = 0  # panel with more information
-        self.extraInfoHeight = 0  # panel with more information
 
         self._map_dl_request = DownloadRequest()
         self._map_dl_request.done.connect(self._on_map_preview_downloaded)
