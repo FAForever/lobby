@@ -89,44 +89,7 @@ class ReplayItemDelegate(QtWidgets.QStyledItemDelegate):
 
 
 class ReplayItem(QtWidgets.QTreeWidgetItem):
-    # list element
-    FORMATTER_REPLAY = str(
-        util.THEME.readfile(
-            "replays/formatters/replay.qthtml",
-        ),
-    )
-    # replay-info elements
-    FORMATTER_REPLAY_INFORMATION = (
-        "<h2 align='center'>Replay UID : {uid}</h2><table border='0' "
-        "cellpadding='0' cellspacing='5' align='center'><tbody>{teams}</tbody>"
-        "</table>"
-    )
-    FORMATTER_REPLAY_TEAM_SPOILED = (
-        "<tr><td colspan='3' align='center' valign='middle'><font size='+2'>"
-        "{title}</font></td></tr>{players}"
-    )
-    FORMATTER_REPLAY_FFA_SPOILED = (
-        "<tr><td colspan='3' align='center' valign='middle'><font size='+2'>"
-        "Win</font></td></tr>{winner}<tr><td colspan=3 align='center' "
-        "valign='middle'><font size='+2'>Lose</font></td></tr>{players}"
-    )
-    FORMATTER_REPLAY_TEAM2_SPOILED = (
-        "<td><table border=0><tr><td colspan='3' align='center' "
-        "valign='middle'><font size='+2'>{title}</font></td></tr>{players}"
-        "</table></td>"
-    )
-    FORMATTER_REPLAY_TEAM2 = "<td><table border=0>{players}</table></td>"
-    FORMATTER_REPLAY_PLAYER_SCORE = (
-        "<td align='center' valign='middle' width='20'>{player_score}</td>"
-    )
-    FORMATTER_REPLAY_PLAYER_ICON = (
-        "<td width='40'><img src='{faction_icon_uri}' width='40' height='20'>"
-        "</td>"
-    )
-    FORMATTER_REPLAY_PLAYER_LABEL = (
-        "<td align='{alignment}' valign='middle' width='130'>{player_name} "
-        "({player_rating})</td>"
-    )
+    REPLAY_TREE_ITEM_FORMATTER = str(util.THEME.readfile("replays/formatters/replay.qthtml"))
 
     def __init__(self, uid, parent, *args, **kwargs):
         QtWidgets.QTreeWidgetItem.__init__(self, *args, **kwargs)
@@ -240,7 +203,7 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
         else:
             self.moddisplayname = self.mod
 
-        self.viewtext = self.FORMATTER_REPLAY.format(
+        self.viewtext = self.REPLAY_TREE_ITEM_FORMATTER.format(
             time=self.startHour, name=self.name, map=self.mapdisplayname,
             duration=self.duration, mod=self.moddisplayname,
         )
