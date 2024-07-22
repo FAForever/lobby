@@ -50,13 +50,18 @@ class LeaderboardTableMenu:
         yield LeaderboardTableMenuItems.SHOW_USER_INFO
         yield LeaderboardTableMenuItems.VIEW_REPLAYS
 
-    def friendActions(self, name, uid, is_me):
+    def friendActions(
+            self,
+            name: str,
+            uid: int,
+            is_me: bool,
+    ) -> Generator[LeaderboardTableMenuItems, None, None]:
         if is_me:
             return
 
-        if self.client.me.relations.model.is_friend(uid, name):
+        if self.client.user_relations.model.is_friend(uid, name):
             yield LeaderboardTableMenuItems.REMOVE_FRIEND
-        elif self.client.me.relations.model.is_foe(uid, name):
+        elif self.client.user_relations.model.is_foe(uid, name):
             yield LeaderboardTableMenuItems.REMOVE_FOE
         else:
             yield LeaderboardTableMenuItems.ADD_FRIEND
@@ -106,8 +111,8 @@ class LeaderboardTableMenu:
     def viewReplays(self, name):
         self.client.view_replays(name, self.leaderboardName)
 
-    def handleFriends(self, uid, kind):
-        ctl = self.client.me.relations.controller.faf
+    def handleFriends(self, uid: int, kind: LeaderboardTableMenuItems) -> None:
+        ctl = self.client.user_relations.controller.faf
 
         Items = LeaderboardTableMenuItems
         if kind == Items.ADD_FRIEND:

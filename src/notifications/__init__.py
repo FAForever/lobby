@@ -7,6 +7,7 @@ from PyQt6 import QtCore
 import util
 from config import Settings
 from fa import maps
+from model.player import Player
 from notifications.ns_dialog import NotificationDialog
 from notifications.ns_settings import IngameNotification
 from notifications.ns_settings import NsSettingsDialog
@@ -42,7 +43,7 @@ class Notifications:
 
         self.user = util.THEME.icon("client/user.png", pix=True)
 
-    def _newPlayer(self, player):
+    def _newPlayer(self, player: Player) -> None:
         if (
             self.isDisabled()
             or not self.settings.popupEnabled(self.USER_ONLINE)
@@ -55,7 +56,7 @@ class Notifications:
         notify_mode = self.settings.getCustomSetting(self.USER_ONLINE, 'mode')
         if (
             notify_mode != 'all'
-            and not self.me.relations.model.is_friend(player.id)
+            and not self.client.user_relations.model.is_friend(player.id)
         ):
             return
 
@@ -69,7 +70,7 @@ class Notifications:
         host = game.host_player
         notify_mode = self.settings.getCustomSetting(self.NEW_GAME, 'mode')
         if notify_mode != 'all':
-            if host is None or not self.me.relations.model.is_friend(host):
+            if host is None or not self.client.user_relations.model.is_friend(host):
                 return
 
         self.events.append((self.NEW_GAME, game.copy()))
@@ -98,7 +99,7 @@ class Notifications:
         notify_mode = self.settings.getCustomSetting(self.PARTY_INVITE, 'mode')
         if (
             notify_mode != 'all'
-            and not self.me.relations.model.is_friend(message["sender"])
+            and not self.client.user_relations.model.is_friend(message["sender"])
         ):
             return
         self.events.append((self.PARTY_INVITE, message))

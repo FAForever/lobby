@@ -25,8 +25,6 @@ class User(QtCore.QObject):
         self._players.added.connect(self._on_player_change)
         self._players.removed.connect(self._on_player_change)
 
-        self.relations = None   # FIXME - circular me -> rels -> me dep
-
     @property
     def player(self):
         return self._player

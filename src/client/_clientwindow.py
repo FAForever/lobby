@@ -232,7 +232,6 @@ class ClientWindow(FormClass, BaseClass):
         self.user_relations = UserRelations(
             relation_model, relation_controller, relation_trackers,
         )
-        self.me.relations = self.user_relations
 
         self.map_preview_downloader = MapSmallPreviewDownloader(util.MAP_PREVIEW_SMALL_DIR)
         self.avatar_downloader = AvatarDownloader()
@@ -241,7 +240,10 @@ class ClientWindow(FormClass, BaseClass):
         self.map_generator = MapGeneratorManager()
 
         # Qt model for displaying active games.
-        self.game_model = GameModel(self.me, self.map_preview_downloader, self.gameset)
+        self.game_model = GameModel(
+            self.user_relations, self.me,
+            self.map_preview_downloader, self.gameset,
+        )
 
         self.gameset.added.connect(self.fill_in_session_info)
 
@@ -367,9 +369,7 @@ class ClientWindow(FormClass, BaseClass):
             self.me, self.user_relations.model, util.THEME,
         )
 
-        self.game_announcer = GameAnnouncer(
-            self.gameset, self.me, self.player_colors,
-        )
+        self.game_announcer = GameAnnouncer(self.gameset, self.user_relations, self.player_colors)
 
         self.power = 0  # current user power
         self.id = 0
@@ -784,10 +784,7 @@ class ClientWindow(FormClass, BaseClass):
 
         # build main window with the now active client
         self.news = NewsWidget(self)
-        self.coop = CoopWidget(
-            self, self.game_model, self.me,
-            self.gameview_builder, self.game_launcher,
-        )
+        self.coop = CoopWidget(self, self.game_model, self.gameview_builder, self.game_launcher)
         self.games = GamesWidget(
             self, self.game_model, self.me,
             self.gameview_builder, self.game_launcher,

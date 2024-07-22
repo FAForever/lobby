@@ -6,6 +6,8 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QMenu
 
+from model.chat.channelchatter import ChannelChatter
+from model.chat.chatter import Chatter
 from model.game import GameState
 from model.player import Player
 from playercard.playerinfodialog import PlayerInfoDialog
@@ -107,25 +109,37 @@ class ChatterMenu:
                 yield ChatterMenuItems.VIEW_IN_LEADERBOARDS
             yield ChatterMenuItems.VIEW_REPLAYS
 
-    def friend_actions(self, player, chatter, cc, is_me):
+    def friend_actions(
+            self,
+            player: Player | None,
+            chatter: Chatter,
+            cc: ChannelChatter,
+            is_me: bool,
+    ) -> Generator[ChatterMenuItems, None, None]:
         if is_me:
             return
         id_ = -1 if player is None else player.id
         name = chatter.name
-        if self._me.relations.model.is_friend(id_, name):
+        if self._client_window.user_relations.model.is_friend(id_, name):
             yield ChatterMenuItems.REMOVE_FRIEND
-        elif self._me.relations.model.is_foe(id_, name):
+        elif self._client_window.user_relations.model.is_foe(id_, name):
             yield ChatterMenuItems.REMOVE_FOE
         else:
             yield ChatterMenuItems.ADD_FRIEND
             yield ChatterMenuItems.ADD_FOE
 
-    def ignore_actions(self, player, chatter, cc, is_me):
+    def ignore_actions(
+            self,
+            player: Player,
+            chatter: Chatter,
+            cc: ChannelChatter,
+            is_me: bool,
+    ) -> Generator[ChatterMenuItems, None, None]:
         if is_me:
             return
         id_ = -1 if player is None else player.id
         name = chatter.name
-        if self._me.relations.model.is_chatterbox(id_, name):
+        if self._client_window.user_relations.model.is_chatterbox(id_, name):
             yield ChatterMenuItems.REMOVE_CHATTERBOX
         else:
             if not cc.is_mod() and not chatter.is_base_channel_mod():
@@ -213,8 +227,8 @@ class ChatterMenu:
     def _copy_username(self, chatter):
         QApplication.clipboard().setText(chatter.name)
 
-    def _handle_friends(self, chatter, player, kind):
-        ctl = self._me.relations.controller
+    def _handle_friends(self, chatter: Chatter, player: Player, kind: ChatterMenuItems) -> None:
+        ctl = self._client_window.user_relations.controller
         ctl = ctl.faf if player is not None else ctl.irc
         uid = player.id if player is not None else chatter.name
 
@@ -228,8 +242,13 @@ class ChatterMenu:
         elif kind == Items.REMOVE_FOE:
             ctl.foes.remove(uid)
 
-    def _handle_chatterboxes(self, chatter, player, kind):
-        ctl = self._me.relations.controller
+    def _handle_chatterboxes(
+            self,
+            chatter: Chatter,
+            player: Player | None,
+            kind: ChatterMenuItems,
+    ) -> None:
+        ctl = self._client_window.user_relations.controller
         ctl = ctl.faf if player is not None else ctl.irc
         uid = player.id if player is not None else chatter.name
 

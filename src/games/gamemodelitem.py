@@ -1,8 +1,16 @@
+from __future__ import annotations
+
+from typing import Callable
+
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import pyqtSignal
 
+from client.user import User
+from client.user import UserRelations
 from downloadManager import DownloadRequest
+from downloadManager import MapPreviewDownloader
 from fa import maps
+from model.game import Game
 
 
 class GameModelItem(QObject):
@@ -12,24 +20,34 @@ class GameModelItem(QObject):
     """
     updated = pyqtSignal(object)
 
-    def __init__(self, game, me, preview_dler):
+    def __init__(
+            self,
+            game: Game,
+            relations: UserRelations,
+            me: User,
+            preview_dler: MapPreviewDownloader,
+    ) -> None:
         QObject.__init__(self)
 
         self.game = game
         self.game.updated.connect(self._game_updated)
+        self.user_relations = relations
+        self.user_relations.trackers.players.updated.connect(self._host_relation_changed)
         self._me = me
-        self._me.relations.trackers.players.updated.connect(
-            self._host_relation_changed,
-        )
         self._me.clan_changed.connect(self._host_relation_changed)
         self._preview_dler = preview_dler
         self._preview_dl_request = DownloadRequest()
         self._preview_dl_request.done.connect(self._at_preview_downloaded)
 
     @classmethod
-    def builder(cls, me, preview_dler):
-        def build(game):
-            return cls(game, me, preview_dler)
+    def builder(
+            cls,
+            relations: UserRelations,
+            me: User,
+            preview_dler: MapPreviewDownloader,
+    ) -> Callable[[Game], GameModelItem]:
+        def build(game: Game) -> GameModelItem:
+            return cls(game, relations, me, preview_dler)
         return build
 
     def _game_updated(self):
