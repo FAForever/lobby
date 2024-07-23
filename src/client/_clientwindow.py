@@ -42,6 +42,7 @@ from client.user import UserRelationModel
 from client.user import UserRelations
 from client.user import UserRelationTrackers
 from connectivity.ConnectivityDialog import ConnectivityDialog
+from contextmenu.playercontextmenu import PlayerContextMenu
 from coop import CoopWidget
 from downloadManager import AvatarDownloader
 from downloadManager import MapSmallPreviewDownloader
@@ -703,6 +704,10 @@ class ClientWindow(FormClass, BaseClass):
             lobby_info=self.lobby_info,
             avatar_dler=self.avatar_downloader,
             theme=util.THEME,
+        )
+        self.player_ctx_menu = PlayerContextMenu(
+            self.me, self.power_tools, self, self._avatar_widget_builder,
+            self._alias_viewer, self, self._game_runner,
         )
 
         chat_connection = IrcConnection.build(settings=config.Settings)

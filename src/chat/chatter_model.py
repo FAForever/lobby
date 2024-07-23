@@ -591,12 +591,13 @@ class ChatterEventFilter(QObject):
         QtWidgets.QToolTip.showText(event.globalPos(), tooltip_text, widget)
         return True
 
-    def _handle_context_menu(self, widget, event):
+    def _handle_context_menu(self, widget: QtWidgets.QWidget, event: QtGui.QMouseEvent) -> bool:
         data, elem = self._get_data_and_elem(widget, event)
         if data is None:
             return False
 
-        menu = self._menu_handler.get_context_menu(data, elem)
+        player_id = data.player.id if data.player is not None else -1
+        menu = self._menu_handler.get_context_menu(data.chatter.name, player_id)
         menu.popup(QtGui.QCursor.pos())
         return True
 
