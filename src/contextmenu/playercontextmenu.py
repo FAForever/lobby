@@ -32,7 +32,6 @@ class PlayerMenuItem(Enum):
     CLOSE_GAME = "Close Game"
     KICK_PLAYER = "Close FAF Client"
     VIEW_ALIASES = "View aliases"
-    VIEW_IN_LEADERBOARDS = "View in Leaderboards"
     JOIN_GAME = "Join hosted Game"
     VIEW_LIVEREPLAY = "View live replay"
     VIEW_REPLAYS = "View Replays in Vault"
@@ -128,9 +127,6 @@ class PlayerContextMenu:
                 yield PlayerMenuItem.JOIN_GAME
             elif game.state == GameState.PLAYING:
                 yield PlayerMenuItem.VIEW_LIVEREPLAY
-
-        if online_player.ladder_estimate != 0:
-            yield PlayerMenuItem.VIEW_IN_LEADERBOARDS
 
     def friend_actions(
             self,
@@ -232,8 +228,6 @@ class PlayerContextMenu:
             self._show_user_info(player_id)
         elif kind == Items.VIEW_REPLAYS:
             self._client_window.view_replays(login)
-        elif kind == Items.VIEW_IN_LEADERBOARDS:
-            self._client_window.view_in_leaderboards(player_id)
         elif kind in [Items.JOIN_GAME, Items.VIEW_LIVEREPLAY]:
             self._handle_game(player_id)
         elif kind == Items.INVITE_TO_PARTY:
