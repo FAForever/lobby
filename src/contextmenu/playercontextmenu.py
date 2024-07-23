@@ -223,11 +223,9 @@ class PlayerContextMenu:
             self._avatar_widget_builder().show()
         elif kind in [
             Items.ADD_FRIEND, Items.ADD_FOE, Items.REMOVE_FRIEND,
-            Items.REMOVE_FOE,
+            Items.REMOVE_FOE, Items.ADD_CHATTERBOX, Items.REMOVE_CHATTERBOX,
         ]:
-            self._handle_friends(login, player_id, kind)
-        elif kind in [Items.ADD_CHATTERBOX, Items.REMOVE_CHATTERBOX]:
-            self._handle_chatterboxes(login, player_id, kind)
+            self._handle_social(login, player_id, kind)
         elif kind == Items.VIEW_ALIASES:
             self._view_aliases(login)
         elif kind == Items.SHOW_USER_INFO:
@@ -259,7 +257,7 @@ class PlayerContextMenu:
         if clip is not None:
             clip.setText(login)
 
-    def _handle_friends(self, login: str, player_id: int, kind: PlayerMenuItem) -> None:
+    def _handle_social(self, login: str, player_id: int, kind: PlayerMenuItem) -> None:
         ctl = self._client_window.user_relations.controller
 
         if player_id == -1:
@@ -269,36 +267,17 @@ class PlayerContextMenu:
             ctl = ctl.faf
             uid = player_id
 
-        Items = PlayerMenuItem
-        if kind == Items.ADD_FRIEND:
-            ctl.friends.add(uid)
-        elif kind == Items.REMOVE_FRIEND:
-            ctl.friends.remove(uid)
-        if kind == Items.ADD_FOE:
-            ctl.foes.add(uid)
-        elif kind == Items.REMOVE_FOE:
-            ctl.foes.remove(uid)
-
-    def _handle_chatterboxes(
-            self,
-            login: str,
-            player_id: int,
-            kind: PlayerMenuItem,
-    ) -> None:
-        ctl = self._client_window.user_relations.controller
-
-        if player_id == -1:
-            ctl = ctl.irc
-            uid = login
-        else:
-            ctl = ctl.faf
-            uid = player_id
-
-        Items = PlayerMenuItem
-        if kind == Items.ADD_CHATTERBOX:
-            ctl.chatterboxes.add(uid)
-        elif kind == Items.REMOVE_CHATTERBOX:
-            ctl.chatterboxes.remove(uid)
+        social_handlers = {
+            PlayerMenuItem.ADD_FRIEND: ctl.friends.add,
+            PlayerMenuItem.REMOVE_FRIEND: ctl.friends.remove,
+            PlayerMenuItem.ADD_FOE: ctl.foes.add,
+            PlayerMenuItem.REMOVE_FOE: ctl.foes.remove,
+            PlayerMenuItem.ADD_CHATTERBOX: ctl.chatterboxes.add,
+            PlayerMenuItem.REMOVE_CHATTERBOX: ctl.chatterboxes.remove,
+        }
+        handler = social_handlers.get(kind)
+        if handler is not None:
+            handler(uid)
 
     def _view_aliases(self, login: str) -> None:
         self._alias_viewer.view_aliases(login)
