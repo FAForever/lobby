@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from bisect import bisect_left
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
 
 import pyqtgraph as pg
 from PyQt6.QtCore import QDateTime
@@ -37,11 +36,8 @@ from api.stats_api import PlayerEventApiAccessor
 from downloadManager import AvatarDownloader
 from downloadManager import DownloadRequest
 from model.rating import Rating
+from playercard.leagueformatter import LegueFormatter
 from playercard.statistics import StatsCharts
-from src.playercard.leagueformatter import LegueFormatter
-
-if TYPE_CHECKING:
-    from client._clientwindow import ClientWindow
 
 FormClass, BaseClass = util.THEME.loadUiType("player_card/playercard.ui")
 
@@ -174,13 +170,13 @@ class Crosshairs:
 
 
 class PlayerInfoDialog(FormClass, BaseClass):
-    def __init__(self, client_window: ClientWindow, player_id: str) -> None:
+    def __init__(self, avatar_dler: AvatarDownloader, player_id: str) -> None:
         BaseClass.__init__(self)
         self.setupUi(self)
         self.load_stylesheet()
 
         self.tab_widget_ctrl = RatingTabWidgetController(player_id, self.tabWidget)
-        self.avatar_handler = AvatarHandler(self.avatarList, client_window.avatar_downloader)
+        self.avatar_handler = AvatarHandler(self.avatarList, avatar_dler)
 
         self.player_id = player_id
 

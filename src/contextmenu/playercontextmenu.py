@@ -277,5 +277,5 @@ class PlayerContextMenu:
         self._alias_viewer.view_aliases(login)
 
     def _show_user_info(self, player_id: int) -> None:
-        dialog = PlayerInfoDialog(self._client_window, str(player_id))
+        dialog = PlayerInfoDialog(self._client_window.avatar_downloader, str(player_id))
         dialog.run()
