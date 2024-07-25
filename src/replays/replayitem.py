@@ -271,9 +271,11 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
         if not self.extra_info_loaded:
             self.load_extra_info()
         self.spoiled = not self.parent.spoilerCheckbox.isChecked()
+        assert self.client is not None
         scoreboard = Scoreboard(
             self.mod, self.winner, self.spoiled,
             self.duration, self.teamWin, self.uid, self.teams,
+            self.client.player_ctx_menu,
         )
         scoreboard.setup()
         return scoreboard

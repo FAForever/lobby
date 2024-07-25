@@ -12,9 +12,11 @@ from PyQt6.QtWidgets import QListView
 from PyQt6.QtWidgets import QVBoxLayout
 from PyQt6.QtWidgets import QWidget
 
+from contextmenu.playercontextmenu import PlayerContextMenu
 from replays.models import ScoreboardModel
 from replays.models import ScoreboardModelItem
 from replays.scoreboarditemdelegate import ScoreboardItemDelegate
+from replays.scoreboardlistview import ScoreboardListView
 
 
 class GameResult(Enum):
@@ -37,6 +39,7 @@ class Scoreboard(QWidget):
             teamwin: dict | None,
             uid: str,
             teams: dict,
+            player_menu_handler: PlayerContextMenu,
     ) -> None:
         super().__init__()
         self.winner = winner
@@ -47,6 +50,7 @@ class Scoreboard(QWidget):
         self.teams = teams
         self.num_teams = len(self.teams)
         self.biggest_team = max(len(team) for team in self.teams.values()) if self.teams else 0
+        self.player_menu_handler = player_menu_handler
 
         self.main_layout = QVBoxLayout()
         if self.num_teams == 2:
@@ -58,8 +62,8 @@ class Scoreboard(QWidget):
         self._height = 0
         self._team_heights = []
 
-    def create_teamlist_view(self) -> QListView:
-        team_view = QListView()
+    def create_teamlist_view(self) -> ScoreboardListView:
+        team_view = ScoreboardListView()
         team_view.setObjectName("replayScoreTeamList")
         return team_view
 
@@ -109,6 +113,7 @@ class Scoreboard(QWidget):
         team_view = self.create_teamlist_view()
         team_view.setModel(model)
         team_view.setItemDelegate(ScoreboardItemDelegate())
+        team_view.set_menu_handler(self.player_menu_handler)
         team_layout.addWidget(team_view)
 
         view_height = self.teamview_height(team_view)
