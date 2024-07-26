@@ -393,6 +393,18 @@ QTextEdit, QPlainTextEdit, QLineEdit, QListWidget, QListView, QTableWidget, QTre
     border-bottom-right-radius : 5px;
 }
 
+QFrame#rankedFrame
+{
+    border-style:solid;
+    border-width:1px;
+    border-color:#353535;
+    color:silver;
+    padding:5px;
+    background-color:#303038;
+    border-bottom-left-radius : 5px;
+    border-bottom-right-radius : 5px;
+}
+
 QListView#replayScoreTeamList
 {
     border-width:0px;
@@ -848,14 +860,6 @@ QToolButton#rankedPlay::disabled
     border: 1px solid darkslategrey;
 }
 
-QProgressBar#searchProgress
-{
-    background-color: silver;
-    padding: 2px;
-	border-radius: 5px;
-	border: 1px solid grey;
-}
-
 QToolButton#mapsPool
 {
 	color: silver;
@@ -884,7 +888,7 @@ QToolButton::hover
 
     color:silver;
     padding:5px;
-    background-color:#606060;
+    background-color:#808080;
     border-radius : 5px;
  }
 
