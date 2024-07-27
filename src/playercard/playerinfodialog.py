@@ -36,7 +36,7 @@ from api.stats_api import PlayerEventApiAccessor
 from downloadManager import AvatarDownloader
 from downloadManager import DownloadRequest
 from model.rating import Rating
-from playercard.leagueformatter import LegueFormatter
+from playercard.leagueformatter import league_formatter_factory
 from playercard.statistics import StatsCharts
 
 FormClass, BaseClass = util.THEME.loadUiType("player_card/playercard.ui")
@@ -205,7 +205,8 @@ class PlayerInfoDialog(FormClass, BaseClass):
 
     def process_player_ratings(self, ratings: dict[str, list[LeaderboardRating]]) -> None:
         for rating in ratings["values"]:
-            self.leaguesLayout.addWidget(LegueFormatter(self.player_id, rating, self.leagues_api))
+            widget = league_formatter_factory(self.player_id, rating, self.leagues_api)
+            self.leaguesLayout.addWidget(widget)
         pie_chart = self.stats_charts.game_types_played(ratings["values"])
         self.statsChartsLayout.addWidget(pie_chart)
 

@@ -12,7 +12,7 @@ from downloadManager import DownloadRequest
 FormClass, BaseClass = util.THEME.loadUiType("player_card/playerleague.ui")
 
 
-class LegueFormatter(FormClass, BaseClass):
+class LeagueFormatter(FormClass, BaseClass):
     def __init__(
             self,
             player_id: str,
@@ -23,41 +23,50 @@ class LegueFormatter(FormClass, BaseClass):
         self.setupUi(self)
         self.load_stylesheet()
 
-        self.divisionLabel.setText("Unlisted")
-        icon = util.THEME.pixmap("player_card/unlisted.png")
-        self.iconLabel.setPixmap(icon.scaled(80, 80))
+        self.rating = rating
+        self.leaderboard = rating.leaderboard
+        self.player_id = player_id
 
-        self.gamesLabel.setText(f"{rating.total_games:.0f} Games")
-        # chr(0xB1) = +-
-        rating_str = f"{rating.rating:.0f} [{rating.mean:.0f}\xb1{rating.deviation:.0f}]"
-        self.ratingLabel.setText(rating_str)
-
-        assert rating.leaderboard is not None
-
-        self.leaderboardLabel.setText(rating.leaderboard.pretty_name)
         self.league_score_api = league_score_api
         self.league_score_api.score_ready.connect(self.on_league_score_ready)
-
-        self.leaderboard = rating.leaderboard
-        self.league_score_api.get_player_score_in_leaderboard(
-            player_id, self.leaderboard.technical_name,
-        )
-
-        self.leaderboardLabel.setText(self.leaderboard.pretty_name)
 
         self._downloader = Downloader(util.DIVISIONS_CACHE_DIR)
         self._images_dl_request = DownloadRequest()
         self._images_dl_request.done.connect(self.on_image_downloaded)
 
+        self.fill_ui()
+        self.fetch_league_score()
+
     def load_stylesheet(self) -> None:
         self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
+
+    def default_pixmap(self) -> QPixmap:
+        return util.THEME.pixmap("player_card/unlisted.png")
+
+    def default_league(self) -> str:
+        return "Unlisted"
+
+    def rating_text(self) -> str:
+        # chr(0xB1) = +-
+        return f"{self.rating.rating:.0f} [{self.rating.mean:.0f}\xb1{self.rating.deviation:.0f}]"
+
+    def fill_ui(self) -> None:
+        self.divisionLabel.setText(self.default_league())
+        self.set_league_icon()
+        self.gamesLabel.setText(f"{self.rating.total_games:.0f} Games")
+        self.ratingLabel.setText(self.rating_text())
+        self.leaderboardLabel.setText(self.leaderboard.pretty_name)
+
+    def fetch_league_score(self) -> None:
+        self.league_score_api.get_player_score_in_leaderboard(
+            self.player_id, self.leaderboard.technical_name,
+        )
 
     def on_league_score_ready(self, score: LeagueSeasonScore) -> None:
         if score.season.leaderboard.technical_name != self.leaderboard.technical_name:
             return
 
         if score.score is None:
-            self.divisionLabel.setText("Unlisted")
             return
 
         subdivision = score.subdivision
@@ -71,8 +80,11 @@ class LegueFormatter(FormClass, BaseClass):
         else:
             self.download_league_icon(subdivision.image_url)
 
-    def set_league_icon(self, image_path: str) -> None:
-        self.iconLabel.setPixmap(QPixmap(image_path).scaled(160, 80))
+    def set_league_icon(self, image_path: str = "") -> None:
+        if os.path.isfile(image_path):
+            self.iconLabel.setPixmap(QPixmap(image_path).scaled(160, 80))
+        else:
+            self.iconLabel.setPixmap(self.default_pixmap().scaled(80, 80))
 
     def download_league_icon(self, url: str) -> None:
         name = os.path.basename(url)
@@ -82,3 +94,24 @@ class LegueFormatter(FormClass, BaseClass):
         image_path, download_failed = result
         if not download_failed:
             self.set_league_icon(image_path)
+
+
+class GlobalLeagueFormatter(LeagueFormatter):
+    def default_pixmap(self) -> QPixmap:
+        return util.THEME.pixmap("player_card/global.png")
+
+    def default_league(self) -> str:
+        return ""
+
+    def fetch_league_score(self) -> None:
+        return
+
+
+def league_formatter_factory(
+        player_id: str,
+        rating: LeaderboardRating,
+        api: LeagueSeasonScoreApiConnector,
+) -> LeagueFormatter | GlobalLeagueFormatter:
+    if rating.leaderboard.technical_name == "global":
+        return GlobalLeagueFormatter(player_id, rating, api)
+    return LeagueFormatter(player_id, rating, api)
