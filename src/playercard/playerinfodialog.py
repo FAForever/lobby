@@ -270,7 +270,7 @@ class AvatarHandler:
 
     def _add_avatar_item(self, pixmap: QPixmap, description: str) -> None:
         if pixmap.isNull():
-            icon = util.THEME.icon("chat/avatar/avatar_blank.png")
+            icon = QIcon(util.THEME.pixmap("chat/avatar/avatar_blank.png").scaled(40, 20))
         else:
             icon = QIcon(pixmap.scaled(40, 20))
         avatar_item = QListWidgetItem(icon, description)
