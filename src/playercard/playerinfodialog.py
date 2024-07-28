@@ -3,11 +3,13 @@ from __future__ import annotations
 from bisect import bisect_left
 from collections.abc import Sequence
 
+import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtCore import QDateTime
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import QPointF
 from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QThread
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QColor
 from PyQt6.QtGui import QIcon
@@ -23,7 +25,6 @@ from api.models.Avatar import Avatar
 from api.models.AvatarAssignment import AvatarAssignment
 from api.models.Leaderboard import Leaderboard
 from api.models.LeaderboardRating import LeaderboardRating
-from api.models.LeaderboardRatingJournal import LeaderboardRatingJournal
 from api.models.NameRecord import NameRecord
 from api.models.Player import Player
 from api.models.PlayerEvent import PlayerEvent
@@ -137,7 +138,7 @@ class Crosshairs:
         return x, y
 
     def update_lines_and_text(self, pos: QPointF) -> None:
-        if not self.series.x():
+        if len(self.series.x()) == 0:
             return
 
         data_point = self.map_to_data(pos)
@@ -283,26 +284,84 @@ class AvatarHandler:
 
 
 class LineSeries:
-    def __init__(self) -> None:
-        self._x: list[Numeric] = []
-        self._y: list[Numeric] = []
+    def __init__(self, size: int = 0) -> None:
+        self._x: np.ndarray = np.zeros(size)
+        self._y: np.ndarray = np.zeros(size)
 
-    def x(self) -> list[Numeric]:
+    def x(self) -> np.ndarray:
         return self._x
 
-    def y(self) -> list[Numeric]:
+    def y(self) -> np.ndarray:
         return self._y
 
-    def append(self, x: Numeric, y: Numeric) -> None:
-        self._x.append(x)
-        self._y.append(y)
+    def set_point(self, index: int, point: QPointF) -> None:
+        self._x[index] = point.x()
+        self._y[index] = point.y()
+
+    def extend(self, series: LineSeries) -> None:
+        self._x = np.append(self._x, series.x())
+        self._y = np.append(self._y, series.y())
 
     def point_at(self, index: int) -> QPointF:
         return QPointF(self._x[index], self._y[index])
 
 
+class LineSeriesParser(QObject):
+    result_ready = pyqtSignal(LineSeries)
+
+    def __init__(self, identifier: int, unparsed_api_response: dict) -> None:
+        QObject.__init__(self)
+        self.id = identifier
+        self.data = unparsed_api_response
+
+    def parse(self, index: int) -> None:
+        if index != self.id:
+            return
+
+        journal = self.data["data"]
+        journal_leng = len(journal)
+        if journal_leng == 0:
+            self.result_ready.emit(LineSeries())
+            return
+
+        stats = self.data["included"]
+        stats_leng = len(stats)
+
+        series = LineSeries(stats_leng)
+
+        stats_index = journal_index = 0
+        while stats_index < stats_leng and journal_index < journal_leng:
+            if (
+                stats[stats_index]["id"]
+                != journal[journal_index]["relationships"]["gamePlayerStats"]["data"]["id"]
+            ):
+                journal_index += 1
+                continue
+
+            score_time_str = stats[stats_index]["attributes"]["scoreTime"]
+            score_time = QDateTime.fromString(score_time_str, Qt.DateFormat.ISODate)
+            # not creating additional objects (like Rating and QPointF)
+            # and not accessing their attributes in a loop will also give small
+            # improvement, but not quite noticeable (a few hundreds of a second
+            # per 10000 loop cycles -- ~10x less than API call deviation)
+            rating = Rating(
+                journal[journal_index]["attributes"]["meanAfter"],
+                journal[journal_index]["attributes"]["deviationAfter"],
+            )
+            point = QPointF(
+                score_time.toSecsSinceEpoch(),
+                rating.displayed(),
+            )
+            series.set_point(stats_index, point)
+            stats_index += 1
+            journal_index += 1
+
+        self.result_ready.emit(series)
+
+
 class RatingsPlotTab(QObject):
     name_changed = pyqtSignal(int, str)
+    parse_ratings_chunk = pyqtSignal(int)
 
     def __init__(
             self,
@@ -316,31 +375,50 @@ class RatingsPlotTab(QObject):
         self.player_id = player_id
         self.leaderboard = leaderboard
         self.ratings_history_api = LeaderboardRatingJournalApiConnector()
-        self.ratings_history_api.ratings_ready.connect(self.process_rating_history)
+        self.ratings_history_api.ratings_ready.connect(self.on_ratings_loaded)
+        self.ratings_history_api.ratings_chunk_ready.connect(self.process_rating_history)
         self.plot = plot
         self._loaded = False
+        self.worker_thread = QThread()
+        self.workers = []
+
+    def __del__(self) -> None:
+        self.clear_threads()
 
     def enter(self) -> None:
         if self._loaded:
             return
         self.name_changed.emit(self.index, "Loading...")
         self.ratings_history_api.get_full_history(self.player_id, self.leaderboard.technical_name)
+        self.worker_thread.start()
 
-    def get_plot_series(self, ratings: list[LeaderboardRatingJournal]) -> LineSeries:
-        series = LineSeries()
-        for entry in ratings:
-            assert entry.player_stats is not None
-            score_time = QDateTime.fromString(entry.player_stats.score_time, Qt.DateFormat.ISODate)
-            series.append(
-                score_time.toSecsSinceEpoch(),
-                Rating(entry.mean_after, entry.deviation_after).displayed(),
-            )
-        return series
-
-    def process_rating_history(self, ratings: dict[str, list[LeaderboardRatingJournal]]) -> None:
-        self.plot.draw_series(self.get_plot_series(ratings["values"]))
+    def on_ratings_loaded(self) -> None:
         self._loaded = True
+
+    def clear_threads(self) -> None:
+        self.worker_thread.quit()
+        self.workers.clear()
+
+    def finish(self) -> None:
+        self.clear_threads()
+        self.plot.draw_series()
         self.name_changed.emit(self.index, self.leaderboard.pretty_name)
+
+    def process_rating_history(self, message: dict) -> None:
+        index = len(self.workers)
+        worker = LineSeriesParser(index, message)
+        self.workers.append(worker)
+
+        worker.result_ready.connect(self.data_parsed)
+        worker.moveToThread(self.worker_thread)
+
+        self.parse_ratings_chunk.connect(worker.parse)
+        self.parse_ratings_chunk.emit(index)
+
+    def data_parsed(self, series: LineSeries) -> None:
+        self.plot.add_data(series)
+        if self._loaded:
+            self.finish()
 
 
 class RatingTabWidgetController:
@@ -373,17 +451,20 @@ class PlotController:
         self.widget = widget
         self.widget.setBackground("#202025")
         self.widget.setAxisItems({"bottom": DateAxisItem()})
-        self.crosshairs = Crosshairs(self.widget, LineSeries())
+        self.series = LineSeries()
+        self.crosshairs = Crosshairs(self.widget, self.series)
         self.hide_irrelevant_plot_actions()
         self.add_custom_menu_actions()
 
     def clear(self) -> None:
         self.widget.clear()
 
-    def draw_series(self, series: LineSeries) -> None:
-        self.widget.plot(series.x(), series.y(), pen=pg.mkPen("orange"))
-        self.crosshairs.set_series(series)
+    def draw_series(self) -> None:
+        self.widget.plot(self.series.x(), self.series.y(), pen=pg.mkPen("orange"))
         self.widget.autoRange()
+
+    def add_data(self, series: LineSeries) -> None:
+        self.series.extend(series)
 
     def hide_irrelevant_plot_actions(self) -> None:
         for action in ("Transforms", "Downsample", "Average", "Alpha", "Points"):

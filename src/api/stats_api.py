@@ -4,13 +4,12 @@ from PyQt6.QtCore import QDateTime
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import pyqtSignal
 
+from api.ApiAccessors import ApiAccessor
 from api.ApiAccessors import DataApiAccessor
 from api.models.Leaderboard import Leaderboard
-from api.models.LeaderboardRatingJournal import LeaderboardRatingJournal
 from api.models.LeagueSeasonScore import LeagueSeasonScore
 from api.models.PlayerEvent import PlayerEvent
 from api.parsers.LeaderboardParser import LeaderboardParser
-from api.parsers.LeaderboardRatingJournalParser import LeaderboardRatingJournalParser
 from api.parsers.LeaderboardRatingParser import LeaderboardRatingParser
 
 logger = logging.getLogger(__name__)
@@ -42,22 +41,22 @@ class LeaderboardApiConnector(DataApiAccessor):
         return {"values": LeaderboardParser.parse_many(message)}
 
 
-class LeaderboardRatingJournalApiConnector(DataApiAccessor):
-    ratings_ready = pyqtSignal(dict)
+class LeaderboardRatingJournalApiConnector(ApiAccessor):
+    ratings_ready = pyqtSignal()
+    ratings_chunk_ready = pyqtSignal(dict)
 
     def __init__(self) -> None:
         super().__init__("/data/leaderboardRatingJournal")
-        self._result: list[LeaderboardRatingJournal] = []
         self.query = {}
 
     def handle_page(self, message: dict) -> None:
         total_pages = message["meta"]["page"]["totalPages"]
         current_page = message["meta"]["page"]["number"]
-        self._result.extend(LeaderboardRatingJournalParser.parse_many(message))
+        self.ratings_chunk_ready.emit(message)
         if current_page < total_pages:
             self.get_history_page(current_page + 1)
         else:
-            self.ratings_ready.emit({"values": self._result})
+            self.ratings_ready.emit()
 
     def get_history_page(self, page: int) -> None:
         self.query.update({
@@ -68,9 +67,8 @@ class LeaderboardRatingJournalApiConnector(DataApiAccessor):
         self.get_by_query(self.query, self.handle_page)
 
     def get_full_history(self, pid: str, leaderboard: str) -> None:
-        self._result.clear()
         self.query.update({
-            "include": "gamePlayerStats,leaderboard",
+            "include": "gamePlayerStats",
             "filter": (
                 f"gamePlayerStats.player.id=={pid!r};"
                 f"leaderboard.technicalName=={leaderboard!r};"
