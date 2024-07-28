@@ -116,7 +116,7 @@ class RatingsPlotTab(QObject):
     def process_rating_history(self, message: dict) -> None:
         total_pages = message["meta"]["page"]["totalPages"]
         current_page = message["meta"]["page"]["number"]
-        self._loaded = current_page == total_pages
+        self._loaded = current_page >= total_pages
 
         worker = LineSeriesParser(message)
         self.workers.append(worker)
