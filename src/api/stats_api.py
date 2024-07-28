@@ -42,8 +42,7 @@ class LeaderboardApiConnector(DataApiAccessor):
 
 
 class LeaderboardRatingJournalApiConnector(ApiAccessor):
-    ratings_ready = pyqtSignal()
-    ratings_chunk_ready = pyqtSignal(dict)
+    ratings_ready = pyqtSignal(dict)
 
     def __init__(self) -> None:
         super().__init__("/data/leaderboardRatingJournal")
@@ -52,11 +51,9 @@ class LeaderboardRatingJournalApiConnector(ApiAccessor):
     def handle_page(self, message: dict) -> None:
         total_pages = message["meta"]["page"]["totalPages"]
         current_page = message["meta"]["page"]["number"]
-        self.ratings_chunk_ready.emit(message)
+        self.ratings_ready.emit(message)
         if current_page < total_pages:
             self.get_history_page(current_page + 1)
-        else:
-            self.ratings_ready.emit()
 
     def get_history_page(self, page: int) -> None:
         self.query.update({

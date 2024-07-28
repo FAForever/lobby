@@ -306,20 +306,20 @@ class LineSeries:
         return QPointF(self._x[index], self._y[index])
 
 
-class LineSeriesParser(QObject):
+class LineSeriesParser(QThread):
     result_ready = pyqtSignal(LineSeries)
 
-    def __init__(self, identifier: int, unparsed_api_response: dict) -> None:
-        QObject.__init__(self)
-        self.id = identifier
+    def __init__(self, unparsed_api_response: dict) -> None:
+        QThread.__init__(self)
         self.data = unparsed_api_response
 
-    def parse(self, index: int) -> None:
-        if index != self.id:
-            return
+    def run(self) -> None:
+        self.parse()
 
+    def parse(self) -> None:
         journal = self.data["data"]
         journal_leng = len(journal)
+
         if journal_leng == 0:
             self.result_ready.emit(LineSeries())
             return
@@ -361,7 +361,6 @@ class LineSeriesParser(QObject):
 
 class RatingsPlotTab(QObject):
     name_changed = pyqtSignal(int, str)
-    parse_ratings_chunk = pyqtSignal(int)
 
     def __init__(
             self,
@@ -375,28 +374,27 @@ class RatingsPlotTab(QObject):
         self.player_id = player_id
         self.leaderboard = leaderboard
         self.ratings_history_api = LeaderboardRatingJournalApiConnector()
-        self.ratings_history_api.ratings_ready.connect(self.on_ratings_loaded)
-        self.ratings_history_api.ratings_chunk_ready.connect(self.process_rating_history)
+        self.ratings_history_api.ratings_ready.connect(self.process_rating_history)
         self.plot = plot
         self._loaded = False
-        self.worker_thread = QThread()
         self.workers = []
 
     def __del__(self) -> None:
-        self.clear_threads()
+        try:
+            self.clear_threads()
+        except RuntimeError:
+            pass
 
     def enter(self) -> None:
         if self._loaded:
             return
         self.name_changed.emit(self.index, "Loading...")
         self.ratings_history_api.get_full_history(self.player_id, self.leaderboard.technical_name)
-        self.worker_thread.start()
-
-    def on_ratings_loaded(self) -> None:
-        self._loaded = True
 
     def clear_threads(self) -> None:
-        self.worker_thread.quit()
+        for worker in self.workers:
+            if worker.isRunning():
+                worker.quit()
         self.workers.clear()
 
     def finish(self) -> None:
@@ -405,15 +403,14 @@ class RatingsPlotTab(QObject):
         self.name_changed.emit(self.index, self.leaderboard.pretty_name)
 
     def process_rating_history(self, message: dict) -> None:
-        index = len(self.workers)
-        worker = LineSeriesParser(index, message)
+        total_pages = message["meta"]["page"]["totalPages"]
+        current_page = message["meta"]["page"]["number"]
+        self._loaded = current_page == total_pages
+
+        worker = LineSeriesParser(message)
         self.workers.append(worker)
-
         worker.result_ready.connect(self.data_parsed)
-        worker.moveToThread(self.worker_thread)
-
-        self.parse_ratings_chunk.connect(worker.parse)
-        self.parse_ratings_chunk.emit(index)
+        worker.start()
 
     def data_parsed(self, series: LineSeries) -> None:
         self.plot.add_data(series)
