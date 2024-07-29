@@ -168,6 +168,7 @@ class PlotController:
         self.widget.setAxisItems({"bottom": DateAxisItem()})
         self.series = LineSeries()
         self.crosshairs = Crosshairs(self.widget, self.series)
+        self.hide_scene_actions()
         self.hide_irrelevant_plot_actions()
         self.add_custom_menu_actions()
 
@@ -180,6 +181,12 @@ class PlotController:
 
     def add_data(self, series: LineSeries) -> None:
         self.series.extend(series)
+
+    def hide_scene_actions(self) -> None:
+        # hide the 'Export...' action
+        scene_menu = self.widget.scene().contextMenu
+        for action in scene_menu:
+            action.setVisible(False)
 
     def hide_irrelevant_plot_actions(self) -> None:
         for action in ("Transforms", "Downsample", "Average", "Alpha", "Points"):
