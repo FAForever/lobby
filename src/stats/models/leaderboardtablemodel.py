@@ -1,7 +1,8 @@
 from PyQt6.QtCore import QAbstractTableModel
-from PyQt6.QtCore import QDateTime
 from PyQt6.QtCore import QModelIndex
 from PyQt6.QtCore import Qt
+
+from util import utctolocal
 
 
 class LeaderboardTableModel(QAbstractTableModel):
@@ -68,11 +69,7 @@ class LeaderboardTableModel(QAbstractTableModel):
                         / self.values[row]["totalGames"],
                     )
             elif column == 7:
-                dateUTC = QDateTime.fromString(
-                    self.values[row]["updateTime"], Qt.DateFormat.ISODate,
-                )
-                dateLocal = dateUTC.toLocalTime().toString("yyyy-MM-dd")
-                return "{}".format(dateLocal)
+                return utctolocal(self.values[row]["updateTime"])
             elif column == 8:
                 return "{}".format(self.values[row]["player"]["id"])
 

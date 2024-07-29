@@ -513,7 +513,7 @@ def strtodate(s: str) -> QDateTime:
 
 
 def datetostr(d: QDateTime) -> str:
-    return d.toString("yyyy-mm-dd HH:MM:ss")
+    return d.toString("yyyy-MM-dd hh:mm")
 
 
 def utctolocal(s: str) -> str:

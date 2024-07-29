@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from PyQt6.QtCore import QDateTime
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QTableWidgetItem
 
 import util
@@ -67,10 +65,8 @@ class PlayerInfoDialog(FormClass, BaseClass):
     def process_player(self, player: Player) -> None:
         self.nicknameLabel.setText(player.login)
         self.idLabel.setText(player.xd)
-        registered = QDateTime.fromString(player.create_time, Qt.DateFormat.ISODate).toLocalTime()
-        self.registeredLabel.setText(registered.toString("yyyy-MM-dd hh:mm"))
-        last_login = QDateTime.fromString(player.update_time, Qt.DateFormat.ISODate).toLocalTime()
-        self.lastLoginLabel.setText(last_login.toString("yyyy-MM-dd hh:mm"))
+        self.registeredLabel.setText(util.utctolocal(player.create_time))
+        self.lastLoginLabel.setText(util.utctolocal(player.update_time))
         self.add_avatars(player.avatar_assignments)
         self.add_names(player.names)
 
@@ -80,8 +76,7 @@ class PlayerInfoDialog(FormClass, BaseClass):
         self.nameHistoryTableWidget.setRowCount(len(names))
         for row, name_record in enumerate(names):
             name = QTableWidgetItem(name_record.name)
-            change_time = QDateTime.fromString(name_record.change_time, Qt.DateFormat.ISODate)
-            used_until = QTableWidgetItem(change_time.toString("yyyy-MM-dd hh:mm"))
+            used_until = QTableWidgetItem(util.utctolocal(name_record.change_time))
             self.nameHistoryTableWidget.setItem(row, 0, name)
             self.nameHistoryTableWidget.setItem(row, 1, used_until)
 
