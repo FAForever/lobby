@@ -177,7 +177,17 @@ QWidget#replayScore
     padding: 0px;
 }
 
-QWidget#scrollAreaWidgetContents
+QWidget#achievementWidget
+{
+    background-color: #202025;
+}
+
+QWidget#hline
+{
+    background-color: #202025;
+}
+
+QWidget#statisticsChartsScrollArea,#achievementsScrollArea
 {
     background-color: #383838;
 }
@@ -1043,4 +1053,18 @@ QFrame#settingsFrame {
 #line
 {
     background-color: #202025;
+}
+
+QProgressBar#achievementBar
+{
+    background-color: black;
+    text-align: center;
+    max-height: 12px;
+    border: 1px solid black;
+}
+
+QProgressBar#achievementBar::chunk
+{
+    background-color: orange;
+
 }

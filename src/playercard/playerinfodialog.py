@@ -13,6 +13,7 @@ from api.stats_api import LeaderboardRatingApiConnector
 from api.stats_api import LeagueSeasonScoreApiConnector
 from api.stats_api import PlayerEventApiAccessor
 from downloadManager import AvatarDownloader
+from playercard.achievements import AchievementsHandler
 from playercard.avatarhandler import AvatarHandler
 from playercard.leagueformatter import league_formatter_factory
 from playercard.ratingtabwidget import RatingTabWidgetController
@@ -27,7 +28,8 @@ class PlayerInfoDialog(FormClass, BaseClass):
         self.setupUi(self)
         self.load_stylesheet()
 
-        self.tab_widget_ctrl = RatingTabWidgetController(player_id, self.tabWidget)
+        self.mainTabWidget.currentChanged.connect(self.on_tab_changed)
+        self.tab_widget_ctrl = RatingTabWidgetController(player_id, self.ratingsTabWidget)
         self.avatar_handler = AvatarHandler(self.avatarList, avatar_dler)
 
         self.player_id = player_id
@@ -45,6 +47,8 @@ class PlayerInfoDialog(FormClass, BaseClass):
 
         self.stats_charts = StatsCharts()
 
+        self.achievements_handler = AchievementsHandler(self.verticalLayout_2, self.player_id)
+
     def load_stylesheet(self) -> None:
         self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
 
@@ -54,6 +58,10 @@ class PlayerInfoDialog(FormClass, BaseClass):
         self.player_event_api.get_player_events(self.player_id)
         self.tab_widget_ctrl.run()
         self.exec()
+
+    def on_tab_changed(self, index: int) -> None:
+        if self.mainTabWidget.currentWidget() == self.achievementsTab:
+            self.achievements_handler.run()
 
     def process_player_ratings(self, ratings: dict[str, list[LeaderboardRating]]) -> None:
         for rating in ratings["values"]:

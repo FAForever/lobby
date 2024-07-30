@@ -1,4 +1,5 @@
 import logging
+from typing import Iterator
 
 from PyQt6.QtCore import QDateTime
 from PyQt6.QtCore import Qt
@@ -6,8 +7,10 @@ from PyQt6.QtCore import pyqtSignal
 
 from api.ApiAccessors import ApiAccessor
 from api.ApiAccessors import DataApiAccessor
+from api.models.Achievement import Achievement
 from api.models.Leaderboard import Leaderboard
 from api.models.LeagueSeasonScore import LeagueSeasonScore
+from api.models.PlayerAchievement import PlayerAchievement
 from api.models.PlayerEvent import PlayerEvent
 from api.parsers.LeaderboardParser import LeaderboardParser
 from api.parsers.LeaderboardRatingParser import LeaderboardRatingParser
@@ -122,3 +125,29 @@ class PlayerEventApiAccessor(DataApiAccessor):
 
     def handle_player_events(self, message: dict) -> None:
         self.events_ready.emit([PlayerEvent(**entry) for entry in message["data"]])
+
+
+class PlayerAchievementApiAccessor(DataApiAccessor):
+    achievments_ready = pyqtSignal(object)
+
+    def __init__(self) -> None:
+        super().__init__("/data/playerAchievement")
+
+    def get_achievements(self, player_id: str | int) -> None:
+        query = {
+            "include": "achievement",
+            "filter": f"player.id=={player_id}",
+            "sort": "achievement.order",
+        }
+        self.get_by_query(query, self.handle_achievements)
+
+    def handle_achievements(self, message: dict) -> None:
+        self.achievments_ready.emit((PlayerAchievement(**entry) for entry in message["data"]))
+
+
+class AchievementsApiAccessor(DataApiAccessor):
+    def __init__(self) -> None:
+        super().__init__("/data/achievement")
+
+    def prepare_data(self, message: dict) -> dict[str, Iterator[Achievement]]:
+        return {"values": (Achievement(**entry) for entry in message["data"])}
