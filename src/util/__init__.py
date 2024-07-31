@@ -68,6 +68,9 @@ AVATARS_CACHE_DIR = os.path.join(CACHE_DIR, "avatars")
 # Cache for league division images
 DIVISIONS_CACHE_DIR = os.path.join(CACHE_DIR, "divisions")
 
+# Cache for achievement images
+ACHIEVEMENTS_CACHE_DIR = os.path.join(CACHE_DIR, "achievements", "revealed")
+
 # This contains cached game files
 GAME_CACHE_DIR = os.path.join(CACHE_DIR, "featured_mod")
 
@@ -177,7 +180,7 @@ for data_dir in [
     MAP_PREVIEW_SMALL_DIR, MAP_PREVIEW_LARGE_DIR, MOD_PREVIEW_DIR,
     THEME_DIR, REPLAY_DIR, LOG_DIR, EXTRA_DIR, NEWS_CACHE_DIR,
     GAME_CACHE_DIR, GAMEDATA_DIR, BIN_DIR, REPLAY_DIR, AVATARS_CACHE_DIR,
-    DIVISIONS_CACHE_DIR,
+    DIVISIONS_CACHE_DIR, ACHIEVEMENTS_CACHE_DIR,
 ]:
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)

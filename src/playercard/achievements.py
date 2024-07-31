@@ -23,7 +23,7 @@ from api.stats_api import AchievementsApiAccessor
 from api.stats_api import PlayerAchievementApiAccessor
 from downloadManager import DownloadRequest
 from downloadManager import ImageDownloader
-from util import CACHE_DIR
+from util import ACHIEVEMENTS_CACHE_DIR
 from util import THEME
 
 FormClass, BaseClass = THEME.loadUiType("player_card/achievement.ui")
@@ -97,8 +97,7 @@ class AchievementsHandler:
 
         self.achievements_api = AchievementsApiAccessor()
         self.achievements_api.data_ready.connect(self.on_achievements_ready)
-        self.cache_dir = os.path.join(CACHE_DIR, "achievements", "revealed")
-        self.img_dler = ImageDownloader(self.cache_dir, QSize(128, 128))
+        self.img_dler = ImageDownloader(ACHIEVEMENTS_CACHE_DIR, QSize(128, 128))
         self.all_achievements = []
         self._loaded = False
 
