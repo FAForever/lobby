@@ -10,6 +10,7 @@ from PyQt6.QtCore import QEventLoop
 from PyQt6.QtCore import QFile
 from PyQt6.QtCore import QIODevice
 from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QSize
 from PyQt6.QtCore import QTimer
 from PyQt6.QtCore import QUrl
 from PyQt6.QtCore import pyqtSignal
@@ -19,7 +20,6 @@ from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
 from config import Settings
-from qt.utils import qopen
 from util import AVATARS_CACHE_DIR
 
 logger = logging.getLogger(__name__)
@@ -417,35 +417,37 @@ class DownloadTimeouts:
         self._timed_out_items.clear()
 
 
-class AvatarDownloader:
-    def __init__(self):
+class ImageDownloader:
+    def __init__(self, cache_dir: str = AVATARS_CACHE_DIR, size: QSize | None = None) -> None:
+        self._size = size
         self._nam = QNetworkAccessManager()
         self._requests = {}
-        self.avatars = {}
-        self._nam.finished.connect(self._avatar_download_finished)
-        self.cache_dir = AVATARS_CACHE_DIR
+        self.images = {}
+        self._nam.finished.connect(self._image_download_finished)
+        self.cache_dir = cache_dir
         self.load_cache()
 
     def load_cache(self) -> None:
         for filename in os.listdir(self.cache_dir):
             filepath = os.path.join(self.cache_dir, filename)
-            self.avatars[filename] = QPixmap(filepath)
+            pix = QPixmap(filepath)
+            self.images[filename] = pix if self._size is None else pix.scaled(self._size)
 
-    def avatar_name(self, url: QUrl | str) -> str:
+    def image_name(self, url: QUrl | str) -> str:
         return QUrl(url).fileName(QUrl.ComponentFormattingOption.EncodeSpaces)
 
-    def has_avatar(self, name_or_url: str) -> bool:
-        return self.get_avatar(name_or_url) is not None
+    def has_image(self, name_or_url: QUrl | str) -> bool:
+        return self.get_image(name_or_url) is not None
 
-    def get_avatar(self, name_or_url: str) -> QPixmap:
-        return self.avatars.get(self.avatar_name(name_or_url), None)
+    def get_image(self, name_or_url: QUrl | str) -> QPixmap | None:
+        return self.images.get(self.image_name(name_or_url))
 
     def download_if_needed(self, url: str | None, req: DownloadRequest) -> None:
-        if url is None or self.has_avatar(url):
+        if url is None or self.has_image(url):
             return
-        self.download_avatar(url, req)
+        self.download_image(url, req)
 
-    def download_avatar(self, url, req):
+    def download_image(self, url: str, req: DownloadRequest) -> None:
         self._add_request(url, req)
 
     def _add_request(self, url, req):
@@ -454,20 +456,24 @@ class AvatarDownloader:
         if should_download:
             self._nam.get(QNetworkRequest(QUrl(url)))
 
-    def _avatar_download_finished(self, reply: QNetworkReply) -> None:
+    def _image_download_finished(self, reply: QNetworkReply) -> None:
         url_str = reply.url().toString()
-        avatar_name = self.avatar_name(reply.url())
-        avatar_path = self._save_avatar_to_cache(avatar_name, reply.readAll())
+        avatar_name = self.image_name(reply.url())
+        avatar_path = self._save_image_to_cache(avatar_name, reply.readAll())
 
-        if avatar_name not in self.avatars:
-            self.avatars[avatar_name] = QPixmap(avatar_path)
+        if avatar_name not in self.images:
+            self.images[avatar_name] = QPixmap(avatar_path)
 
         reqs = self._requests.pop(url_str, [])
         for req in reqs:
-            req.finished(url_str, self.avatars[avatar_name])
+            req.finished(url_str, self.images[avatar_name])
 
-    def _save_avatar_to_cache(self, name: str, qbytes: QByteArray) -> str:
+    def _save_image_to_cache(self, name: str, qbytes: QByteArray) -> str:
         filepath = os.path.join(self.cache_dir, name)
-        with qopen(filepath, QFile.OpenModeFlag.WriteOnly) as file:
-            file.write(qbytes.data())
+        pixmap = QPixmap()
+        pixmap.loadFromData(qbytes)
+        if self._size is not None:
+            pixmap.scaled(self._size).save(filepath)
+        else:
+            pixmap.save(filepath)
         return filepath

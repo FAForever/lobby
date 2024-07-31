@@ -219,14 +219,13 @@ class ChatterItemFormatter:
             return "newplayer"
         return league["league"]
 
-    def chatter_avatar_icon(self, data):
+    def chatter_avatar_icon(self, data: ChatterModelItem) -> QIcon | None:
         avatar_url = data.avatar_url()
         avatar_name = QtCore.QUrl(avatar_url).fileName()
         if avatar_url is None:
             return None
-        if avatar_name not in self._avatars.avatars:
-            return
-        return QIcon(self._avatars.avatars[avatar_name])
+        if (pixmap := self._avatars.get_image(avatar_name)) is not None:
+            return QIcon(pixmap)
 
     def chatter_country(self, data):
         if data.player is None:

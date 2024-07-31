@@ -175,9 +175,9 @@ class ChatAvatarPixAdder:
     def build(cls, widget, avatar_dler, **kwargs):
         return cls(widget, avatar_dler)
 
-    def add_avatar(self, url):
+    def add_avatar(self, url: str) -> None:
         avatar_name = QUrl(url).fileName()
-        avatar_pix = self._avatar_dler.avatars.get(avatar_name, None)
+        avatar_pix = self._avatar_dler.get_image(avatar_name)
         if avatar_pix is not None:
             self._add_avatar_resource(url, avatar_pix)
         elif url not in self._requests:

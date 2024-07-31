@@ -8,12 +8,12 @@ from PyQt6.QtWidgets import QListWidgetItem
 import util
 from api.models.Avatar import Avatar
 from api.models.AvatarAssignment import AvatarAssignment
-from downloadManager import AvatarDownloader
 from downloadManager import DownloadRequest
+from downloadManager import ImageDownloader
 
 
 class AvatarHandler:
-    def __init__(self, avatar_list: QListWidget, avatar_downloader: AvatarDownloader) -> None:
+    def __init__(self, avatar_list: QListWidget, avatar_downloader: ImageDownloader) -> None:
         self.avatar_list = avatar_list
         self.avatar_dler = avatar_downloader
         self.requests = {}
@@ -23,7 +23,7 @@ class AvatarHandler:
             return
 
         for assignment in avatar_assignments:
-            if self.avatar_dler.has_avatar(assignment.avatar.filename):
+            if self.avatar_dler.has_image(assignment.avatar.filename):
                 self._add_avatar(assignment.avatar)
             else:
                 self._download_avatar(assignment.avatar)
@@ -36,10 +36,10 @@ class AvatarHandler:
 
     def _download_avatar(self, avatar: Avatar) -> None:
         req = self._prepare_avatar_dl_request(avatar)
-        self.avatar_dler.download_avatar(avatar.url, req)
+        self.avatar_dler.download_image(avatar.url, req)
 
     def _add_avatar(self, avatar: Avatar) -> None:
-        self._add_avatar_item(self.avatar_dler.get_avatar(avatar.filename), avatar.tooltip)
+        self._add_avatar_item(self.avatar_dler.get_image(avatar.filename), avatar.tooltip)
 
     def _add_avatar_item(self, pixmap: QPixmap, description: str) -> None:
         if pixmap.isNull():

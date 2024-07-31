@@ -1,13 +1,14 @@
 import os
 
+from PyQt6.QtCore import QSize
 from PyQt6.QtGui import QPixmap
 
 import util
 from api.models.LeaderboardRating import LeaderboardRating
 from api.models.LeagueSeasonScore import LeagueSeasonScore
 from api.stats_api import LeagueSeasonScoreApiConnector
-from downloadManager import Downloader
 from downloadManager import DownloadRequest
+from downloadManager import ImageDownloader
 
 FormClass, BaseClass = util.THEME.loadUiType("player_card/playerleague.ui")
 
@@ -30,7 +31,7 @@ class LeagueFormatter(FormClass, BaseClass):
         self.league_score_api = league_score_api
         self.league_score_api.score_ready.connect(self.on_league_score_ready)
 
-        self._downloader = Downloader(util.DIVISIONS_CACHE_DIR)
+        self._downloader = ImageDownloader(util.DIVISIONS_CACHE_DIR, QSize(160, 80))
         self._images_dl_request = DownloadRequest()
         self._images_dl_request.done.connect(self.on_image_downloaded)
 
@@ -41,7 +42,7 @@ class LeagueFormatter(FormClass, BaseClass):
         self.setStyleSheet(util.THEME.readstylesheet("client/client.css"))
 
     def default_pixmap(self) -> QPixmap:
-        return util.THEME.pixmap("player_card/unlisted.png")
+        return util.THEME.pixmap("player_card/unlisted.png").scaled(80, 80)
 
     def default_league(self) -> str:
         return "Unlisted"
@@ -52,7 +53,7 @@ class LeagueFormatter(FormClass, BaseClass):
 
     def fill_ui(self) -> None:
         self.divisionLabel.setText(self.default_league())
-        self.set_league_icon()
+        self.set_league_icon(self.default_pixmap())
         self.gamesLabel.setText(f"{self.rating.total_games:.0f} Games")
         self.ratingLabel.setText(self.rating_text())
         self.leaderboardLabel.setText(self.leaderboard.pretty_name)
@@ -74,26 +75,22 @@ class LeagueFormatter(FormClass, BaseClass):
         self.divisionLabel.setText(league_name)
 
         image_name = os.path.basename(subdivision.image_url)
-        image_path = os.path.join(util.CACHE_DIR, "divisions", image_name)
-        if os.path.isfile(image_path):
-            self.set_league_icon(image_path)
-        else:
-            self.download_league_icon(subdivision.image_url)
+        self.set_league_icon(self.icon(image_name))
+        self.download_league_icon_if_needed(subdivision.image_url)
 
-    def set_league_icon(self, image_path: str = "") -> None:
-        if os.path.isfile(image_path):
-            self.iconLabel.setPixmap(QPixmap(image_path).scaled(160, 80))
-        else:
-            self.iconLabel.setPixmap(self.default_pixmap().scaled(80, 80))
+    def icon(self, image_name: str = "") -> QPixmap:
+        if (pixmap := self._downloader.get_image(image_name)) is not None:
+            return pixmap
+        return self.default_pixmap()
 
-    def download_league_icon(self, url: str) -> None:
-        name = os.path.basename(url)
-        self._downloader.download(name, self._images_dl_request, url)
+    def set_league_icon(self, pixmap: QPixmap) -> None:
+        self.iconLabel.setPixmap(pixmap)
 
-    def on_image_downloaded(self, _: str, result: tuple[str, bool]) -> None:
-        image_path, download_failed = result
-        if not download_failed:
-            self.set_league_icon(image_path)
+    def download_league_icon_if_needed(self, url: str) -> None:
+        self._downloader.download_if_needed(url, self._images_dl_request)
+
+    def on_image_downloaded(self, _: str, pixmap: QPixmap) -> None:
+        self.set_league_icon(pixmap)
 
 
 class GlobalLeagueFormatter(LeagueFormatter):

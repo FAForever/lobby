@@ -5,6 +5,7 @@ from itertools import batched
 from typing import Iterator
 from typing import NamedTuple
 
+from PyQt6.QtCore import QSize
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QGridLayout
@@ -20,8 +21,8 @@ from api.models.Achievement import State
 from api.models.PlayerAchievement import PlayerAchievement
 from api.stats_api import AchievementsApiAccessor
 from api.stats_api import PlayerAchievementApiAccessor
-from downloadManager import Downloader
 from downloadManager import DownloadRequest
+from downloadManager import ImageDownloader
 from util import CACHE_DIR
 from util import THEME
 
@@ -29,7 +30,7 @@ FormClass, BaseClass = THEME.loadUiType("player_card/achievement.ui")
 
 
 class AchievementWidget(FormClass, BaseClass):
-    def __init__(self, player_achievement: PlayerAchievement, img_dler: Downloader) -> None:
+    def __init__(self, player_achievement: PlayerAchievement, img_dler: ImageDownloader) -> None:
         BaseClass.__init__(self)
         self.setupUi(self)
 
@@ -69,29 +70,22 @@ class AchievementWidget(FormClass, BaseClass):
 
     def add_achievement_image(self) -> None:
         image_name = os.path.basename(self.achievement.revealed_icon_url)
-        image_path = os.path.join(CACHE_DIR, "achievements", "revealed", image_name)
-        if os.path.isfile(image_path):
-            self.set_icon(image_path)
-        else:
-            self.download_icon(self.achievement.revealed_icon_url)
+        self.set_icon(self.icon(image_name))
+        self.download_icon_if_needed(self.achievement.revealed_icon_url)
 
-    def icon(self, icon_path: str = "") -> QPixmap:
-        if os.path.isfile(icon_path):
-            return QPixmap(icon_path)
-        else:
-            return THEME.pixmap("player_card/achievement.png")
+    def icon(self, icon_name: str = "") -> QPixmap:
+        if (pixmap := self.img_dler.get_image(icon_name)) is not None:
+            return pixmap
+        return THEME.pixmap("player_card/achievement.png")
 
-    def set_icon(self, icon_path: str) -> None:
-        self.iconLabel.setPixmap(self.icon(icon_path).scaled(128, 128))
+    def set_icon(self, pixmap: QPixmap) -> None:
+        self.iconLabel.setPixmap(pixmap)
 
-    def on_icon_downloaded(self, _: str, result: tuple[str, bool]) -> None:
-        icon_path, download_failed = result
-        if not download_failed:
-            self.set_icon(icon_path)
+    def on_icon_downloaded(self, _: str, pixmap: QPixmap) -> None:
+        self.set_icon(pixmap)
 
-    def download_icon(self, url: str) -> None:
-        name = os.path.basename(url)
-        self.img_dler.download(name, self.img_dl_request, url)
+    def download_icon_if_needed(self, url: str) -> None:
+        self.img_dler.download_if_needed(url, self.img_dl_request)
 
 
 class AchievementsHandler:
@@ -103,7 +97,8 @@ class AchievementsHandler:
 
         self.achievements_api = AchievementsApiAccessor()
         self.achievements_api.data_ready.connect(self.on_achievements_ready)
-        self.img_dler = Downloader(os.path.join(CACHE_DIR, "achievements", "revealed"))
+        self.cache_dir = os.path.join(CACHE_DIR, "achievements", "revealed")
+        self.img_dler = ImageDownloader(self.cache_dir, QSize(128, 128))
         self.all_achievements = []
         self._loaded = False
 
