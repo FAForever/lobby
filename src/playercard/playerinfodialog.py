@@ -71,6 +71,7 @@ class PlayerInfoDialog(FormClass, BaseClass):
         self.statsChartsLayout.addWidget(pie_chart)
 
     def process_player(self, player: Player) -> None:
+        self.setWindowTitle(player.login)
         self.nicknameLabel.setText(player.login)
         self.idLabel.setText(player.xd)
         self.registeredLabel.setText(util.utctolocal(player.create_time))
