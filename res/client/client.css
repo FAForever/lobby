@@ -1057,7 +1057,7 @@ QFrame#settingsFrame {
 
 QProgressBar#achievementBar
 {
-    background-color: black;
+    background-color: gray;
     text-align: center;
     max-height: 12px;
     border: 1px solid black;
@@ -1066,5 +1066,4 @@ QProgressBar#achievementBar
 QProgressBar#achievementBar::chunk
 {
     background-color: orange;
-
 }
