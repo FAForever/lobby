@@ -1667,8 +1667,8 @@ class ClientWindow(FormClass, BaseClass):
         self.tab_changed(self.topTabs, curr, self._vault_tab)
         self._vault_tab = curr
 
-    def view_replays(self, name, leaderboardName=None):
-        self.replays.set_player(name, leaderboardName)
+    def view_replays(self, name: str) -> None:
+        self.replays.set_player(name)
         self.mainTabs.setCurrentIndex(self.mainTabs.indexOf(self.replaysTab))
 
     def manage_power(self):

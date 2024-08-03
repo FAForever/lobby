@@ -1102,13 +1102,9 @@ class ReplaysWidget(BaseClass, FormClass):
     def refresh_leaderboards(self) -> None:
         self.vaultManager.refresh_leaderboards()
 
-    def set_player(self, name: str, leaderboard_name: str | None = None) -> None:
+    def set_player(self, name: str) -> None:
         self.setCurrentIndex(2)  # focus on Online Fault
-        if leaderboard_name is not None:
-            item_index = self.leaderboardList.findData(leaderboard_name)
-            self.vaultManager.searchVault(0, "", name, item_index, 0, 100, exactPlayerName=True)
-        else:
-            self.vaultManager.searchVault(0, "", name, 0, 0, 100, exactPlayerName=True)
+        self.vaultManager.searchVault(0, "", name, 0, 0, 100, exactPlayerName=True)
 
     def focusEvent(self, event):
         self.localManager.updatemyTree()
