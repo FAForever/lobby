@@ -25,10 +25,10 @@ class Achievement(AbstractEntity):
     total_steps:            int | None = Field(alias="totalSteps")
     typ:                    str        = Field(alias="type")
     unlocked_icon_url:      str        = Field(alias="unlockedIconUrl")
-    unlockers_avg_duration: int | None        = Field(alias="unlockersAvgDuration")
-    unlockers_count:        int        = Field(alias="unlockersCount")
-    unlockers_max_duration: int | None        = Field(alias="unlockersMaxDuration")
-    unlockers_min_duration: int | None        = Field(alias="unlockersMinDuration")
+    unlockers_avg_duration: int | None = Field(alias="unlockersAvgDuration")
+    unlockers_count:        int | None = Field(alias="unlockersCount")
+    unlockers_max_duration: int | None = Field(alias="unlockersMaxDuration")
+    unlockers_min_duration: int | None = Field(alias="unlockersMinDuration")
     unlockers_percent:      float      = Field(alias="unlockersPercent")
 
     @property
