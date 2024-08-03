@@ -74,7 +74,7 @@ if sys.platform == "win32":
 
         # copied from https://github.com/marcelotduarte/cx_Freeze/blob/5e42a97d2da321eae270cdcc65cdc777eb8e8fc4/samples/pyqt6-simplebrowser/setup.py  # noqa: E501
         # and unexcluded overexcluded
-        "excludes": ["tkinter", "unittest", "pydoc", "tcl"],
+        "excludes": ["tkinter", "unittest", "tcl"],
 
         "zip_include_packages": ["*"],
         "zip_exclude_packages": [],
