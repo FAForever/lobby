@@ -41,7 +41,7 @@ class LeaderboardWidget(BaseClass, FormClass):
         self.client = client
         self.parent = parent
         self.leaderboardName = leaderboardName
-        self.apiConnector = LeaderboardRatingApiConnector(self.leaderboardName)
+        self.apiConnector = LeaderboardRatingApiConnector()
         self.apiConnector.data_ready.connect(self.process_rating_info)
         self.playerApiConnector = PlayerApiConnector()
         self.onlyActive = True
@@ -166,11 +166,10 @@ class LeaderboardWidget(BaseClass, FormClass):
             self.showColumnCheckBoxes[index].blockSignals(False)
 
     def process_rating_info(self, message: dict) -> None:
-        if message["leaderboard"] == self.leaderboardName:
-            self.createLeaderboard(message)
-            self.processMeta(message["meta"])
-            self.resetLoading()
-            self.timer.stop()
+        self.createLeaderboard(message)
+        self.processMeta(message["meta"])
+        self.resetLoading()
+        self.timer.stop()
 
     def createLeaderboard(self, data):
         self.model = LeaderboardTableModel(data)

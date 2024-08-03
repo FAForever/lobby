@@ -42,8 +42,9 @@ from client.user import UserRelationModel
 from client.user import UserRelations
 from client.user import UserRelationTrackers
 from connectivity.ConnectivityDialog import ConnectivityDialog
+from contextmenu.playercontextmenu import PlayerContextMenu
 from coop import CoopWidget
-from downloadManager import AvatarDownloader
+from downloadManager import ImageDownloader
 from downloadManager import MapSmallPreviewDownloader
 from fa.factions import Factions
 from fa.game_runner import GameRunner
@@ -232,16 +233,18 @@ class ClientWindow(FormClass, BaseClass):
         self.user_relations = UserRelations(
             relation_model, relation_controller, relation_trackers,
         )
-        self.me.relations = self.user_relations
 
         self.map_preview_downloader = MapSmallPreviewDownloader(util.MAP_PREVIEW_SMALL_DIR)
-        self.avatar_downloader = AvatarDownloader()
+        self.avatar_downloader = ImageDownloader()
 
         # Map generator
         self.map_generator = MapGeneratorManager()
 
         # Qt model for displaying active games.
-        self.game_model = GameModel(self.me, self.map_preview_downloader, self.gameset)
+        self.game_model = GameModel(
+            self.user_relations, self.me,
+            self.map_preview_downloader, self.gameset,
+        )
 
         self.gameset.added.connect(self.fill_in_session_info)
 
@@ -367,9 +370,7 @@ class ClientWindow(FormClass, BaseClass):
             self.me, self.user_relations.model, util.THEME,
         )
 
-        self.game_announcer = GameAnnouncer(
-            self.gameset, self.me, self.player_colors,
-        )
+        self.game_announcer = GameAnnouncer(self.gameset, self.user_relations, self.player_colors)
 
         self.power = 0  # current user power
         self.id = 0
@@ -704,6 +705,10 @@ class ClientWindow(FormClass, BaseClass):
             avatar_dler=self.avatar_downloader,
             theme=util.THEME,
         )
+        self.player_ctx_menu = PlayerContextMenu(
+            self.me, self.power_tools, self, self._avatar_widget_builder,
+            self._alias_viewer, self, self._game_runner,
+        )
 
         chat_connection = IrcConnection.build(settings=config.Settings)
         line_metadata_builder = ChatLineMetadataBuilder.build(
@@ -784,10 +789,7 @@ class ClientWindow(FormClass, BaseClass):
 
         # build main window with the now active client
         self.news = NewsWidget(self)
-        self.coop = CoopWidget(
-            self, self.game_model, self.me,
-            self.gameview_builder, self.game_launcher,
-        )
+        self.coop = CoopWidget(self, self.game_model, self.gameview_builder, self.game_launcher)
         self.games = GamesWidget(
             self, self.game_model, self.me,
             self.gameview_builder, self.game_launcher,
@@ -1454,6 +1456,7 @@ class ClientWindow(FormClass, BaseClass):
         maximized = util.settings.value("maximized", defaultValue=False, type=bool)
         util.settings.endGroup()
         if maximized:
+            self.is_window_maximized = True
             self.setGeometry(self.screen().availableGeometry())
         elif geometry:
             self.restoreGeometry(geometry)
@@ -1548,6 +1551,7 @@ class ClientWindow(FormClass, BaseClass):
         self._chatMVC.connection.setPortFromConfig()
         if api_changed:
             self.ladder.refreshLeaderboards()
+            self.replays.refresh_leaderboards()
             self.games.refreshMods()
 
         self.oauth_flow.setup_credentials()
@@ -1663,19 +1667,9 @@ class ClientWindow(FormClass, BaseClass):
         self.tab_changed(self.topTabs, curr, self._vault_tab)
         self._vault_tab = curr
 
-    def view_replays(self, name, leaderboardName=None):
-        self.replays.set_player(name, leaderboardName)
+    def view_replays(self, name: str) -> None:
+        self.replays.set_player(name)
         self.mainTabs.setCurrentIndex(self.mainTabs.indexOf(self.replaysTab))
-
-    def view_in_leaderboards(self, user):
-        self.ladder.setCurrentIndex(
-            self.ladder.indexOf(self.ladder.leaderboardsTab),
-        )
-        self.ladder.leaderboards.widget(0).searchPlayerInLeaderboard(user)
-        self.ladder.leaderboards.widget(1).searchPlayerInLeaderboard(user)
-        self.ladder.leaderboards.widget(2).searchPlayerInLeaderboard(user)
-        self.ladder.leaderboards.setCurrentIndex(1)
-        self.mainTabs.setCurrentIndex(self.mainTabs.indexOf(self.ladderTab))
 
     def manage_power(self):
         """ update the interface accordingly to the power of the user """

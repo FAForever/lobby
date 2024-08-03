@@ -79,6 +79,39 @@ QMenuBar::item
      height: 13px;
  }
 
+QTabWidget
+{
+    background-color:#383838;
+    color: silver;
+    min-width: 80px;
+    padding:4px;
+}
+
+QTabWidget::pane
+{
+    border: none;
+    background-color: #2f2f2f;
+}
+
+QTabWidget > QTabBar::tab
+{
+    background-color:#383838;
+    color: silver;
+    min-width: 80px;
+}
+
+QTabWidget > QTabBar::tab::hover
+{
+    color: silver;
+    background-color: #808080;
+}
+
+QTabWidget > QTabBar::tab::selected
+{
+    color: white;
+    background-color: #758fa0;
+}
+
 QTabWidget#matchmakerQueues::pane
 {
     background-color: none;
@@ -137,6 +170,27 @@ QWidget#centralwidget, QProgressDialog, QWindow, QWizard
     background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #FFFFFF, stop:0.1 #000000, stop:1 #1F1F1F);
 }
 
+QWidget#replayScore
+{
+    background-color: #202025;
+    background: #202025;
+    padding: 0px;
+}
+
+QWidget#achievementWidget
+{
+    background-color: #202025;
+}
+
+QWidget#hline
+{
+    background-color: #202025;
+}
+
+QWidget#statisticsChartsScrollArea,#achievementsScrollArea
+{
+    background-color: #383838;
+}
 
 QTabWidget#mainTabs::pane
 { /* The tab widget frame */
@@ -349,6 +403,48 @@ QTextEdit, QPlainTextEdit, QLineEdit, QListWidget, QListView, QTableWidget, QTre
     border-bottom-right-radius : 5px;
 }
 
+QFrame#rankedFrame
+{
+    border-style:solid;
+    border-width:1px;
+    border-color:#353535;
+    color:silver;
+    padding:5px;
+    background-color:#303038;
+    border-bottom-left-radius : 5px;
+    border-bottom-right-radius : 5px;
+}
+
+QListView#replayScoreTeamList
+{
+    border-width:0px;
+    border-color:#353535;
+    color:silver;
+    padding:0px;
+    background-color:#202025;
+    alternate-background-color: #303035;
+    border-top-right-radius : 0px;
+    border-top-left-radius : 0px;
+    border-bottom-left-radius : 0px;
+    border-bottom-right-radius : 0px;
+
+}
+
+QPlainTextEdit#mapNamePlainTextEdit
+{
+    border-width:0px;
+    border-style:solid;
+    border-color:#353535;
+    color:orange;
+    padding:0px;
+    background-color:#202025;
+    alternate-background-color: #303035;
+    border-top-right-radius : 0px;
+    border-top-left-radius : 0px;
+    border-bottom-left-radius : 0px;
+    border-bottom-right-radius : 0px;
+}
+
 QTableView
 {
     border-style:solid;
@@ -432,6 +528,12 @@ QTableWidget::item::hover
 {
     background: #606060;
     border-radius: 3px;
+}
+
+QTableWidget#nameHistoryTableWidget::item::hover
+{
+    background: none;
+    border-radius: 0px;
 }
 
 
@@ -543,6 +645,16 @@ QScrollArea
     border-bottom-right-radius : 5px;
 }
 
+QScrollArea#replayScoreScrollArea
+{
+    background-color: #202025;
+    background: #202025;
+    color:#202025;
+    border-width: 0px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    padding: 0px;
+}
 
 /* Scrollbars*/
 QScrollBar:horizontal {
@@ -662,6 +774,14 @@ QLabel#labelLoading,#labelAutomatchInfo
     color: gold;
 }
 
+QLabel#VSLabel
+{
+    color: black;
+    background-color: #202025;
+    margin: 0px;
+}
+
+
 QGroupBox
 {
     margin: 5px;
@@ -676,6 +796,11 @@ QGroupBox
 QLabel
 {
     color: silver;
+}
+
+QLabel::disabled
+{
+    color: gray;
 }
 
 /* Used for dialogs*/
@@ -699,34 +824,36 @@ QCheckBox#spoilerCheckbox, #automaticCheckbox, #showLatestCheckbox, #hideUnrChec
 
 QCheckBox#spoilerCheckbox::indicator:unchecked, #automaticCheckbox::indicator:unchecked, #showLatestCheckbox::indicator:unchecked,
 #hideUnrCheckbox::indicator:unchecked, #matchUsernameCheckbox::indicator:unchecked,
-#landRandomDensity::indicator::unchecked, #plateausRandomDensity::indicator::unchecked, #mountainsRandomDensity::indicator::unchecked,
-#rampsRandomDensity::indicator::unchecked, #mexRandomDensity::indicator::unchecked ,#reclaimRandomDensity::indicator::unchecked
+#landRandomDensity::indicator::unchecked, #resourceRandomGenerator::indicator::unchecked, #mountainsRandomDensity::indicator::unchecked,
+#rampsRandomDensity::indicator::unchecked, #mexRandomDensity::indicator::unchecked ,#reclaimRandomDensity::indicator::unchecked,
+#useCustomStyleCheckBox::indicator::unchecked
 {
     image: url('%THEMEPATH%/client/chboxUncheked.png');
- }
+}
 
-QCheckBox#spoilerCheckbox::indicator:checked, #automaticCheckbox::indicator:checked, #showLatestCheckbox::indicator:checked,
-#hideUnrCheckbox::indicator:checked, #matchUsernameCheckbox::indicator:checked,
-#landRandomDensity::indicator::checked, #plateausRandomDensity::indicator::checked, #mountainsRandomDensity::indicator::checked,
-#rampsRandomDensity::indicator::checked, #mexRandomDensity::indicator::checked ,#reclaimRandomDensity::indicator::checked
+ QCheckBox#spoilerCheckbox::indicator:checked, #automaticCheckbox::indicator:checked, #showLatestCheckbox::indicator:checked,
+ #hideUnrCheckbox::indicator:checked, #matchUsernameCheckbox::indicator:checked,
+ #landRandomDensity::indicator::checked, #plateausRandomDensity::indicator::checked, #mountainsRandomDensity::indicator::checked,
+ #rampsRandomDensity::indicator::checked, #mexRandomDensity::indicator::checked ,#reclaimRandomDensity::indicator::checked,
+ #useCustomStyleCheckBox::indicator::checked
 {
     image: url('%THEMEPATH%/client/chboxCheked.png');
- }
+}
 
- QCheckBox::enabled
- {
-     color: silver;
- }
+QCheckBox::enabled
+{
+    color: silver;
+}
 
- QCheckBox::indicator:unchecked
- {
+QCheckBox::indicator:unchecked
+{
     image: url('%THEMEPATH%/client/chboxUnchecked.png');
- }
+}
 
- QCheckBox::indicator:checked
- {
+QCheckBox::indicator:checked
+{
     image: url('%THEMEPATH%/client/chboxChecked.png');
- }
+}
 
 /* Used for Ranked Buttons only at the moment*/
 QToolButton#rankedPlay
@@ -741,14 +868,6 @@ QToolButton#rankedPlay::disabled
     color: grey;
     border-radius: 5px;
     border: 1px solid darkslategrey;
-}
-
-QProgressBar#searchProgress
-{
-    background-color: silver;
-    padding: 2px;
-	border-radius: 5px;
-	border: 1px solid grey;
 }
 
 QToolButton#mapsPool
@@ -779,7 +898,7 @@ QToolButton::hover
 
     color:silver;
     padding:5px;
-    background-color:#606060;
+    background-color:#808080;
     border-radius : 5px;
  }
 
@@ -876,7 +995,30 @@ QPushButton#showAllButton
     border-radius: 2px;
 }
 
-QComboBox, QComboBox:selected, QDoubleSpinBox#mapSize
+QSpinBox, QDoubleSpinBox
+{
+    color:orange;
+    selection-color:orange;
+    background-color: #575656;
+    selection-background-color: #575656;
+    border: 1 solid;
+    border-color: #555450;
+
+}
+
+QSpinBox::disabled, QDoubleSpinBox::disabled
+{
+    color:gray;
+    selection-color:gray;
+    background-color: #575656;
+    selection-background-color: #575656;
+    border: 1 solid;
+    border-color: #555450;
+
+}
+
+
+QComboBox, QComboBox:selected
 {
     color:orange;
     selection-color:orange;
@@ -884,13 +1026,11 @@ QComboBox, QComboBox:selected, QDoubleSpinBox#mapSize
     selection-background-color: #575656;
 }
 
-QDoubleSpinBox#mapSize
+QComboBox::disabled
 {
-    border: 1 solid;
-    border-color: #555450;
-    selection-color: white;
-    selection-background-color: slateblue;
+    color:gray;
 }
+
 
 QComboBox QAbstractItemView {
     border: 2px solid darkgray;
@@ -908,4 +1048,22 @@ QFrame#settingsFrame {
     border-top-left-radius : 5px;
     border-bottom-left-radius : 5px;
     border-bottom-right-radius : 5px;
+}
+
+#line
+{
+    background-color: #202025;
+}
+
+QProgressBar#achievementBar
+{
+    background-color: gray;
+    text-align: center;
+    max-height: 12px;
+    border: 1px solid black;
+}
+
+QProgressBar#achievementBar::chunk
+{
+    background-color: orange;
 }

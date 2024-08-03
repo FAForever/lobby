@@ -3,6 +3,7 @@ The UI of the Notification System Settings Frame.
 Each module/hook for the notification system must be registered here.
 """
 from enum import Enum
+from typing import Any
 
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
@@ -74,7 +75,7 @@ class NsSettingsDialog(FormClass2, BaseClass2):
 
         for row in range(0, model.rowCount(None)):
             self.tableView.setIndexWidget(
-                model.createIndex(row, 3),
+                model.createIndex(row, 4),
                 model.getHook(row).settings(),
             )
 
@@ -140,6 +141,11 @@ class NsSettingsDialog(FormClass2, BaseClass2):
             return self.hooks[eventType].soundEnabled()
         return False
 
+    def ingame_allowed(self, event_type: str) -> bool:
+        if event_type in self.hooks:
+            return self.hooks[event_type].ingame_allowed()
+        return False
+
     def getCustomSetting(self, eventType, key):
         if eventType in self.hooks:
             if hasattr(self.hooks[eventType], key):
@@ -155,17 +161,18 @@ class NotificationHooks(QtCore.QAbstractTableModel):
 
     POPUP = 1
     SOUND = 2
-    SETTINGS = 3
+    ALLOW_INGAME = 3
+    SETTINGS = 4
 
     def __init__(self, parent, hooks, *args):
         QtCore.QAbstractTableModel.__init__(self, parent, *args)
         self.da = True
         self.hooks = hooks
-        self.headerdata = ['Type', 'PopUp', 'Sound', '#']
+        self.headerdata = ['Type', 'PopUp', 'Sound', 'Allow ingame', '#']
 
     def flags(self, index):
         flags = super(QtCore.QAbstractTableModel, self).flags(index)
-        if index.column() == self.POPUP or index.column() == self.SOUND:
+        if index.column() in (self.POPUP, self.SOUND, self.ALLOW_INGAME):
             return flags | QtCore.Qt.ItemFlag.ItemIsUserCheckable
         if index.column() == self.SETTINGS:
             return flags | QtCore.Qt.ItemFlag.ItemIsEditable
@@ -196,6 +203,10 @@ class NotificationHooks(QtCore.QAbstractTableModel):
                 return self.returnChecked(
                     self.hooks[index.row()].soundEnabled(),
                 )
+            if index.column() == self.ALLOW_INGAME:
+                return self.returnChecked(
+                    self.hooks[index.row()].ingame_allowed(),
+                )
             return None
 
         if role != QtCore.Qt.ItemDataRole.DisplayRole:
@@ -208,13 +219,22 @@ class NotificationHooks(QtCore.QAbstractTableModel):
     def returnChecked(self, state):
         return QtCore.Qt.CheckState.Checked if state else QtCore.Qt.CheckState.Unchecked
 
-    def setData(self, index, value, role=QtCore.Qt.ItemDataRole.DisplayRole.EditRole):
+    def setData(
+            self,
+            index: QtCore.QModelIndex,
+            value: Any,
+            role: QtCore.Qt.ItemDataRole = QtCore.Qt.ItemDataRole.EditRole,
+    ) -> bool:
         if index.column() == self.POPUP:
             self.hooks[index.row()].switchPopup()
             self.dataChanged.emit(index, index)
             return True
         if index.column() == self.SOUND:
             self.hooks[index.row()].switchSound()
+            self.dataChanged.emit(index, index)
+            return True
+        if index.column() == self.ALLOW_INGAME:
+            self.hooks[index.row()].switch_ingame()
             self.dataChanged.emit(index, index)
             return True
         return False

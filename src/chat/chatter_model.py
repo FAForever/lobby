@@ -20,7 +20,8 @@ from chat.gameinfo import SensitiveMapInfoChecker
 from fa import maps
 from model.game import GameState
 from model.rating import RatingType
-from util.qt_list_model import QtListModel
+from qt.itemviews.styleditemdelegate import StyledItemDelegate
+from qt.models.qtlistmodel import QtListModel
 
 
 class ChatterModel(QtListModel):
@@ -218,13 +219,12 @@ class ChatterItemFormatter:
             return "newplayer"
         return league["league"]
 
-    def chatter_avatar_icon(self, data):
+    def chatter_avatar_icon(self, data: ChatterModelItem) -> QIcon | None:
         avatar_url = data.avatar_url()
         if avatar_url is None:
             return None
-        if avatar_url not in self._avatars.avatars:
-            return
-        return QIcon(self._avatars.avatars[avatar_url])
+        if (pixmap := self._avatars.get_image(avatar_url)) is not None:
+            return QIcon(pixmap)
 
     def chatter_country(self, data):
         if data.player is None:
@@ -334,9 +334,9 @@ class ChatterItemFormatter:
         return self.country_tooltip(data)
 
 
-class ChatterItemDelegate(QtWidgets.QStyledItemDelegate):
+class ChatterItemDelegate(StyledItemDelegate):
     def __init__(self, layout, formatter):
-        QtWidgets.QStyledItemDelegate.__init__(self)
+        StyledItemDelegate.__init__(self)
         self.layout = layout
         self._formatter = formatter
 
@@ -375,13 +375,6 @@ class ChatterItemDelegate(QtWidgets.QStyledItemDelegate):
 
         painter.restore()
 
-    def _draw_clear_option(self, painter, option):
-        option.icon = QtGui.QIcon()
-        option.text = ""
-        option.widget.style().drawControl(
-            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget,
-        )
-
     def _handle_highlight(
             self,
             painter: QtGui.QPainter,
@@ -390,11 +383,11 @@ class ChatterItemDelegate(QtWidgets.QStyledItemDelegate):
         if option.state & QtWidgets.QStyle.StateFlag.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight)
 
-    def _draw_nick(self, painter: QtGui.QPainter, data: str) -> None:
+    def _draw_nick(self, painter: QtGui.QPainter, data: ChatterModelItem) -> None:
         text = self._formatter.chatter_name(data)
         color = QColor(self._formatter.chatter_color(data))
         clip = QRect(self.layout.sizes[ChatterLayoutElements.NICK])
-        text = self._get_elided_text(painter, text, clip.width())
+        text = self._get_elided_text(painter, text, width=clip.width())
 
         painter.save()
         pen = painter.pen()
@@ -404,10 +397,6 @@ class ChatterItemDelegate(QtWidgets.QStyledItemDelegate):
         painter.drawText(clip, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, text)
 
         painter.restore()
-
-    def _get_elided_text(self, painter: QtGui.QPainter, text: str, width: int) -> str:
-        metrics = painter.fontMetrics()
-        return metrics.elidedText(text, Qt.TextElideMode.ElideRight, width)
 
     def _draw_status(self, painter, data):
         status = self._formatter.chatter_status(data)
@@ -600,12 +589,13 @@ class ChatterEventFilter(QObject):
         QtWidgets.QToolTip.showText(event.globalPos(), tooltip_text, widget)
         return True
 
-    def _handle_context_menu(self, widget, event):
+    def _handle_context_menu(self, widget: QtWidgets.QWidget, event: QtGui.QMouseEvent) -> bool:
         data, elem = self._get_data_and_elem(widget, event)
         if data is None:
             return False
 
-        menu = self._menu_handler.get_context_menu(data, elem)
+        player_id = data.player.id if data.player is not None else -1
+        menu = self._menu_handler.get_context_menu(data.chatter.name, player_id)
         menu.popup(QtGui.QCursor.pos())
         return True
 

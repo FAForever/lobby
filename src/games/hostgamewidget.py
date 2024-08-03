@@ -1,16 +1,27 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from PyQt6 import QtCore
 
 import fa.check
-import games.mapgenoptionsdialog as MapGenDialog
 import util
 import vaults.modvault.utils
+from client.user import User
+from downloadManager import MapPreviewDownloader
 from fa import maps
+from games.gameitem import GameViewBuilder
 from games.gamemodel import GameModel
+from games.mapgenoptionsdialog import MapGenDialog
 from model.game import Game
 from model.game import GameState
 from model.game import GameVisibility
+from model.playerset import Playerset
+
+if TYPE_CHECKING:
+    from client._clientwindow import ClientWindow
+
 
 logger = logging.getLogger(__name__)
 
@@ -252,13 +263,25 @@ class HostGameWidget(FormClass, BaseClass):
         util.settings.endGroup()
 
     @QtCore.pyqtSlot()
-    def generateMap(self):
-        dialog = MapGenDialog.MapGenDialog(self)
+    def generateMap(self) -> None:
+        dialog = MapGenDialog(self.client.map_generator)
+        dialog.map_generated.connect(self.on_map_generated)
         dialog.exec()
+        dialog.deleteLater()
+
+    def on_map_generated(self, mapname: str) -> None:
+        self.setupMapList()
+        self.set_map(mapname)
 
 
-def build_launcher(playerset, me, client, view_builder, map_preview_dler):
-    model = GameModel(me, map_preview_dler)
+def build_launcher(
+        playerset: Playerset,
+        me: User,
+        client: ClientWindow,
+        view_builder: GameViewBuilder,
+        map_preview_dler: MapPreviewDownloader,
+) -> GameLauncher:
+    model = GameModel(client.user_relations, me, map_preview_dler)
     widget = HostGameWidget(client, view_builder, model)
     launcher = GameLauncher(playerset, me, client, widget)
     return launcher

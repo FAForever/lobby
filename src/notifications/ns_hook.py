@@ -20,17 +20,15 @@ class NsHook():
         self.button = QtWidgets.QPushButton('More')
         self.button.setEnabled(False)
 
-    def loadSettings(self):
-        self.popup = Settings.get(
-            self._settings_key + '/popup', True, type=bool,
-        )
-        self.sound = Settings.get(
-            self._settings_key + '/sound', True, type=bool,
-        )
+    def loadSettings(self) -> None:
+        self.popup = Settings.get(f"{self._settings_key}/popup", default=True, type=bool)
+        self.sound = Settings.get(f"{self._settings_key}/sound", default=True, type=bool)
+        self.ingame = Settings.get(f"{self._settings_key}/ingame", default=False, type=bool)
 
-    def saveSettings(self):
-        Settings.set(self._settings_key + '/popup', self.popup)
-        Settings.set(self._settings_key + '/sound', self.sound)
+    def saveSettings(self) -> None:
+        Settings.set(f"{self._settings_key}/popup", self.popup)
+        Settings.set(f"{self._settings_key}/sound", self.sound)
+        Settings.set(f"{self._settings_key}/ingame", self.ingame)
 
     def getEventDisplayName(self):
         return self.eventType
@@ -44,6 +42,13 @@ class NsHook():
 
     def soundEnabled(self):
         return self.sound
+
+    def ingame_allowed(self) -> bool:
+        return self.ingame
+
+    def switch_ingame(self) -> None:
+        self.ingame = not self.ingame
+        self.saveSettings()
 
     def switchSound(self):
         self.sound = not self.sound

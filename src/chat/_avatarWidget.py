@@ -61,14 +61,14 @@ class AvatarWidget(QObject):
         })
         self.base.close()
 
-    def set_avatar_list(self, avatars):
+    def set_avatar_list(self, avatars: list[dict]) -> None:
         self.avatar_list.clear()
 
         self._add_avatar_item(None)
         for avatar in avatars:
             self._add_avatar_item(avatar)
             url = avatar["url"]
-            icon = self._avatar_dler.avatars.get(url, None)
+            icon = self._avatar_dler.get_image(url)
             if icon is not None:
                 self._set_avatar_icon(url, icon)
             else:

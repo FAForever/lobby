@@ -2,8 +2,11 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtCore import QTimer
 from PyQt6.QtCore import pyqtSignal
 
+from client.playercolors import PlayerColors
+from client.user import UserRelations
 from fa import maps
 from model.game import GameState
+from model.gameset import Gameset
 
 
 class GameAnnouncer(QObject):
@@ -11,10 +14,10 @@ class GameAnnouncer(QObject):
 
     ANNOUNCE_DELAY_SECS = 35
 
-    def __init__(self, gameset, me, colors):
+    def __init__(self, gameset: Gameset, relations: UserRelations, colors: PlayerColors) -> None:
         QObject.__init__(self)
         self._gameset = gameset
-        self._me = me
+        self.user_relations = relations
         self._colors = colors
 
         self._gameset.newLobby.connect(self._announce_hosting)
@@ -27,7 +30,7 @@ class GameAnnouncer(QObject):
     def _is_friend_host(self, game):
         return (
             game.host_player is not None
-            and self._me.relations.model.is_friend(game.host_player.id)
+            and self.user_relations.model.is_friend(game.host_player.id)
         )
 
     def _announce_hosting(self, game):

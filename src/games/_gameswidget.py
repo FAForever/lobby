@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt
@@ -10,12 +13,19 @@ from PyQt6.QtGui import QCursor
 import fa
 import util
 from api.featured_mod_api import FeaturedModApiConnector
+from client.user import User
 from config import Settings
 from games.automatchframe import MatchmakerQueue
+from games.gameitem import GameViewBuilder
 from games.gamemodel import CustomGameFilterModel
+from games.gamemodel import GameModel
+from games.hostgamewidget import GameLauncher
 from games.moditem import ModItem
 from games.moditem import mod_invisible
 from model.chat.channel import PARTY_CHANNEL_SUFFIX
+
+if TYPE_CHECKING:
+    from client._clientwindow import ClientWindow
 
 logger = logging.getLogger(__name__)
 
@@ -81,20 +91,20 @@ class GamesWidget(FormClass, BaseClass):
     party_updated = pyqtSignal()
 
     def __init__(
-        self,
-        client,
-        game_model,
-        me,
-        gameview_builder,
-        game_launcher,
-    ):
+            self,
+            client: ClientWindow,
+            game_model: GameModel,
+            me: User,
+            gameview_builder: GameViewBuilder,
+            game_launcher: GameLauncher,
+    ) -> None:
         BaseClass.__init__(self, client)
         self.setupUi(self)
 
         self._me = me
         self.client = client  # type - ClientWindow
         self.mods = {}
-        self._game_model = CustomGameFilterModel(self._me, game_model)
+        self._game_model = CustomGameFilterModel(self.client.user_relations, game_model)
         self._game_launcher = game_launcher
 
         self.apiConnector = FeaturedModApiConnector()

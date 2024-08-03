@@ -2,7 +2,7 @@ import logging
 
 from PyQt6.QtCore import QFile
 
-from util.qt import qopen
+from qt.utils import qopen
 
 logger = logging.getLogger(__name__)
 

@@ -2,14 +2,14 @@ from PyQt6.QtCore import QModelIndex
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPainter
 from PyQt6.QtWidgets import QStyle
-from PyQt6.QtWidgets import QStyledItemDelegate
 from PyQt6.QtWidgets import QStyleOptionViewItem
 from PyQt6.QtWidgets import QTableView
 
-from util.qt import qpainter
+from qt.itemviews.styleditemdelegate import StyledItemDelegate
+from qt.utils import qpainter
 
 
-class TableItemDelegate(QStyledItemDelegate):
+class TableItemDelegate(StyledItemDelegate):
     """
     Highlights the entire row on mouse hover when table's
     SelectionBehavior is set to SelectRows
@@ -41,11 +41,6 @@ class TableItemDelegate(QStyledItemDelegate):
 
         self.initStyleOption(opt, index)
         return opt
-
-    def _draw_clear_option(self, painter: QPainter, option: QStyleOptionViewItem) -> None:
-        option.text = ""
-        control_element = QStyle.ControlElement.CE_ItemViewItem
-        option.widget.style().drawControl(control_element, option, painter, option.widget)
 
     def _set_pen(self, painter: QPainter, option: QStyleOptionViewItem) -> None:
         if option.state & QStyle.StateFlag.State_Selected:

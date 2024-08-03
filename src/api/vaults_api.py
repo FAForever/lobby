@@ -64,11 +64,11 @@ class MapApiConnector(VaultsApiConnector):
     def __init__(self) -> None:
         super().__init__("/data/map")
 
-    def _extend_query_options(self, query_options: dict) -> dict:
+    def _extend_query_options(self, query_options: dict) -> None:
         super()._extend_query_options(query_options)
         self._extend_includes(query_options, ["author"])
 
-    def prepare_data(self, message: dict) -> None:
+    def prepare_data(self, message: dict) -> dict:
         return {
             "values": MapParser.parse_many(message["data"]),
             "meta": message["meta"],
@@ -89,7 +89,7 @@ class MapPoolApiConnector(VaultsApiConnector):
         self._add_default_includes(query_options)
         return query_options
 
-    def prepare_data(self, message: dict) -> None:
+    def prepare_data(self, message: dict) -> dict:
         return {
             "values": MapPoolAssignmentParser.parse_many_to_maps(message["data"]),
             "meta": message["meta"],

@@ -16,7 +16,6 @@ from api.coop_api import CoopApiAccessor
 from api.coop_api import CoopResultApiAccessor
 from api.models.CoopResult import CoopResult
 from api.models.CoopScenario import CoopScenario
-from client.user import User
 from coop.coopmapitem import CoopMapItem
 from coop.coopmapitem import CoopMapItemDelegate
 from coop.coopmodel import CoopGameFilterModel
@@ -27,8 +26,8 @@ from games.gameitem import GameViewBuilder
 from games.gamemodel import GameModel
 from games.hostgamewidget import GameLauncher
 from model.game import Game
+from qt.utils import qopen
 from ui.busy_widget import BusyWidget
-from util.qt import qopen
 
 if TYPE_CHECKING:
     from client._clientwindow import ClientWindow
@@ -43,7 +42,6 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
             self,
             client: ClientWindow,
             game_model: GameModel,
-            me: User,
             gameview_builder: GameViewBuilder,
             game_launcher: GameLauncher,
     ) -> None:
@@ -53,8 +51,7 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
         self.setupUi(self)
 
         self.client = client  # type - ClientWindow
-        self._me = me
-        self._game_model = CoopGameFilterModel(self._me, game_model)
+        self._game_model = CoopGameFilterModel(self.client.user_relations, game_model)
         self._game_launcher = game_launcher
         self._gameview_builder = gameview_builder
 
@@ -222,6 +219,8 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
         """
         if not fa.instance.available():
             return
+
+        self.client.games.stopSearch()
 
         if not fa.check.check(game.featured_mod, game.mapname, sim_mods=game.sim_mods):
             return

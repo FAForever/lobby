@@ -1,232 +1,52 @@
+from __future__ import annotations
+
 import logging
-from enum import Enum
+from typing import TYPE_CHECKING
+from typing import Callable
 
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtWidgets import QMenu
+from PyQt6.QtWidgets import QWidget
 
-from model.game import GameState
+from chat._avatarWidget import AvatarWidget
+from client.aliasviewer import AliasWindow
+from client.user import User
+from contextmenu.playercontextmenu import PlayerContextMenu
+from fa.game_runner import GameRunner
+from power import PowerTools
+
+if TYPE_CHECKING:
+    from client._clientwindow import ClientWindow
 
 logger = logging.getLogger(__name__)
 
 
-class ChatterMenuItems(Enum):
-    SELECT_AVATAR = "Select avatar"
-    SEND_ORCS = "Send the Orcs"
-    CLOSE_GAME = "Close Game"
-    KICK_PLAYER = "Close FAF Client"
-    VIEW_ALIASES = "View aliases"
-    VIEW_IN_LEADERBOARDS = "View in Leaderboards"
-    JOIN_GAME = "Join hosted Game"
-    VIEW_LIVEREPLAY = "View live replay"
-    VIEW_REPLAYS = "View Replays in Vault"
-    ADD_FRIEND = "Add friend"
-    ADD_FOE = "Add foe"
-    REMOVE_FRIEND = "Remove friend"
-    REMOVE_FOE = "Remove foe"
-    ADD_CHATTERBOX = "Ignore"
-    REMOVE_CHATTERBOX = "Unignore"
-    COPY_USERNAME = "Copy username"
-    INVITE_TO_PARTY = "Invite to party"
-    KICK_FROM_PARTY = "Kick from party"
-
-
-class ChatterMenu:
-    def __init__(
-        self, me, power_tools, parent_widget, avatar_widget_builder,
-        alias_viewer, client_window, game_runner,
-    ):
-        self._me = me
-        self._power_tools = power_tools
-        self._parent_widget = parent_widget
-        self._avatar_widget_builder = avatar_widget_builder
-        self._alias_viewer = alias_viewer
-        self._client_window = client_window
-        self._game_runner = game_runner
-
+class ChatterMenu(PlayerContextMenu):
+    # FIXME: ChatterMenu is built in ChattersView's built method
+    # by passing both necessary and unnecessary kwargs to the method below
+    # (notice **kwargs). But the ChattersView itself is built in this way
+    # and the its 'parent's' class and so on. As a result it is hard to
+    # extract any of them from the chain of 'builds' without modifying
+    # lots of chat-related files.
+    # It's better to avoid passing the whole bunch of dependencies arguments
+    # into a single build and wonder which of them are needed for this
+    # particular class and which are for its dependencies.
+    # Many of those build methods (if not all) were created just for the
+    # purpose of passing additional unexpected arguments, so that __init__
+    # doesn't complain about them. (see 9b14d4e7)
+    # Maybe it's fine in some cases, but chat's build chain is very convoluted
+    # and hard to grasp
     @classmethod
     def build(
-        cls, me, power_tools, parent_widget, avatar_widget_builder,
-        alias_viewer, client_window, game_runner, **kwargs
+        cls,
+        me: User,
+        power_tools: PowerTools,
+        parent_widget: QWidget,
+        avatar_widget_builder: Callable[..., AvatarWidget],
+        alias_viewer: AliasWindow,
+        client_window: ClientWindow,
+        game_runner: GameRunner,
+        **kwargs,
     ):
         return cls(
             me, power_tools, parent_widget, avatar_widget_builder,
             alias_viewer, client_window, game_runner,
         )
-
-    def actions(self, cc):
-        chatter = cc.chatter
-        player = chatter.player
-        game = None if player is None else player.currentGame
-
-        if player is None or self._me.player is None:
-            is_me = False
-        else:
-            is_me = player.id == self._me.player.id
-
-        yield list(self.me_actions(is_me))
-        yield list(self.power_actions(self._power_tools.power))
-        yield list(self.chatter_actions())
-        yield list(self.player_actions(player, game, is_me))
-        yield list(self.friend_actions(player, chatter, cc, is_me))
-        yield list(self.ignore_actions(player, chatter, cc, is_me))
-        yield list(self.party_actions(player, is_me))
-
-    def chatter_actions(self):
-        yield ChatterMenuItems.COPY_USERNAME
-        yield ChatterMenuItems.VIEW_ALIASES
-
-    def me_actions(self, is_me):
-        if is_me:
-            yield ChatterMenuItems.SELECT_AVATAR
-
-    def power_actions(self, power):
-        if power == 2:
-            yield ChatterMenuItems.SEND_ORCS
-            yield ChatterMenuItems.CLOSE_GAME
-            yield ChatterMenuItems.KICK_PLAYER
-
-    def player_actions(self, player, game, is_me):
-        if game is not None and not is_me:
-            if game.state == GameState.OPEN:
-                yield ChatterMenuItems.JOIN_GAME
-            elif game.state == GameState.PLAYING:
-                yield ChatterMenuItems.VIEW_LIVEREPLAY
-
-        if player is not None:
-            if player.ladder_estimate != 0:
-                yield ChatterMenuItems.VIEW_IN_LEADERBOARDS
-            yield ChatterMenuItems.VIEW_REPLAYS
-
-    def friend_actions(self, player, chatter, cc, is_me):
-        if is_me:
-            return
-        id_ = -1 if player is None else player.id
-        name = chatter.name
-        if self._me.relations.model.is_friend(id_, name):
-            yield ChatterMenuItems.REMOVE_FRIEND
-        elif self._me.relations.model.is_foe(id_, name):
-            yield ChatterMenuItems.REMOVE_FOE
-        else:
-            yield ChatterMenuItems.ADD_FRIEND
-            yield ChatterMenuItems.ADD_FOE
-
-    def ignore_actions(self, player, chatter, cc, is_me):
-        if is_me:
-            return
-        id_ = -1 if player is None else player.id
-        name = chatter.name
-        if self._me.relations.model.is_chatterbox(id_, name):
-            yield ChatterMenuItems.REMOVE_CHATTERBOX
-        else:
-            if not cc.is_mod() and not chatter.is_base_channel_mod():
-                yield ChatterMenuItems.ADD_CHATTERBOX
-
-    def party_actions(self, player, is_me):
-        if is_me:
-            return
-        if player is None:
-            return
-        else:
-            if player.id in self._client_window.games.party.memberIds:
-                if (
-                    self._me.player.id
-                    == self._client_window.games.party.owner_id
-                ):
-                    yield ChatterMenuItems.KICK_FROM_PARTY
-            elif player.currentGame is not None:
-                return
-            else:
-                yield ChatterMenuItems.INVITE_TO_PARTY
-
-    def get_context_menu(self, data, point):
-        return self.menu(data.cc)
-
-    def menu(self, cc):
-        menu = QMenu(self._parent_widget)
-
-        def add_entry(item):
-            action = QAction(item.value, menu)
-            action.triggered.connect(self.handler(cc, item))
-            menu.addAction(action)
-
-        first = True
-        for category in self.actions(cc):
-            if not category:
-                continue
-            if not first:
-                menu.addSeparator()
-            for item in category:
-                add_entry(item)
-            first = False
-        return menu
-
-    def handler(self, cc, kind):
-        chatter = cc.chatter
-        player = chatter.player
-        game = None if player is None else player.currentGame
-        return lambda: self._handle_action(chatter, player, game, kind)
-
-    def _handle_action(self, chatter, player, game, kind):
-        Items = ChatterMenuItems
-        if kind == Items.COPY_USERNAME:
-            self._copy_username(chatter)
-        elif kind == Items.SEND_ORCS:
-            self._power_tools.actions.send_the_orcs(chatter.name)
-        elif kind == Items.CLOSE_GAME:
-            self._power_tools.view.close_game_dialog.show(chatter.name)
-        elif kind == Items.KICK_PLAYER:
-            self._power_tools.view.kick_dialog(chatter.name)
-        elif kind == Items.SELECT_AVATAR:
-            self._avatar_widget_builder().show()
-        elif kind in [
-            Items.ADD_FRIEND, Items.ADD_FOE, Items.REMOVE_FRIEND,
-            Items.REMOVE_FOE,
-        ]:
-            self._handle_friends(chatter, player, kind)
-        elif kind in [Items.ADD_CHATTERBOX, Items.REMOVE_CHATTERBOX]:
-            self._handle_chatterboxes(chatter, player, kind)
-        elif kind == Items.VIEW_ALIASES:
-            self._view_aliases(chatter)
-        elif kind == Items.VIEW_REPLAYS:
-            self._client_window.view_replays(player.login)
-        elif kind == Items.VIEW_IN_LEADERBOARDS:
-            self._client_window.view_in_leaderboards(player)
-        elif kind in [Items.JOIN_GAME, Items.VIEW_LIVEREPLAY]:
-            self._game_runner.run_game_with_url(game, player.id)
-        elif kind == Items.INVITE_TO_PARTY:
-            self._client_window.invite_to_party(player.id)
-        elif kind == Items.KICK_FROM_PARTY:
-            self._client_window.games.kickPlayerFromParty(player.id)
-
-    def _copy_username(self, chatter):
-        QApplication.clipboard().setText(chatter.name)
-
-    def _handle_friends(self, chatter, player, kind):
-        ctl = self._me.relations.controller
-        ctl = ctl.faf if player is not None else ctl.irc
-        uid = player.id if player is not None else chatter.name
-
-        Items = ChatterMenuItems
-        if kind == Items.ADD_FRIEND:
-            ctl.friends.add(uid)
-        elif kind == Items.REMOVE_FRIEND:
-            ctl.friends.remove(uid)
-        if kind == Items.ADD_FOE:
-            ctl.foes.add(uid)
-        elif kind == Items.REMOVE_FOE:
-            ctl.foes.remove(uid)
-
-    def _handle_chatterboxes(self, chatter, player, kind):
-        ctl = self._me.relations.controller
-        ctl = ctl.faf if player is not None else ctl.irc
-        uid = player.id if player is not None else chatter.name
-
-        Items = ChatterMenuItems
-        if kind == Items.ADD_CHATTERBOX:
-            ctl.chatterboxes.add(uid)
-        elif kind == Items.REMOVE_CHATTERBOX:
-            ctl.chatterboxes.remove(uid)
-
-    def _view_aliases(self, chatter):
-        self._alias_viewer.view_aliases(chatter.name)

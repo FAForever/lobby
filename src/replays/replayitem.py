@@ -1,4 +1,5 @@
-import os
+from __future__ import annotations
+
 import time
 from datetime import datetime
 from datetime import timezone
@@ -6,12 +7,14 @@ from datetime import timezone
 from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
+from PyQt6.QtGui import QAction
 
 import util
 from config import Settings
 from downloadManager import DownloadRequest
 from fa import maps
 from games.moditem import mods
+from replays.scoreboard import Scoreboard
 
 
 class ReplayItemDelegate(QtWidgets.QStyledItemDelegate):
@@ -86,44 +89,7 @@ class ReplayItemDelegate(QtWidgets.QStyledItemDelegate):
 
 
 class ReplayItem(QtWidgets.QTreeWidgetItem):
-    # list element
-    FORMATTER_REPLAY = str(
-        util.THEME.readfile(
-            "replays/formatters/replay.qthtml",
-        ),
-    )
-    # replay-info elements
-    FORMATTER_REPLAY_INFORMATION = (
-        "<h2 align='center'>Replay UID : {uid}</h2><table border='0' "
-        "cellpadding='0' cellspacing='5' align='center'><tbody>{teams}</tbody>"
-        "</table>"
-    )
-    FORMATTER_REPLAY_TEAM_SPOILED = (
-        "<tr><td colspan='3' align='center' valign='middle'><font size='+2'>"
-        "{title}</font></td></tr>{players}"
-    )
-    FORMATTER_REPLAY_FFA_SPOILED = (
-        "<tr><td colspan='3' align='center' valign='middle'><font size='+2'>"
-        "Win</font></td></tr>{winner}<tr><td colspan=3 align='center' "
-        "valign='middle'><font size='+2'>Lose</font></td></tr>{players}"
-    )
-    FORMATTER_REPLAY_TEAM2_SPOILED = (
-        "<td><table border=0><tr><td colspan='3' align='center' "
-        "valign='middle'><font size='+2'>{title}</font></td></tr>{players}"
-        "</table></td>"
-    )
-    FORMATTER_REPLAY_TEAM2 = "<td><table border=0>{players}</table></td>"
-    FORMATTER_REPLAY_PLAYER_SCORE = (
-        "<td align='center' valign='middle' width='20'>{player_score}</td>"
-    )
-    FORMATTER_REPLAY_PLAYER_ICON = (
-        "<td width='40'><img src='{faction_icon_uri}' width='40' height='20'>"
-        "</td>"
-    )
-    FORMATTER_REPLAY_PLAYER_LABEL = (
-        "<td align='{alignment}' valign='middle' width='130'>{player_name} "
-        "({player_rating})</td>"
-    )
+    REPLAY_TREE_ITEM_FORMATTER = str(util.THEME.readfile("replays/formatters/replay.qthtml"))
 
     def __init__(self, uid, parent, *args, **kwargs):
         QtWidgets.QTreeWidgetItem.__init__(self, *args, **kwargs)
@@ -132,37 +98,29 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
         self.parent = parent
         self.height = 70
         self.viewtext = None
-        self.viewtextPlayer = None
         self.mapname = None
         self.mapdisplayname = None
         self.client = None
-        self.title = None
-        self.host = None
 
         self.startDate = None
         self.duration = None
         self.live_delay = False
 
-        self.moreInfo = False
-        self.replayInfo = False
+        self.extra_info_loaded = False
         self.spoiled = False
         self.url = "{}/{}".format(Settings.get('replay_vault/host'), self.uid)
 
         self.teams = {}
-        self.access = None
         self.mod = None
         self.moddisplayname = None
 
         self.options = []
         self.players = []
         self.numberplayers = 0
-        self.biggestTeam = 0
         self.winner = None
         self.teamWin = None
 
         self.setHidden(True)
-        self.extraInfoWidth = 0  # panel with more information
-        self.extraInfoHeight = 0  # panel with more information
 
         self._map_dl_request = DownloadRequest()
         self._map_dl_request.done.connect(self._on_map_preview_downloaded)
@@ -238,7 +196,7 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
         else:
             self.moddisplayname = self.mod
 
-        self.viewtext = self.FORMATTER_REPLAY.format(
+        self.viewtext = self.REPLAY_TREE_ITEM_FORMATTER.format(
             time=self.startHour, name=self.name, map=self.mapdisplayname,
             duration=self.duration, mod=self.moddisplayname,
         )
@@ -248,14 +206,14 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
         self.icon = util.THEME.icon(path, is_local)
         self.setIcon(0, self.icon)
 
-    def infoPlayers(self):
+    def load_extra_info(self) -> None:
         """
         processes information from the server about a replay into readable
         extra information for the user, also calls method to show the
         information
         """
 
-        self.moreInfo = True
+        self.extra_info_loaded = True
         playersList = self.replay['playerStats']
         self.numberplayers = len(playersList)
 
@@ -276,6 +234,9 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
                 team = 1
             else:
                 team = int(player["team"])
+
+            if team == -1:
+                continue
 
             if "score" in player:
                 if team in scores:
@@ -306,207 +267,22 @@ class ReplayItem(QtWidgets.QTreeWidgetItem):
                     self.teamWin = team
                     mvt = scores[team]
 
-        self.generateInfoPlayersHtml()
-
-    def generateInfoPlayersHtml(self):
-        """
-        Creates the ui and extra information about a replay,
-        Either teamWin or winner must be set if the replay is to be spoiled
-        """
-
-        teams = ""
-        winnerHTML = ""
-
+    def generate_scoreboard(self) -> Scoreboard:
+        if not self.extra_info_loaded:
+            self.load_extra_info()
         self.spoiled = not self.parent.spoilerCheckbox.isChecked()
-
-        i = 0
-        for team in self.teams:
-            if team != -1:
-                i += 1
-
-                if len(self.teams[team]) > self.biggestTeam:
-                    self.biggestTeam = len(self.teams[team])
-
-                players = ""
-                for player in self.teams[team]:
-                    alignment, playerIcon, playerLabel, playerScore = (
-                        self.generatePlayerHTML(i, player)
-                    )
-
-                    if (
-                        self.winner is not None
-                        and player["score"] == self.winner["score"]
-                        and self.spoiled
-                    ):
-                        winnerHTML += (
-                            "<tr>{}{}{}</tr>".format(
-                                playerScore,
-                                playerIcon,
-                                playerLabel,
-                            )
-                        )
-                    elif alignment == "left":
-                        players += (
-                            "<tr>{}{}{}</tr>".format(
-                                playerScore,
-                                playerIcon,
-                                playerLabel,
-                            )
-                        )
-                    else:  # alignment == "right"
-                        players += (
-                            "<tr>{}{}{}</tr>".format(
-                                playerLabel,
-                                playerIcon,
-                                playerScore,
-                            )
-                        )
-
-                if self.spoiled:
-                    if self.winner is not None:  # FFA in rows: Win... Lose...
-                        teams += self.FORMATTER_REPLAY_FFA_SPOILED.format(
-                            winner=winnerHTML, players=players,
-                        )
-                    else:
-                        if "playing" in self.duration:
-                            teamTitle = "Playing"
-                        elif self.teamWin == team:
-                            teamTitle = "Win"
-                        else:
-                            teamTitle = "Lose"
-
-                        if len(self.teams) == 2:  # pack team in <table>
-                            teams += (
-                                self.FORMATTER_REPLAY_TEAM2_SPOILED.format(
-                                    title=teamTitle, players=players,
-                                )
-                            )
-                        else:  # just row on
-                            teams += self.FORMATTER_REPLAY_TEAM_SPOILED.format(
-                                title=teamTitle, players=players,
-                            )
-                else:
-                    if len(self.teams) == 2:  # pack team in <table>
-                        teams += self.FORMATTER_REPLAY_TEAM2.format(
-                            players=players,
-                        )
-                    else:  # just row on
-                        teams += players
-
-                if len(self.teams) == 2 and i == 1:  # add the 'vs'
-                    teams += (
-                        "<td align='center' valign='middle' "
-                        "height='100%'><font color='black' size='+4'>"
-                        "VS</font></td>"
-                    )
-
-        # prepare the package to 'fit in' with its <td>s
-        if len(self.teams) == 2:
-            teams = "<tr>{}</tr>".format(teams)
-
-        self.replayInfo = self.FORMATTER_REPLAY_INFORMATION.format(
-            uid=self.uid, teams=teams,
+        assert self.client is not None
+        scoreboard = Scoreboard(
+            self.mod, self.winner, self.spoiled,
+            self.duration, self.teamWin, self.uid, self.teams,
+            self.client.player_ctx_menu,
         )
+        scoreboard.setup()
+        return scoreboard
 
-        if self.isSelected():
-            self.parent.replayInfos.clear()
-            self.resize()
-            self.parent.replayInfos.setHtml(self.replayInfo)
-
-    def generatePlayerHTML(self, i, player):
-        if i == 2 and len(self.teams) == 2:
-            alignment = "right"
-        else:
-            alignment = "left"
-
-        if "login" not in player["player"]:
-            player["player"]["login"] = "No data"
-
-        playerRating = int(
-            round((player["beforeMean"] - player["beforeDeviation"] * 3) / 100)
-            * 100,
-        )
-        playerLabel = self.FORMATTER_REPLAY_PLAYER_LABEL.format(
-            player_name=player["player"]["login"],
-            player_rating=playerRating,
-            alignment=alignment,
-        )
-
-        iconPath = os.path.join(
-            util.COMMON_DIR,
-            "replays/{}.png".format(
-                self.retrieveIconFaction(player, self.mod),
-            ),
-        )
-        iconUrl = QtCore.QUrl.fromLocalFile(iconPath).url()
-
-        playerIcon = self.FORMATTER_REPLAY_PLAYER_ICON.format(
-            faction_icon_uri=iconUrl,
-        )
-
-        if self.spoiled and not self.mod == "ladder1v1":
-            playerScore = self.FORMATTER_REPLAY_PLAYER_SCORE.format(
-                player_score=player["score"],
-            )
-        else:  # no score for ladder
-            playerScore = self.FORMATTER_REPLAY_PLAYER_SCORE.format(
-                player_score=" ",
-            )
-
-        return alignment, playerIcon, playerLabel, playerScore
-
-    @staticmethod
-    def retrieveIconFaction(player, mod):
-        if "faction" in player:
-            if player["faction"] == 1:
-                faction = "UEF"
-            elif player["faction"] == 2:
-                faction = "Aeon"
-            elif player["faction"] == 3:
-                faction = "Cybran"
-            elif player["faction"] == 4:
-                faction = "Seraphim"
-            elif player["faction"] == 5:
-                if mod == "nomads":
-                    faction = "Nomads"
-                else:
-                    faction = "Random"
-            elif player["faction"] == 6:
-                if mod == "nomads":
-                    faction = "Random"
-                else:
-                    faction = "Broken"
-            else:
-                faction = "Broken"
-        else:
-            faction = "Missing"
-        return faction
-
-    def resize(self):
-        if self.isSelected():
-            if self.extraInfoWidth == 0 or self.extraInfoHeight == 0:
-                if len(self.teams) == 1:  # ladder, FFA
-                    self.extraInfoWidth = 275
-                    # + 1 -> second title
-                    self.extraInfoHeight = 75 + (self.numberplayers + 1) * 25
-                elif len(self.teams) == 2:  # Team vs Team
-                    self.extraInfoWidth = 500
-                    self.extraInfoHeight = 75 + self.biggestTeam * 22
-                else:  # FAF
-                    self.extraInfoWidth = 275
-                    self.extraInfoHeight = (
-                        75 + (self.numberplayers + len(self.teams)) * 25
-                    )
-
-            self.parent.replayInfos.setMinimumWidth(self.extraInfoWidth)
-            self.parent.replayInfos.setMaximumWidth(600)
-
-            self.parent.replayInfos.setMinimumHeight(self.extraInfoHeight)
-            self.parent.replayInfos.setMaximumHeight(self.extraInfoHeight)
-
-    def pressed(self, item):
+    def pressed(self) -> None:
         menu = QtWidgets.QMenu(self.parent)
-        actionDownload = QtWidgets.QAction("Download replay", menu)
+        actionDownload = QAction("Download replay", menu)
         actionDownload.triggered.connect(self.downloadReplay)
         menu.addAction(actionDownload)
         menu.popup(QtGui.QCursor.pos())

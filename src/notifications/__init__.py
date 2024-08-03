@@ -7,6 +7,8 @@ from PyQt6 import QtCore
 import util
 from config import Settings
 from fa import maps
+from model.game import Game
+from model.player import Player
 from notifications.ns_dialog import NotificationDialog
 from notifications.ns_settings import IngameNotification
 from notifications.ns_settings import NsSettingsDialog
@@ -42,11 +44,8 @@ class Notifications:
 
         self.user = util.THEME.icon("client/user.png", pix=True)
 
-    def _newPlayer(self, player):
-        if (
-            self.isDisabled()
-            or not self.settings.popupEnabled(self.USER_ONLINE)
-        ):
+    def _newPlayer(self, player: Player) -> None:
+        if self.is_disabled(self.USER_ONLINE):
             return
 
         if self.me.player is not None and self.me.player == player:
@@ -55,28 +54,28 @@ class Notifications:
         notify_mode = self.settings.getCustomSetting(self.USER_ONLINE, 'mode')
         if (
             notify_mode != 'all'
-            and not self.me.relations.model.is_friend(player.id)
+            and not self.client.user_relations.model.is_friend(player.id)
         ):
             return
 
         self.events.append((self.USER_ONLINE, player.copy()))
         self.checkEvent()
 
-    def _newLobby(self, game):
-        if self.isDisabled() or not self.settings.popupEnabled(self.NEW_GAME):
+    def _newLobby(self, game: Game) -> None:
+        if self.is_disabled(self.NEW_GAME):
             return
 
         host = game.host_player
         notify_mode = self.settings.getCustomSetting(self.NEW_GAME, 'mode')
         if notify_mode != 'all':
-            if host is None or not self.me.relations.model.is_friend(host):
+            if host is None or not self.client.user_relations.model.is_friend(host.id, host.login):
                 return
 
         self.events.append((self.NEW_GAME, game.copy()))
         self.checkEvent()
 
-    def _gamefull(self):
-        if self.isDisabled() or not self.settings.popupEnabled(self.GAME_FULL):
+    def _gamefull(self) -> None:
+        if self.is_disabled(self.GAME_FULL):
             return
         if (self.GAME_FULL, None) not in self.events:
             self.events.append((self.GAME_FULL, None))
@@ -94,11 +93,14 @@ class Notifications:
         self.events.append((self.UNOFFICIAL_CLIENT, msg))
         self.checkEvent()
 
-    def partyInvite(self, message):
+    def partyInvite(self, message: dict) -> None:
+        if self.is_disabled(self.PARTY_INVITE):
+            return
+
         notify_mode = self.settings.getCustomSetting(self.PARTY_INVITE, 'mode')
         if (
             notify_mode != 'all'
-            and not self.me.relations.model.is_friend(message["sender"])
+            and not self.client.user_relations.model.is_friend(message["sender"])
         ):
             return
         self.events.append((self.PARTY_INVITE, message))
@@ -113,18 +115,22 @@ class Notifications:
         if self.settings.ingame_notifications == IngameNotification.QUEUE:
             self.checkEvent()
 
-    def isDisabled(self):
-        return (
-            self.disabledStartup
-            or (
-                self.game_running
-                and (
-                    self.settings.ingame_notifications
-                    == IngameNotification.DISABLE
-                )
+    def is_enabled(self, event_type: str) -> bool:
+        if not self.settings.enabled or self.disabledStartup:
+            return False
+
+        if not self.settings.popupEnabled(event_type):
+            return False
+
+        if self.game_running:
+            return (
+                self.settings.ingame_notifications == IngameNotification.ENABLE
+                or self.settings.ingame_allowed(event_type)
             )
-            or not self.settings.enabled
-        )
+        return True
+
+    def is_disabled(self, event_type: str) -> bool:
+        return not self.is_enabled(event_type)
 
     def setNotificationEnabled(self, enabled):
         self.settings.enabled = enabled
@@ -232,7 +238,7 @@ class Notifications:
             self.settings.soundEnabled(eventType),
         )
 
-    def checkEvent(self):
+    def checkEvent(self) -> None:
         """
         Checks that we are in correct state to show next notification popup
 
@@ -243,15 +249,9 @@ class Notifications:
             * Game isn't running, or ingame notifications are enabled
 
         """
-        if (
-            len(self.events) > 0
-            and self.dialog.isHidden()
-            and (
-                not self.game_running
-                or (
-                    self.settings.ingame_notifications
-                    == IngameNotification.ENABLE
-                )
-            )
-        ):
+        if len(self.events) == 0 or not self.dialog.isHidden():
+            return
+
+        event_type, _ = self.events[0]
+        if self.is_enabled(event_type):
             self.showEvent()

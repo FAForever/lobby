@@ -7,6 +7,8 @@ import re
 import shutil
 import subprocess
 import sys
+from enum import Enum
+from typing import Self
 
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import QDateTime
@@ -59,6 +61,15 @@ MOD_PREVIEW_DIR = os.path.join(CACHE_DIR, "mod_previews")
 
 # Cache for news images
 NEWS_CACHE_DIR = os.path.join(CACHE_DIR, "news")
+
+# Cache for avatar images
+AVATARS_CACHE_DIR = os.path.join(CACHE_DIR, "avatars")
+
+# Cache for league division images
+DIVISIONS_CACHE_DIR = os.path.join(CACHE_DIR, "divisions")
+
+# Cache for achievement images
+ACHIEVEMENTS_CACHE_DIR = os.path.join(CACHE_DIR, "achievements", "revealed")
 
 # This contains cached game files
 GAME_CACHE_DIR = os.path.join(CACHE_DIR, "featured_mod")
@@ -168,7 +179,8 @@ for data_dir in [
     APPDATA_DIR, PERSONAL_DIR, LUA_DIR, CACHE_DIR,
     MAP_PREVIEW_SMALL_DIR, MAP_PREVIEW_LARGE_DIR, MOD_PREVIEW_DIR,
     THEME_DIR, REPLAY_DIR, LOG_DIR, EXTRA_DIR, NEWS_CACHE_DIR,
-    GAME_CACHE_DIR, GAMEDATA_DIR, BIN_DIR, REPLAY_DIR,
+    GAME_CACHE_DIR, GAMEDATA_DIR, BIN_DIR, REPLAY_DIR, AVATARS_CACHE_DIR,
+    DIVISIONS_CACHE_DIR, ACHIEVEMENTS_CACHE_DIR,
 ]:
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
@@ -506,7 +518,7 @@ def strtodate(s: str) -> QDateTime:
 
 
 def datetostr(d: QDateTime) -> str:
-    return d.toString("yyyy-mm-dd HH:MM:ss")
+    return d.toString("yyyy-MM-dd hh:mm")
 
 
 def utctolocal(s: str) -> str:
@@ -518,3 +530,13 @@ def capitalize(string: str) -> str:
     Capitalize the first letter only, leave the rest as it is
     """
     return f"{string[0].upper()}{string[1:]}"
+
+
+class StringValuedEnum(Enum):
+
+    @classmethod
+    def from_string(cls, string: str) -> Self:
+        for member in iter(cls):
+            if member.value == string:
+                return member
+        raise ValueError("Unsupported value")

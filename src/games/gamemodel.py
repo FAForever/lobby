@@ -3,16 +3,27 @@ from enum import Enum
 from PyQt6.QtCore import QSortFilterProxyModel
 from PyQt6.QtCore import Qt
 
+from client.user import User
+from client.user import UserRelations
+from downloadManager import MapPreviewDownloader
 from games.moditem import mod_invisible
+from model.game import Game
 from model.game import GameState
-from util.qt_list_model import QtListModel
+from model.gameset import Gameset
+from qt.models.qtlistmodel import QtListModel
 
 from .gamemodelitem import GameModelItem
 
 
 class GameModel(QtListModel):
-    def __init__(self, me, preview_dler, gameset=None):
-        builder = GameModelItem.builder(me, preview_dler)
+    def __init__(
+            self,
+            relations: UserRelations,
+            me: User,
+            preview_dler: MapPreviewDownloader,
+            gameset: Gameset | None = None,
+    ) -> None:
+        builder = GameModelItem.builder(relations, me, preview_dler)
         QtListModel.__init__(self, builder)
 
         self._gameset = gameset
@@ -40,10 +51,10 @@ class GameSortModel(QSortFilterProxyModel):
         HOSTNAME = 3
         AGE = 4
 
-    def __init__(self, me, model):
+    def __init__(self, relations: UserRelations, model: GameModel) -> None:
         QSortFilterProxyModel.__init__(self)
         self._sort_type = self.SortType.AGE
-        self._me = me
+        self.user_relations = relations
         self.setSourceModel(model)
         self.sort(0)
 
@@ -60,12 +71,12 @@ class GameSortModel(QSortFilterProxyModel):
                 return False
         return False
 
-    def _lt_friend(self, left, right):
+    def _lt_friend(self, left: Game, right: Game) -> bool:
         hostl = -1 if left.host_player is None else left.host_player.id
         hostr = -1 if right.host_player is None else right.host_player.id
         return (
-            self._me.relations.model.is_friend(hostl)
-            and not self._me.relations.model.is_friend(hostr)
+            self.user_relations.model.is_friend(hostl)
+            and not self.user_relations.model.is_friend(hostr)
         )
 
     def _lt_type(self, left, right):
@@ -108,8 +119,8 @@ class GameSortModel(QSortFilterProxyModel):
 
 
 class CustomGameFilterModel(GameSortModel):
-    def __init__(self, me, model):
-        GameSortModel.__init__(self, me, model)
+    def __init__(self, relations: UserRelations, model: GameModel) -> None:
+        GameSortModel.__init__(self, relations, model)
         self._hide_private_games = False
 
     def filter_accepts_game(self, game):

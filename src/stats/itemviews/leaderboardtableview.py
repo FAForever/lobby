@@ -3,7 +3,6 @@ from PyQt6.QtGui import QCursor
 from PyQt6.QtGui import QMouseEvent
 
 from qt.itemviews.tableview import TableView
-from stats.itemviews.leaderboardtablemenu import LeaderboardTableMenu
 
 
 class LeaderboardTableView(TableView):
@@ -24,7 +23,5 @@ class LeaderboardTableView(TableView):
 
     def context_menu(self, name: str, uid: int) -> None:
         client = self.parent().parent().client
-        leaderboardName = self.parent().parent().leaderboardName
-        menuHandler = LeaderboardTableMenu.build(self, client, leaderboardName)
-        menu = menuHandler.getMenu(name, uid)
+        menu = client.player_ctx_menu.get_context_menu(name, uid)
         menu.popup(QCursor.pos())
