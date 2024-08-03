@@ -3,7 +3,6 @@ import time
 
 import jinja2
 from PyQt6.QtCore import QObject
-from PyQt6.QtCore import QUrl
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDesktopServices
 
@@ -176,8 +175,7 @@ class ChatAvatarPixAdder:
         return cls(widget, avatar_dler)
 
     def add_avatar(self, url: str) -> None:
-        avatar_name = QUrl(url).fileName()
-        avatar_pix = self._avatar_dler.get_image(avatar_name)
+        avatar_pix = self._avatar_dler.get_image(url)
         if avatar_pix is not None:
             self._add_avatar_resource(url, avatar_pix)
         elif url not in self._requests:

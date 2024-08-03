@@ -221,10 +221,9 @@ class ChatterItemFormatter:
 
     def chatter_avatar_icon(self, data: ChatterModelItem) -> QIcon | None:
         avatar_url = data.avatar_url()
-        avatar_name = QtCore.QUrl(avatar_url).fileName()
         if avatar_url is None:
             return None
-        if (pixmap := self._avatars.get_image(avatar_name)) is not None:
+        if (pixmap := self._avatars.get_image(avatar_url)) is not None:
             return QIcon(pixmap)
 
     def chatter_country(self, data):
