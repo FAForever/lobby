@@ -47,25 +47,10 @@ jobs:
         run: |
           python setup.py bdist_msi
 
-      - name: Get Artifact Paths
-        id: artifact_paths
-        run: |
-          function getMsiPath {
-            $files = Get-ChildItem *.msi -Recurse | Select -First 1
-            (Get-Item $files).FullName
-          }
-          $WINDOWS_MSI = getMsiPath
-          Write-Host "MSI path: $WINDOWS_MSI"
-          $WINDOWS_MSI_NAME = (Get-Item $WINDOWS_MSI).Name
-          Write-Host "MSI name: $WINDOWS_MSI_NAME"
-          echo "WINDOWS_MSI=$WINDOWS_MSI" >> "$env:GITHUB_ENV"
-          echo "WINDOWS_MSI_NAME=$WINDOWS_MSI_NAME" >> "$env:GITHUB_ENV"
-
       - name: Calculate checksum
         id: checksum
         run: |
-          Write-Host MSI path is: $env:WINDOWS_MSI
-          $MSI_SUM = $(Get-FileHash $env:WINDOWS_MSI).hash
+          $MSI_SUM = $(Get-FileHash dist/*).hash
           Write-Host $MSI_SUM
           echo "MSI_SUM=$MSI_SUM" >> "$env:GITHUB_ENV"
 
@@ -78,4 +63,4 @@ jobs:
           body: "SHA256: ${{ env.MSI_SUM }}"
           draft: true
           prerelease: true
-          artifacts: ${{ env.WINDOWS_MSI }}
+          artifacts: dist/*
