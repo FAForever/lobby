@@ -1,6 +1,16 @@
 0.x.x
 =====
 
+0.22.0
+* Add player profile card
+* Add access to player's context menu via replay scoreboard
+* Allow to individually override notifications' "show ingame" rules
+* Allow generating maps by name
+* Fix incompatibility with new map generator options
+* Fix NEW_GAME notification
+* Fix alias viewer
+* Update ice adapter to 3.3.9
+
 0.21.0
 =====
 ### Make it operational again
