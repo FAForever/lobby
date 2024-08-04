@@ -15,7 +15,10 @@ class OAuthReplyHandler(QOAuthHttpServerReplyHandler):
     def callback(self) -> str:
         with_trailing_slash = super().callback()
         # remove trailing slash because server does not accept it
-        return with_trailing_slash.removesuffix("/")
+        without_trailing_slash = with_trailing_slash.removesuffix("/")
+        # sometimes it's 127.0.0.1, sometimes it magically becomes 'localhost' --
+        # make it deterministic
+        return without_trailing_slash.replace("localhost", "127.0.0.1")
 
 
 @with_logger
