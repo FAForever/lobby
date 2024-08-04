@@ -95,7 +95,7 @@ class LeagueFormatter(FormClass, BaseClass):
 
 class GlobalLeagueFormatter(LeagueFormatter):
     def default_pixmap(self) -> QPixmap:
-        return util.THEME.pixmap("player_card/global.png")
+        return util.THEME.pixmap("player_card/global.png").scaled(80, 80)
 
     def default_league(self) -> str:
         return ""
