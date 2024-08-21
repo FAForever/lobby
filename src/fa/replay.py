@@ -9,7 +9,8 @@ from PyQt6 import QtWidgets
 import fa
 import util
 from fa.check import check
-from fa.replayparser import replayParser
+from fa.replayparser import ReplayParser
+from qt.utils import qopen
 from util.gameurl import GameUrl
 from util.gameurl import GameUrlType
 
@@ -44,6 +45,7 @@ def replay(source, detach=False):
     arg_string = None
     replay_id = None
     compression_type = None
+    sim_mods = None
     # Convert strings to URLs
     if isinstance(source, str):
         if os.path.isfile(source):
@@ -70,17 +72,13 @@ def replay(source, detach=False):
                         )
                         return False
 
-                scfa_replay = QtCore.QFile(
-                    os.path.join(util.CACHE_DIR, "temp.scfareplay"),
-                )
+                replay_path = os.path.join(util.CACHE_DIR, "temp.scfareplay")
                 open_mode = (
                     QtCore.QIODevice.OpenModeFlag.WriteOnly
                     | QtCore.QIODevice.OpenModeFlag.Truncate
                 )
-                scfa_replay.open(open_mode)
-                scfa_replay.write(binary)
-                scfa_replay.flush()
-                scfa_replay.close()
+                with qopen(replay_path, open_mode) as scfa_replay:
+                    scfa_replay.write(binary)
 
                 mapname = info.get('mapname')
                 mod = info['featured_mod']
@@ -88,10 +86,13 @@ def replay(source, detach=False):
                 featured_mod_versions = info.get('featured_mod_versions')
                 arg_string = scfa_replay.fileName()
 
-                parser = replayParser(arg_string)
-                version = parser.getVersion()
+                parser = ReplayParser(replay_path)
+                replay_metadata = parser.parse_header()
+
+                version = replay_metadata["game_version"]
                 if mapname == "None":
-                    mapname = parser.getMapName()
+                    mapname = replay_metadata["mapname"]
+                sim_mods = {mod["uid"]: mod["name"] for mod in replay_metadata["sim_mods"].values()}
 
             elif source.endswith(".scfareplay"):  # compatibility mode
                 filename = os.path.basename(source)
@@ -108,10 +109,12 @@ def replay(source, detach=False):
                         "fallback ('faf') ",
                     )
 
-                mapname = None
                 arg_string = source
-                parser = replayParser(arg_string)
-                version = parser.getVersion()
+                parser = ReplayParser(arg_string)
+                replay_metadata = parser.parse_header()
+                version = replay_metadata["game_version"]
+                mapname = replay_metadata["mapname"]
+                sim_mods = {mod["uid"]: mod["name"] for mod in replay_metadata["sim_mods"].values()}
             else:
                 QtWidgets.QMessageBox.critical(
                     None,
@@ -142,6 +145,7 @@ def replay(source, detach=False):
             mod = source.mod
             mapname = source.map
             replay_id = source.uid
+            sim_mods = source.mods
             # whip the URL into shape so ForgedAllianceForever.exe
             # understands it
             url.setScheme("gpgnet")
@@ -193,7 +197,7 @@ def replay(source, detach=False):
         arguments.append(str(replay_id))
 
     # Update the game appropriately
-    if not check(mod, mapname, version, featured_mod_versions):
+    if not check(mod, mapname, version, featured_mod_versions, sim_mods):
         msg = "Can't watch replays without an updated Forged Alliance game!"
         logger.error(msg)
         return False
