@@ -13,6 +13,5 @@ pytest
 pytest-cov
 pytest-mock
 pytest-qt
-pywin32
 semantic_version
 zstandard
