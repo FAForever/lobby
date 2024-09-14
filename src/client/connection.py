@@ -11,11 +11,11 @@ from PyQt6.QtCore import QByteArray
 from PyQt6.QtCore import QUrl
 from PyQt6.QtWebSockets import QWebSocket
 
-import fa
-from api.ApiAccessors import UserApiAccessor
-from config import Settings
-from model.game import Game
-from model.game import message_to_game_args
+from src import fa
+from src.api.ApiAccessors import UserApiAccessor
+from src.config import Settings
+from src.model.game import Game
+from src.model.game import message_to_game_args
 
 logger = logging.getLogger(__name__)
 

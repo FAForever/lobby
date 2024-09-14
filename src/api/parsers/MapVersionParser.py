@@ -1,4 +1,4 @@
-from api.models.MapVersion import MapVersion
+from src.api.models.MapVersion import MapVersion
 
 
 class MapVersionParser:

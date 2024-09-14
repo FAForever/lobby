@@ -3,7 +3,7 @@ from PyQt6.QtCore import QModelIndex
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import QUrl
 
-from api.models.CoopResult import CoopResult
+from src.api.models.CoopResult import CoopResult
 
 
 class CoopLeaderBoardModel(QAbstractTableModel):

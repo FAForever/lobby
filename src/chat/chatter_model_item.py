@@ -3,8 +3,8 @@ from urllib import parse
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import pyqtSignal
 
-from downloadManager import DownloadRequest
-from fa import maps
+from src.downloadManager import DownloadRequest
+from src.fa import maps
 
 
 class ChatterModelItem(QObject):

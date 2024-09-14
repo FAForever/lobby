@@ -1,7 +1,8 @@
-from api.models.ConfiguredModel import ConfiguredModel
-from api.models.GamePlayerStats import GamePlayerStats
-from api.models.Leaderboard import Leaderboard
 from pydantic import Field
+
+from src.api.models.ConfiguredModel import ConfiguredModel
+from src.api.models.GamePlayerStats import GamePlayerStats
+from src.api.models.Leaderboard import Leaderboard
 
 
 class LeaderboardRatingJournal(ConfiguredModel):

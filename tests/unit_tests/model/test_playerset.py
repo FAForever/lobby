@@ -1,7 +1,7 @@
 import pytest
 
-from model.player import Player
-from model.playerset import Playerset
+from src.model.player import Player
+from src.model.playerset import Playerset
 
 DEFAULT_DICT = {
     "id_": 17,

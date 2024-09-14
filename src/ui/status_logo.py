@@ -3,8 +3,8 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtWidgets import QMenu
 
-import util
-from client.clientstate import ClientState
+from src import util
+from src.client.clientstate import ClientState
 
 
 class StatusLogo(QLabel):

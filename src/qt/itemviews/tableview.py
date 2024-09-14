@@ -4,7 +4,7 @@ from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QTableView
 
-from qt.itemviews.tableheaderview import VerticalHeaderView
+from src.qt.itemviews.tableheaderview import VerticalHeaderView
 
 
 class TableView(QTableView):

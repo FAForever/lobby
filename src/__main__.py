@@ -16,9 +16,9 @@ from PyQt6.QtWidgets import QDialog
 from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtWidgets import QStyleFactory
 
-import util
-import util.crash
-from config import Settings
+from src import util
+from src.config import Settings
+from src.util import crash
 
 # Some linux distros (like Gentoo) make package scripts available
 # by copying and modifying them. This breaks path to our modules.
@@ -70,7 +70,7 @@ def excepthook(
         ),
     )
     logger.error("Runtime Info:\n{}".format(util.crash.runtime_info()))
-    dialog = util.crash.CrashDialog((exc_type, exc_value, traceback_object))
+    dialog = crash.CrashDialog((exc_type, exc_value, traceback_object))
     answer = dialog.exec()
 
     if answer == QDialog.DialogCode.Rejected:
@@ -100,7 +100,7 @@ def run_faf():
     util.THEME.loadTheme()
 
     # Create client singleton and connect
-    import client
+    from src import client
 
     faf_client = client.instance
     faf_client.setup()
@@ -121,7 +121,7 @@ def set_style(app: QApplication) -> None:
 if __name__ == '__main__':
     import logging
 
-    import config
+    from src import config
 
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
     app = QApplication(["FAF Python Client"] + trailing_args)
@@ -155,8 +155,6 @@ if __name__ == '__main__':
     sys.excepthook = excepthook
 
     if len(trailing_args) == 0:
-        # Do the magic
-        sys.path.extend(['.'])
         run_faf()
     else:
         # Try to interpret the argument as a replay.
@@ -164,7 +162,7 @@ if __name__ == '__main__':
             trailing_args[0].lower().endswith(".fafreplay")
             or trailing_args[0].lower().endswith(".scfareplay")
         ):
-            import fa
+            from src import fa
             fa.replay(trailing_args[0], True)  # Launch as detached process
 
     # End of show

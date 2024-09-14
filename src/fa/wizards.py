@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
-import util
-from fa.path import typicalForgedAlliancePaths
-from fa.path import validatePath
+from src import util
+from src.fa.path import typicalForgedAlliancePaths
+from src.fa.path import validatePath
 
 if TYPE_CHECKING:
-    from client._clientwindow import ClientWindow
+    from src.client._clientwindow import ClientWindow
 
 
 __author__ = 'Thygrrr'

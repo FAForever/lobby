@@ -1,6 +1,6 @@
 import logging
 
-from api.ApiAccessors import DataApiAccessor
+from src.api.ApiAccessors import DataApiAccessor
 
 logger = logging.getLogger(__name__)
 

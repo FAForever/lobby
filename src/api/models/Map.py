@@ -1,9 +1,10 @@
-from api.models.AbstractEntity import AbstractEntity
-from api.models.MapType import MapType
-from api.models.MapVersion import MapVersion
-from api.models.Player import Player
-from api.models.ReviewsSummary import ReviewsSummary
 from pydantic import Field
+
+from src.api.models.AbstractEntity import AbstractEntity
+from src.api.models.MapType import MapType
+from src.api.models.MapVersion import MapVersion
+from src.api.models.Player import Player
+from src.api.models.ReviewsSummary import ReviewsSummary
 
 
 class Map(AbstractEntity):

@@ -1,6 +1,6 @@
-from api.models.Map import Map
-from api.models.MapPoolAssignment import MapPoolAssignment
-from api.parsers.MapParser import MapParser
+from src.api.models.Map import Map
+from src.api.models.MapPoolAssignment import MapPoolAssignment
+from src.api.parsers.MapParser import MapParser
 
 
 class MapPoolAssignmentParser:

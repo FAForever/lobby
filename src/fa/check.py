@@ -5,19 +5,19 @@ from typing import TYPE_CHECKING
 
 from PyQt6 import QtWidgets
 
-import config
-import fa
-import util
-from fa.game_updater.misc import UpdaterResult
-from fa.game_updater.updater import Updater
-from fa.mods import checkMods
-from fa.path import validatePath
-from fa.path import writeFAPathLua
-from fa.wizards import Wizard
-from mapGenerator.mapgenUtils import isGeneratedMap
+from src import config
+from src import fa
+from src import util
+from src.fa.game_updater.misc import UpdaterResult
+from src.fa.game_updater.updater import Updater
+from src.fa.mods import checkMods
+from src.fa.path import validatePath
+from src.fa.path import writeFAPathLua
+from src.fa.wizards import Wizard
+from src.mapGenerator.mapgenUtils import isGeneratedMap
 
 if TYPE_CHECKING:
-    from client._clientwindow import ClientWindow
+    from src.client._clientwindow import ClientWindow
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ def map_(mapname: str, force: bool = False, silent: bool = False) -> bool:
         return True
 
     if isGeneratedMap(mapname):
-        import client
+        from src import client
 
         # FIXME: generateMap, downloadMap should also return bool
         return bool(client.instance.map_generator.generateMap(mapname))
@@ -124,7 +124,7 @@ def check(
     logger.info(
         "Updating FA for mod: {}, version {}".format(featured_mod, version),
     )
-    import client  # FIXME: forced by circular imports
+    from src import client  # FIXME: forced by circular imports
     if not path(client.instance):
         return False
 

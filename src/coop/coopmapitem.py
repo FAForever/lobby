@@ -4,8 +4,8 @@ from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
-import util
-from api.models.CoopMission import CoopMission
+from src import util
+from src.api.models.CoopMission import CoopMission
 
 
 class CoopMapItemDelegate(QtWidgets.QStyledItemDelegate):

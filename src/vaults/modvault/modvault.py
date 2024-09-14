@@ -44,11 +44,11 @@ import os
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
-from api.vaults_api import ModApiConnector
-from vaults.modvault import utils
-from vaults.modvault.moditem import ModListItem
-from vaults.modvault.utils import ModInfo
-from vaults.vault import Vault
+from src.api.vaults_api import ModApiConnector
+from src.vaults.modvault import utils
+from src.vaults.modvault.moditem import ModListItem
+from src.vaults.modvault.utils import ModInfo
+from src.vaults.vault import Vault
 
 from .modwidget import ModWidget
 from .uimodwidget import UIModWidget

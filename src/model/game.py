@@ -6,11 +6,11 @@ from enum import Enum
 from PyQt6.QtCore import QTimer
 from PyQt6.QtCore import pyqtSignal
 
-from decorators import with_logger
-from model.modelitem import ModelItem
-from model.transaction import transactional
-from util.gameurl import GameUrl
-from util.gameurl import GameUrlType
+from src.decorators import with_logger
+from src.model.modelitem import ModelItem
+from src.model.transaction import transactional
+from src.util.gameurl import GameUrl
+from src.util.gameurl import GameUrlType
 
 
 class GameState(Enum):

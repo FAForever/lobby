@@ -1,10 +1,10 @@
 import logging
 
-from api.ApiAccessors import DataApiAccessor
-from api.models.FeaturedMod import FeaturedMod
-from api.models.FeaturedModFile import FeaturedModFile
-from api.parsers.FeaturedModFileParser import FeaturedModFileParser
-from api.parsers.FeaturedModParser import FeaturedModParser
+from src.api.ApiAccessors import DataApiAccessor
+from src.api.models.FeaturedMod import FeaturedMod
+from src.api.models.FeaturedModFile import FeaturedModFile
+from src.api.parsers.FeaturedModFileParser import FeaturedModFileParser
+from src.api.parsers.FeaturedModParser import FeaturedModParser
 
 logger = logging.getLogger(__name__)
 

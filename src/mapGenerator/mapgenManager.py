@@ -12,12 +12,12 @@ from PyQt6.QtNetwork import QNetworkAccessManager
 from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
-import util
-from config import Settings
-from fa.maps import getUserMapsFolder
-from mapGenerator.mapgenProcess import MapGeneratorProcess
-from mapGenerator.mapgenUtils import generatedMapPattern
-from vaults.dialogs import download_file
+from src import util
+from src.config import Settings
+from src.fa.maps import getUserMapsFolder
+from src.mapGenerator.mapgenProcess import MapGeneratorProcess
+from src.mapGenerator.mapgenUtils import generatedMapPattern
+from src.vaults.dialogs import download_file
 
 logger = logging.getLogger(__name__)
 

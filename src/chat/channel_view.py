@@ -6,21 +6,21 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDesktopServices
 
-from chat.channel_tab import TabInfo
-from chat.channel_widget import ChannelWidget
-from chat.chatter_menu import ChatterMenu
-from chat.chatter_model import ChatterEventFilter
-from chat.chatter_model import ChatterFormat
-from chat.chatter_model import ChatterItemDelegate
-from chat.chatter_model import ChatterLayout
-from chat.chatter_model import ChatterLayoutElements
-from chat.chatter_model import ChatterModel
-from chat.chatter_model import ChatterSortFilterModel
-from downloadManager import DownloadRequest
-from model.chat.channel import ChannelType
-from model.chat.chatline import ChatLineType
-from util import irc_escape
-from util.gameurl import GameUrl
+from src.chat.channel_tab import TabInfo
+from src.chat.channel_widget import ChannelWidget
+from src.chat.chatter_menu import ChatterMenu
+from src.chat.chatter_model import ChatterEventFilter
+from src.chat.chatter_model import ChatterFormat
+from src.chat.chatter_model import ChatterItemDelegate
+from src.chat.chatter_model import ChatterLayout
+from src.chat.chatter_model import ChatterLayoutElements
+from src.chat.chatter_model import ChatterModel
+from src.chat.chatter_model import ChatterSortFilterModel
+from src.downloadManager import DownloadRequest
+from src.model.chat.channel import ChannelType
+from src.model.chat.chatline import ChatLineType
+from src.util import irc_escape
+from src.util.gameurl import GameUrl
 
 
 class ChannelView:

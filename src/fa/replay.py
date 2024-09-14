@@ -6,13 +6,13 @@ import zstandard
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
-import fa
-import util
-from fa.check import check
-from fa.replayparser import ReplayParser
-from qt.utils import qopen
-from util.gameurl import GameUrl
-from util.gameurl import GameUrlType
+from src import fa
+from src import util
+from src.fa.check import check
+from src.fa.replayparser import ReplayParser
+from src.qt.utils import qopen
+from src.util.gameurl import GameUrl
+from src.util.gameurl import GameUrlType
 
 logger = logging.getLogger(__name__)
 

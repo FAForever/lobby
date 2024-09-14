@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from api.models.AbstractEntity import AbstractEntity
-from api.models.GeneratedMapParams import GeneratedMapParams
-from api.models.MapVersion import MapVersion
 from pydantic import Field
+
+from src.api.models.AbstractEntity import AbstractEntity
+from src.api.models.GeneratedMapParams import GeneratedMapParams
+from src.api.models.MapVersion import MapVersion
 
 
 class MapPoolAssignment(AbstractEntity):

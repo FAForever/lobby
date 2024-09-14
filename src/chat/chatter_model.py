@@ -13,15 +13,15 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QColor
 from PyQt6.QtGui import QIcon
 
-import util
-from chat.chatter_model_item import ChatterModelItem
-from chat.chatterlistview import ChatterListView
-from chat.gameinfo import SensitiveMapInfoChecker
-from fa import maps
-from model.game import GameState
-from model.rating import RatingType
-from qt.itemviews.styleditemdelegate import StyledItemDelegate
-from qt.models.qtlistmodel import QtListModel
+from src import util
+from src.chat.chatter_model_item import ChatterModelItem
+from src.chat.chatterlistview import ChatterListView
+from src.chat.gameinfo import SensitiveMapInfoChecker
+from src.fa import maps
+from src.model.game import GameState
+from src.model.rating import RatingType
+from src.qt.itemviews.styleditemdelegate import StyledItemDelegate
+from src.qt.models.qtlistmodel import QtListModel
 
 
 class ChatterModel(QtListModel):

@@ -3,8 +3,8 @@ import logging
 import os
 import zipfile
 
-from api.models.FeaturedModFile import FeaturedModFile
-from util import APPDATA_DIR
+from src.api.models.FeaturedModFile import FeaturedModFile
+from src.util import APPDATA_DIR
 
 logger = logging.getLogger(__name__)
 

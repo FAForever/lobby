@@ -1,4 +1,4 @@
-from api.models.LeaderboardRatingJournal import LeaderboardRatingJournal
+from src.api.models.LeaderboardRatingJournal import LeaderboardRatingJournal
 
 
 class LeaderboardRatingJournalParser:

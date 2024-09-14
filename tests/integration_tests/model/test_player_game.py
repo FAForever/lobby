@@ -1,9 +1,12 @@
 import copy
 
-from model.game import Game, GameState, GameVisibility
-from model.gameset import Gameset, PlayerGameIndex
-from model.player import Player
-from model.playerset import Playerset
+from src.model.game import Game
+from src.model.game import GameState
+from src.model.game import GameVisibility
+from src.model.gameset import Gameset
+from src.model.gameset import PlayerGameIndex
+from src.model.player import Player
+from src.model.playerset import Playerset
 
 GAME_DICT = {
     "uid": 1,

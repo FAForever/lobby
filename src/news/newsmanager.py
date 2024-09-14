@@ -4,7 +4,7 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import Qt
 
-import client
+from src import client
 
 from .wpapi import WPAPI
 

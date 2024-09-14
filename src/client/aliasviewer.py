@@ -5,7 +5,7 @@ from PyQt6.QtCore import QDateTime
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import QTimer
 
-from api.player_api import PlayerApiConnector
+from src.api.player_api import PlayerApiConnector
 
 logger = logging.getLogger(__name__)
 

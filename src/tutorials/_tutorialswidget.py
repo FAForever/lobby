@@ -7,10 +7,10 @@ from PyQt6.QtNetwork import QNetworkAccessManager
 from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
-import fa
-import util
-from tutorials.tutorialitem import TutorialItem
-from tutorials.tutorialitem import TutorialItemDelegate
+from src import fa
+from src import util
+from src.tutorials.tutorialitem import TutorialItem
+from src.tutorials.tutorialitem import TutorialItemDelegate
 
 logger = logging.getLogger(__name__)
 

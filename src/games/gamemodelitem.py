@@ -5,12 +5,12 @@ from typing import Callable
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import pyqtSignal
 
-from client.user import User
-from client.user import UserRelations
-from downloadManager import DownloadRequest
-from downloadManager import MapPreviewDownloader
-from fa import maps
-from model.game import Game
+from src.client.user import User
+from src.client.user import UserRelations
+from src.downloadManager import DownloadRequest
+from src.downloadManager import MapPreviewDownloader
+from src.fa import maps
+from src.model.game import Game
 
 
 class GameModelItem(QObject):

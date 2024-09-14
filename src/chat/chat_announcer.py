@@ -1,5 +1,7 @@
-from model.chat.channel import ChannelID, ChannelType
-from model.chat.chatline import ChatLine, ChatLineType
+from src.model.chat.channel import ChannelID
+from src.model.chat.channel import ChannelType
+from src.model.chat.chatline import ChatLine
+from src.model.chat.chatline import ChatLineType
 
 
 class ChatAnnouncer:

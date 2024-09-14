@@ -2,8 +2,8 @@ import logging
 
 from PyQt6.QtCore import pyqtSignal
 
-from api.ApiAccessors import DataApiAccessor
-from api.models.Player import Player
+from src.api.ApiAccessors import DataApiAccessor
+from src.api.models.Player import Player
 
 logger = logging.getLogger(__name__)
 

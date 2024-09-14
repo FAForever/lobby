@@ -8,19 +8,19 @@ from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
-import fa
-import util
-from api.matchmaker_queue_api import MatchmakerQueueApiConnector
-from config import Settings
-from fa.factions import Factions
+from src import fa
+from src import util
+from src.api.matchmaker_queue_api import MatchmakerQueueApiConnector
+from src.config import Settings
+from src.fa.factions import Factions
 
 FormClass, BaseClass = util.THEME.loadUiType("games/automatchframe.ui")
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from client._clientwindow import ClientWindow
-    from games._gameswidget import GamesWidget
+    from src.client._clientwindow import ClientWindow
+    from src.games._gameswidget import GamesWidget
 
 
 class MatchmakerQueue(FormClass, BaseClass):

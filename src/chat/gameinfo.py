@@ -1,6 +1,6 @@
 from PyQt6.QtCore import QObject
 
-from model.game import GameState
+from src.model.game import GameState
 
 
 class SensitiveMapInfoChecker(QObject):

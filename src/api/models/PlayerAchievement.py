@@ -1,8 +1,9 @@
-from api.models.AbstractEntity import AbstractEntity
-from api.models.Achievement import Achievement
-from api.models.Achievement import State
-from api.models.Player import Player
 from pydantic import Field
+
+from src.api.models.AbstractEntity import AbstractEntity
+from src.api.models.Achievement import Achievement
+from src.api.models.Achievement import State
+from src.api.models.Player import Player
 
 
 class PlayerAchievement(AbstractEntity):

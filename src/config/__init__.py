@@ -9,11 +9,11 @@ from logging.handlers import RotatingFileHandler
 
 from PyQt6 import QtCore
 
-import fafpath
-from config import version
-from config.develop import default_values as develop_defaults
-from config.production import default_values as production_defaults
-from config.testing import default_values as testing_defaults
+from src import fafpath
+from src.config import version
+from src.config.develop import default_values as develop_defaults
+from src.config.production import default_values as production_defaults
+from src.config.testing import default_values as testing_defaults
 
 if sys.platform == 'win32':
     import ctypes

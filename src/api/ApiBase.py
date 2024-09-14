@@ -13,9 +13,9 @@ from PyQt6.QtNetwork import QNetworkAccessManager
 from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
-from config import Settings
-from oauth.oauth_flow import OAuth2Flow
-from oauth.oauth_flow import OAuth2FlowInstance
+from src.config import Settings
+from src.oauth.oauth_flow import OAuth2Flow
+from src.oauth.oauth_flow import OAuth2FlowInstance
 
 logger = logging.getLogger(__name__)
 

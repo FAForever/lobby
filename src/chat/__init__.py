@@ -1,7 +1,7 @@
 # CAVEAT: DO NOT REMOVE! These are promoted widgets and py2exe wouldn't
 # include them otherwise
-from chat.chatlineedit import ChatLineEdit
-from chat.chatterlistview import ChatterListView
+from src.chat.chatlineedit import ChatLineEdit
+from src.chat.chatterlistview import ChatterListView
 
 __all__ = (
     "ChatLineEdit",

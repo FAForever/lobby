@@ -3,11 +3,11 @@ import logging
 from PyQt6 import QtCore
 from PyQt6 import QtGui
 
-import config
-import util
-from config import Settings
-from config.production import default_values as main_environment
-from config.testing import default_values as testing_environment
+from src import config
+from src import util
+from src.config import Settings
+from src.config.production import default_values as main_environment
+from src.config.testing import default_values as testing_environment
 
 logger = logging.getLogger(__name__)
 

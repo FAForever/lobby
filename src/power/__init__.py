@@ -1,5 +1,5 @@
-from power.actions import PowerActions
-from power.view import PowerView
+from src.power.actions import PowerActions
+from src.power.view import PowerView
 
 
 class PowerTools:

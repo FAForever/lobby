@@ -1,7 +1,7 @@
 from pydantic import Field
 from pydantic import field_validator
 
-from api.models.ConfiguredModel import ConfiguredModel
+from src.api.models.ConfiguredModel import ConfiguredModel
 
 
 class ReviewsSummary(ConfiguredModel):

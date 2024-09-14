@@ -4,10 +4,10 @@ import time
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
-import util
-from api.models.Leaderboard import Leaderboard
-from api.stats_api import LeaderboardApiConnector
-from ui.busy_widget import BusyWidget
+from src import util
+from src.api.models.Leaderboard import Leaderboard
+from src.api.stats_api import LeaderboardApiConnector
+from src.ui.busy_widget import BusyWidget
 
 from .leaderboard_widget import LeaderboardWidget
 

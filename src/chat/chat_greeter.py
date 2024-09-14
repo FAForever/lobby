@@ -1,6 +1,7 @@
-from model.chat.channel import ChannelType
-from model.chat.chatline import ChatLine, ChatLineType
-from util import irc_escape
+from src.model.chat.channel import ChannelType
+from src.model.chat.chatline import ChatLine
+from src.model.chat.chatline import ChatLineType
+from src.util import irc_escape
 
 
 class ChatGreeter:

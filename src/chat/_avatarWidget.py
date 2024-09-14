@@ -4,7 +4,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QListWidgetItem
 from PyQt6.QtWidgets import QPushButton
 
-from downloadManager import DownloadRequest
+from src.downloadManager import DownloadRequest
 
 
 class AvatarWidget(QObject):

@@ -3,14 +3,14 @@ from enum import Enum
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import pyqtSignal
 
-from model.chat.channel import Channel
-from model.chat.channel import ChannelID
-from model.chat.channel import ChannelType
-from model.chat.channel import Lines
-from model.chat.channelchatter import ChannelChatter
-from model.chat.chatline import ChatLine
-from model.chat.chatline import ChatLineType
-from model.chat.chatter import Chatter
+from src.model.chat.channel import Channel
+from src.model.chat.channel import ChannelID
+from src.model.chat.channel import ChannelType
+from src.model.chat.channel import Lines
+from src.model.chat.channelchatter import ChannelChatter
+from src.model.chat.chatline import ChatLine
+from src.model.chat.chatline import ChatLineType
+from src.model.chat.chatter import Chatter
 
 
 class ChatController(QObject):

@@ -5,12 +5,12 @@ from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import pyqtSignal
 
-import client
-from config import setup_file_handler
-from connectivity.IceAdapterClient import IceAdapterClient
-from connectivity.IceAdapterProcess import IceAdapterProcess
-from connectivity.IceServersPoller import IceServersPoller
-from fa.game_process import instance as game_process_instance
+from src import client
+from src.config import setup_file_handler
+from src.connectivity.IceAdapterClient import IceAdapterClient
+from src.connectivity.IceAdapterProcess import IceAdapterProcess
+from src.connectivity.IceServersPoller import IceServersPoller
+from src.fa.game_process import instance as game_process_instance
 
 logger = logging.getLogger(__name__)
 # Log to a separate file to not pollute normal log with huge json dumps

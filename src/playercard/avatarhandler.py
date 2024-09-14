@@ -5,11 +5,11 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QListWidget
 from PyQt6.QtWidgets import QListWidgetItem
 
-import util
-from api.models.Avatar import Avatar
-from api.models.AvatarAssignment import AvatarAssignment
-from downloadManager import DownloadRequest
-from downloadManager import ImageDownloader
+from src import util
+from src.api.models.Avatar import Avatar
+from src.api.models.AvatarAssignment import AvatarAssignment
+from src.downloadManager import DownloadRequest
+from src.downloadManager import ImageDownloader
 
 
 class AvatarHandler:

@@ -1,6 +1,6 @@
-from model.chat.chatter import Chatter
-from model.modelitemset import ModelItemSet
-from model.transaction import transactional
+from src.model.chat.chatter import Chatter
+from src.model.modelitemset import ModelItemSet
+from src.model.transaction import transactional
 
 
 class Chatterset(ModelItemSet):

@@ -1,9 +1,9 @@
 import logging
 
-import fa
-from fa.replay import replay
-from model.game import GameState
-from util.gameurl import GameUrl
+from src import fa
+from src.fa.replay import replay
+from src.model.game import GameState
+from src.util.gameurl import GameUrl
 
 logger = logging.getLogger(__name__)
 

@@ -20,15 +20,15 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtGui import QTextCursor
 from PyQt6.QtWidgets import QDialog
 
-import util
-from downloadManager import FileDownload
-from fa.game_updater.misc import ProgressInfo
-from fa.game_updater.misc import UpdaterResult
-from fa.game_updater.misc import clear_log
-from fa.game_updater.misc import failure_dialog
-from fa.game_updater.misc import log
-from fa.game_updater.misc import timestamp
-from fa.game_updater.worker import UpdaterWorker
+from src import util
+from src.downloadManager import FileDownload
+from src.fa.game_updater.misc import ProgressInfo
+from src.fa.game_updater.misc import UpdaterResult
+from src.fa.game_updater.misc import clear_log
+from src.fa.game_updater.misc import failure_dialog
+from src.fa.game_updater.misc import log
+from src.fa.game_updater.misc import timestamp
+from src.fa.game_updater.worker import UpdaterWorker
 
 logger = logging.getLogger(__name__)
 

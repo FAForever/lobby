@@ -1,4 +1,4 @@
-from api.models.ModVersion import ModVersion
+from src.api.models.ModVersion import ModVersion
 
 
 class ModVersionParser:

@@ -8,8 +8,8 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
-import client
-from decorators import with_logger
+from src import client
+from src.decorators import with_logger
 
 
 @with_logger

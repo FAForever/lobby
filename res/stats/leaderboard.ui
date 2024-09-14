@@ -779,12 +779,12 @@
   <customwidget>
    <class>LeaderboardTableView</class>
    <extends>QTableView</extends>
-   <header location="global">stats.itemviews.leaderboardtableview</header>
+   <header location="global">src.stats.itemviews.leaderboardtableview</header>
   </customwidget>
   <customwidget>
    <class>LeaderboardLineEdit</class>
    <extends>QLineEdit</extends>
-   <header location="global">stats.leaderboardlineedit</header>
+   <header location="global">src.stats.leaderboardlineedit</header>
   </customwidget>
  </customwidgets>
  <resources/>

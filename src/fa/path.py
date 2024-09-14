@@ -2,8 +2,8 @@ import logging
 import os
 import sys
 
-import config
-import util
+from src import config
+from src import util
 
 logger = logging.getLogger(__name__)
 

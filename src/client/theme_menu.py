@@ -3,8 +3,8 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QPushButton
 from PyQt6.QtWidgets import QStyleFactory
 
-import util
-from config import Settings
+from src import util
+from src.config import Settings
 
 FormClass, BaseClass = util.THEME.loadUiType("client/change_style.ui")
 

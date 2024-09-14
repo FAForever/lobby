@@ -3,8 +3,8 @@ from PyQt6.QtGui import QCursor
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QListView
 
-from contextmenu.playercontextmenu import PlayerContextMenu
-from replays.scoreboarditemdelegate import ScoreboardModelItem
+from src.contextmenu.playercontextmenu import PlayerContextMenu
+from src.replays.scoreboarditemdelegate import ScoreboardModelItem
 
 
 class ScoreboardListView(QListView):

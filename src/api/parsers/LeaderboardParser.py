@@ -1,6 +1,6 @@
 from operator import methodcaller
 
-from api.models.Leaderboard import Leaderboard
+from src.api.models.Leaderboard import Leaderboard
 
 
 class LeaderboardParser:

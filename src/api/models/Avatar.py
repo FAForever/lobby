@@ -1,4 +1,4 @@
-from api.models.AbstractEntity import AbstractEntity
+from src.api.models.AbstractEntity import AbstractEntity
 
 
 class Avatar(AbstractEntity):

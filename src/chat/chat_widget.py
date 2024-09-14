@@ -5,8 +5,8 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QTabBar
 
-from model.chat.channel import PARTY_CHANNEL_SUFFIX
-from model.chat.channel import ChannelType
+from src.model.chat.channel import PARTY_CHANNEL_SUFFIX
+from src.model.chat.channel import ChannelType
 
 
 class TabIcon(Enum):

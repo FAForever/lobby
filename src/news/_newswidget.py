@@ -9,10 +9,10 @@ from PyQt6.QtGui import QImage
 from PyQt6.QtGui import QTextDocument
 from PyQt6.QtNetwork import QNetworkAccessManager
 
-import util
-from config import Settings
-from downloadManager import Downloader
-from downloadManager import DownloadRequest
+from src import util
+from src.config import Settings
+from src.downloadManager import Downloader
+from src.downloadManager import DownloadRequest
 
 from .newsitem import NewsItem
 from .newsitem import NewsItemDelegate

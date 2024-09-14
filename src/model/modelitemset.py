@@ -1,7 +1,7 @@
 from PyQt6.QtCore import pyqtSignal
 
-from model.qobjectmapping import QObjectMapping
-from model.transaction import transactional
+from src.model.qobjectmapping import QObjectMapping
+from src.model.transaction import transactional
 
 
 class ModelItemSet(QObjectMapping):

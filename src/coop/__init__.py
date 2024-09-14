@@ -1,6 +1,6 @@
 import logging
 
-from coop.cooptableview import CoopLeaderboardTableView
+from src.coop.cooptableview import CoopLeaderboardTableView
 
 # For use by other modules
 from ._coopwidget import CoopWidget

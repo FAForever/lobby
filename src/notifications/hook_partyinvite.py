@@ -3,10 +3,10 @@ Settings for notifications: if a player comes online
 """
 from PyQt6 import QtCore
 
-import notifications as ns
-import util
-from config import Settings
-from notifications.ns_hook import NsHook
+import src.notifications as ns
+from src import util
+from src.config import Settings
+from src.notifications.ns_hook import NsHook
 
 
 class NsHookPartyInvite(NsHook):

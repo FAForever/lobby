@@ -7,13 +7,11 @@ if sys.platform == "win32":
 else:
     from distutils.core import setup
 
-sys.path.insert(0, "src")
-
 company_name = "FAF Community"
 product_name = "Forged Alliance Forever"
 
 if sys.platform == "win32":
-    import config.version as version
+    from src.config import version
 
     root_dir = os.path.dirname(os.path.abspath(__file__))
     res_dir = os.path.join(root_dir, "res")

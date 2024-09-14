@@ -12,17 +12,17 @@ from typing import TYPE_CHECKING
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
-import util
-from api.models.Map import Map
-from api.vaults_api import MapApiConnector
-from api.vaults_api import MapPoolApiConnector
-from fa import maps
-from vaults import luaparser
-from vaults.mapvault.mapitem import MapListItem
-from vaults.vault import Vault
+from src import util
+from src.api.models.Map import Map
+from src.api.vaults_api import MapApiConnector
+from src.api.vaults_api import MapPoolApiConnector
+from src.fa import maps
+from src.vaults import luaparser
+from src.vaults.mapvault.mapitem import MapListItem
+from src.vaults.vault import Vault
 
 if TYPE_CHECKING:
-    from client._clientwindow import ClientWindow
+    from src.client._clientwindow import ClientWindow
 
 from .mapwidget import MapWidget
 

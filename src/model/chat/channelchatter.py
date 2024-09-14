@@ -1,5 +1,5 @@
-from model.modelitem import ModelItem
-from model.transaction import transactional
+from src.model.modelitem import ModelItem
+from src.model.transaction import transactional
 
 
 class ChannelChatter(ModelItem):

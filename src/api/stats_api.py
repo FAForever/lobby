@@ -5,15 +5,15 @@ from PyQt6.QtCore import QDateTime
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import pyqtSignal
 
-from api.ApiAccessors import ApiAccessor
-from api.ApiAccessors import DataApiAccessor
-from api.models.Achievement import Achievement
-from api.models.Leaderboard import Leaderboard
-from api.models.LeagueSeasonScore import LeagueSeasonScore
-from api.models.PlayerAchievement import PlayerAchievement
-from api.models.PlayerEvent import PlayerEvent
-from api.parsers.LeaderboardParser import LeaderboardParser
-from api.parsers.LeaderboardRatingParser import LeaderboardRatingParser
+from src.api.ApiAccessors import ApiAccessor
+from src.api.ApiAccessors import DataApiAccessor
+from src.api.models.Achievement import Achievement
+from src.api.models.Leaderboard import Leaderboard
+from src.api.models.LeagueSeasonScore import LeagueSeasonScore
+from src.api.models.PlayerAchievement import PlayerAchievement
+from src.api.models.PlayerEvent import PlayerEvent
+from src.api.parsers.LeaderboardParser import LeaderboardParser
+from src.api.parsers.LeaderboardRatingParser import LeaderboardRatingParser
 
 logger = logging.getLogger(__name__)
 

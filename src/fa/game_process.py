@@ -6,9 +6,9 @@ import sys
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
-import config
-import util
-from model.game import GameState
+from src import config
+from src import util
+from src.model.game import GameState
 
 logger = logging.getLogger(__name__)
 

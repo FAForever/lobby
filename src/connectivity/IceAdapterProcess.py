@@ -7,9 +7,9 @@ from PyQt6.QtNetwork import QHostAddress
 from PyQt6.QtNetwork import QTcpServer
 from PyQt6.QtWidgets import QMessageBox
 
-import fafpath
-from config import Settings
-from decorators import with_logger
+from src import fafpath
+from src.config import Settings
+from src.decorators import with_logger
 
 
 @with_logger

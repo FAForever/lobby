@@ -1,4 +1,4 @@
-from api.models.ReviewsSummary import ReviewsSummary
+from src.api.models.ReviewsSummary import ReviewsSummary
 
 
 class ReviewsSummaryParser:

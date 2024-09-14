@@ -4,14 +4,14 @@ import os
 import urllib
 from typing import TYPE_CHECKING
 
-import util
-from api.models.Mod import Mod
-from api.models.ModVersion import ModType
-from vaults.modvault import utils
-from vaults.vaultitem import VaultListItem
+from src import util
+from src.api.models.Mod import Mod
+from src.api.models.ModVersion import ModType
+from src.vaults.modvault import utils
+from src.vaults.vaultitem import VaultListItem
 
 if TYPE_CHECKING:
-    from vaults.modvault.modvault import ModVault
+    from src.vaults.modvault.modvault import ModVault
 
 
 class ModListItem(VaultListItem):

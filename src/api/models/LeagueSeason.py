@@ -1,6 +1,7 @@
-from api.models.ConfiguredModel import ConfiguredModel
-from api.models.LeagueLeaderboard import LeagueLeaderboard
 from pydantic import Field
+
+from src.api.models.ConfiguredModel import ConfiguredModel
+from src.api.models.LeagueLeaderboard import LeagueLeaderboard
 
 
 class LeagueSeason(ConfiguredModel):

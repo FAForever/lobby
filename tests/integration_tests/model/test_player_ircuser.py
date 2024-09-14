@@ -1,9 +1,9 @@
 import pytest
 
-from model.ircuser import IrcUser
-from model.ircuserset import IrcUserset
-from model.player import Player
-from model.playerset import Playerset
+from src.model.ircuser import IrcUser
+from src.model.ircuserset import IrcUserset
+from src.model.player import Player
+from src.model.playerset import Playerset
 
 
 def test_player_change(mocker):

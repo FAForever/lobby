@@ -1,7 +1,7 @@
 import pytest
 
-from model.ircuser import IrcUser
-from model.ircuserset import IrcUserset
+from src.model.ircuser import IrcUser
+from src.model.ircuserset import IrcUserset
 
 
 @pytest.fixture

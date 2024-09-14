@@ -6,7 +6,7 @@ import time
 from PyQt6 import QtCore
 from PyQt6.QtMultimedia import QSoundEffect
 
-import util
+from src import util
 
 from .ns_settings import NotificationPosition
 

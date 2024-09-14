@@ -13,13 +13,11 @@ from typing import Callable
 from PyQt6 import QtCore
 from PyQt6 import QtGui
 
-# module imports
-import util
-# local imports
-from config import Settings
-from mapGenerator.mapgenUtils import isGeneratedMap
-from model.game import OFFICIAL_MAPS as maps
-from vaults.dialogs import downloadVaultAssetNoMsg
+from src import util
+from src.config import Settings
+from src.mapGenerator.mapgenUtils import isGeneratedMap
+from src.model.game import OFFICIAL_MAPS as maps
+from src.vaults.dialogs import downloadVaultAssetNoMsg
 
 logger = logging.getLogger(__name__)
 

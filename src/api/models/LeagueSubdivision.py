@@ -1,6 +1,7 @@
-from api.models.ConfiguredModel import ConfiguredModel
-from api.models.LeagueDivision import LeagueDivision
 from pydantic import Field
+
+from src.api.models.ConfiguredModel import ConfiguredModel
+from src.api.models.LeagueDivision import LeagueDivision
 
 
 class LeagueSubdivision(ConfiguredModel):

@@ -1,9 +1,9 @@
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QMessageBox
 
-from power.actions import BanPeriod
-from util.select_player_dialog import PlayerCompleter
-from util.select_player_dialog import SelectPlayerDialog
+from src.power.actions import BanPeriod
+from src.util.select_player_dialog import PlayerCompleter
+from src.util.select_player_dialog import SelectPlayerDialog
 
 
 class CloseGameDialog(SelectPlayerDialog):

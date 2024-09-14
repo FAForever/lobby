@@ -1,10 +1,10 @@
 import pytest
 
-import config
+from src import config
 
 
 def test_client_sends_current_version(qtbot, mocker):
-    import client
+    from src import client
     c = client.instance
     mocker.patch.object(c.lobby_connection, 'send')
     mocker.patch.object(c.lobby_connection, 'connected')
@@ -22,7 +22,7 @@ def test_client_sends_current_version(qtbot, mocker):
     reason="Run this manually to test client update downloading",
 )
 def test_client_updater(qtbot):
-    from client.updater import ClientUpdater
+    from src.client.updater import ClientUpdater
 
     updater = ClientUpdater(
         "http://content.faforever.com/FAForever-0.10.125.msi",

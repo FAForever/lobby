@@ -1,6 +1,7 @@
-from api.models.AbstractEntity import AbstractEntity
-from api.models.Leaderboard import Leaderboard
 from pydantic import Field
+
+from src.api.models.AbstractEntity import AbstractEntity
+from src.api.models.Leaderboard import Leaderboard
 
 
 class LeaderboardRating(AbstractEntity):

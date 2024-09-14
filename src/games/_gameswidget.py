@@ -10,22 +10,22 @@ from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtGui import QColor
 from PyQt6.QtGui import QCursor
 
-import fa
-import util
-from api.featured_mod_api import FeaturedModApiConnector
-from client.user import User
-from config import Settings
-from games.automatchframe import MatchmakerQueue
-from games.gameitem import GameViewBuilder
-from games.gamemodel import CustomGameFilterModel
-from games.gamemodel import GameModel
-from games.hostgamewidget import GameLauncher
-from games.moditem import ModItem
-from games.moditem import mod_invisible
-from model.chat.channel import PARTY_CHANNEL_SUFFIX
+from src import fa
+from src import util
+from src.api.featured_mod_api import FeaturedModApiConnector
+from src.client.user import User
+from src.config import Settings
+from src.games.automatchframe import MatchmakerQueue
+from src.games.gameitem import GameViewBuilder
+from src.games.gamemodel import CustomGameFilterModel
+from src.games.gamemodel import GameModel
+from src.games.hostgamewidget import GameLauncher
+from src.games.moditem import ModItem
+from src.games.moditem import mod_invisible
+from src.model.chat.channel import PARTY_CHANNEL_SUFFIX
 
 if TYPE_CHECKING:
-    from client._clientwindow import ClientWindow
+    from src.client._clientwindow import ClientWindow
 
 logger = logging.getLogger(__name__)
 

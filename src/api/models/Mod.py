@@ -1,8 +1,9 @@
-from api.models.AbstractEntity import AbstractEntity
-from api.models.ModVersion import ModVersion
-from api.models.Player import Player
-from api.models.ReviewsSummary import ReviewsSummary
 from pydantic import Field
+
+from src.api.models.AbstractEntity import AbstractEntity
+from src.api.models.ModVersion import ModVersion
+from src.api.models.Player import Player
+from src.api.models.ReviewsSummary import ReviewsSummary
 
 
 class Mod(AbstractEntity):

@@ -19,8 +19,8 @@ from PyQt6.QtNetwork import QNetworkAccessManager
 from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
-from config import Settings
-from util import AVATARS_CACHE_DIR
+from src.config import Settings
+from src.util import AVATARS_CACHE_DIR
 
 logger = logging.getLogger(__name__)
 

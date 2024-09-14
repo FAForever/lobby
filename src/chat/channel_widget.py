@@ -8,7 +8,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QTextCursor
 from PyQt6.QtGui import QTextDocument
 
-from qt.utils import monkeypatch_method
+from src.qt.utils import monkeypatch_method
 
 logger = logging.getLogger(__name__)
 

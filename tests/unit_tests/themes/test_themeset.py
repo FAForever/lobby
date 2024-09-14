@@ -1,6 +1,6 @@
 from semantic_version import Version
 
-from util import ThemeSet
+from src.util import ThemeSet
 
 THEME_FILE_FUNS = [
     "pixmap",

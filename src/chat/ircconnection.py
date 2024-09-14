@@ -12,15 +12,15 @@ from irc.client import is_channel
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import pyqtSignal
 
-import config
-import util
-from api.ApiAccessors import UserApiAccessor
-from chat.socketadapter import ConnectionFactory
-from chat.socketadapter import ReactorForSocketAdapter
-from model.chat.channel import ChannelID
-from model.chat.channel import ChannelType
-from model.chat.chatline import ChatLine
-from model.chat.chatline import ChatLineType
+from src import config
+from src import util
+from src.api.ApiAccessors import UserApiAccessor
+from src.chat.socketadapter import ConnectionFactory
+from src.chat.socketadapter import ReactorForSocketAdapter
+from src.model.chat.channel import ChannelID
+from src.model.chat.channel import ChannelType
+from src.model.chat.chatline import ChatLine
+from src.model.chat.chatline import ChatLineType
 
 logger = logging.getLogger(__name__)
 IRC_ELEVATION = '%@~%+&'

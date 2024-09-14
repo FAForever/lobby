@@ -3,20 +3,20 @@ from __future__ import annotations
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
-import config
-import util
-from games.mapgenoptions import ComboBoxOption
-from games.mapgenoptions import RangeOption
-from games.mapgenoptions import SpinBoxOption
-from games.mapgenoptionsvalues import GenerationType
-from games.mapgenoptionsvalues import MapStyle
-from games.mapgenoptionsvalues import PropStyle
-from games.mapgenoptionsvalues import ResourceStyle
-from games.mapgenoptionsvalues import Sentinel
-from games.mapgenoptionsvalues import TerrainStyle
-from games.mapgenoptionsvalues import TerrainSymmetry
-from games.mapgenoptionsvalues import TextureStyle
-from mapGenerator.mapgenManager import MapGeneratorManager
+from src import config
+from src import util
+from src.games.mapgenoptions import ComboBoxOption
+from src.games.mapgenoptions import RangeOption
+from src.games.mapgenoptions import SpinBoxOption
+from src.games.mapgenoptionsvalues import GenerationType
+from src.games.mapgenoptionsvalues import MapStyle
+from src.games.mapgenoptionsvalues import PropStyle
+from src.games.mapgenoptionsvalues import ResourceStyle
+from src.games.mapgenoptionsvalues import Sentinel
+from src.games.mapgenoptionsvalues import TerrainStyle
+from src.games.mapgenoptionsvalues import TerrainSymmetry
+from src.games.mapgenoptionsvalues import TextureStyle
+from src.mapGenerator.mapgenManager import MapGeneratorManager
 
 FormClass, BaseClass = util.THEME.loadUiType("games/mapgen.ui")
 

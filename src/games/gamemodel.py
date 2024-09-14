@@ -3,14 +3,14 @@ from enum import Enum
 from PyQt6.QtCore import QSortFilterProxyModel
 from PyQt6.QtCore import Qt
 
-from client.user import User
-from client.user import UserRelations
-from downloadManager import MapPreviewDownloader
-from games.moditem import mod_invisible
-from model.game import Game
-from model.game import GameState
-from model.gameset import Gameset
-from qt.models.qtlistmodel import QtListModel
+from src.client.user import User
+from src.client.user import UserRelations
+from src.downloadManager import MapPreviewDownloader
+from src.games.moditem import mod_invisible
+from src.model.game import Game
+from src.model.game import GameState
+from src.model.gameset import Gameset
+from src.qt.models.qtlistmodel import QtListModel
 
 from .gamemodelitem import GameModelItem
 

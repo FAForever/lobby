@@ -6,7 +6,7 @@ import pytest
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
-from fa.game_updater.updater import UpdaterProgressDialog
+from src.fa.game_updater.updater import UpdaterProgressDialog
 
 
 class NoIsFinished(QtCore.QObject):

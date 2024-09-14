@@ -6,15 +6,15 @@ from typing import Callable
 
 from PyQt6.QtWidgets import QWidget
 
-from chat._avatarWidget import AvatarWidget
-from client.aliasviewer import AliasWindow
-from client.user import User
-from contextmenu.playercontextmenu import PlayerContextMenu
-from fa.game_runner import GameRunner
-from power import PowerTools
+from src.chat._avatarWidget import AvatarWidget
+from src.client.aliasviewer import AliasWindow
+from src.client.user import User
+from src.contextmenu.playercontextmenu import PlayerContextMenu
+from src.fa.game_runner import GameRunner
+from src.power import PowerTools
 
 if TYPE_CHECKING:
-    from client._clientwindow import ClientWindow
+    from src.client._clientwindow import ClientWindow
 
 logger = logging.getLogger(__name__)
 
