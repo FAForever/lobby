@@ -6,16 +6,15 @@ on:
       version:
         description: 'Release Version'
         required: true
+env:
+  UID_VERSION: v4.0.6
+  ICE_ADAPTER_VERSION: 3.3.9
+  BUILD_VERSION: ${{ github.event.inputs.version }}
 
 jobs:
-  release:
+  build-windows:
     environment: deploy
     runs-on: windows-latest
-    env:
-      UID_VERSION: v4.0.6
-      ICE_ADAPTER_VERSION: 3.3.9
-      BUILD_VERSION: ${{ github.event.inputs.version }}
-
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +29,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r win_requirements.txt
 
+      - name: Test with pytest
+        run: |
+          python runtests.py -vv --full-trace
+
       - name: Download ICE adapter and UID calculator
         run: |
           mkdir build_setup\ice-adapter
@@ -38,10 +41,6 @@ jobs:
           7z x windows-amd64-15.0.1.tar.gz
           7z x windows-amd64-15.0.1.tar -obuild_setup/ice-adapter/jre
           Invoke-WebRequest -Uri "https://github.com/FAForever/java-ice-adapter/releases/download/$($env:ICE_ADAPTER_VERSION)/faf-ice-adapter-$($env:ICE_ADAPTER_VERSION)-win.jar" -OutFile ".\\build_setup\\ice-adapter\\faf-ice-adapter.jar"
-
-      - name: Test with pytest
-        run: |
-          python runtests.py -vv --full-trace
 
       - name: Build application
         run: |
@@ -54,13 +53,97 @@ jobs:
           Write-Host $MSI_SUM
           echo "MSI_SUM=$MSI_SUM" >> "$env:GITHUB_ENV"
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-windows
+          path: dist/*
+
+  build-linux:
+    runs-on: ubuntu-latest
+    environment: release
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Test with pytest
+        run: |
+          python runtests.py -vv --full-trace
+
+      - name: Download UID calculator
+        run: |
+          mkdir build_setup
+          wget -O build_setup/faf-uid "https://github.com/FAForever/uid/releases/download/$($env:UID_VERSION)/faf-uid"
+          chmod +x build_setup/faf-uid
+
+      - name: Download JDK and create JRE
+          wget -O "jdk.tar.gz" "https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz"
+
+          mkdir jdk
+          tar -xzvf jdk.tar.gz -C jdk --strip-components=1
+
+          mkdir -p build_setup/ice-adapter
+          wget "https://github.com//FAForever/java-ice-adapter/releases/download/$($env:ICE_ADAPTER_VERSION)/faf-ice-adapter-$($env:ICE_ADAPTER_VERSION)-win.jar" -O "build_setup/ice-adapter/faf-ice-adapter.jar"
+
+          ICE_ADAPTER_JAVA_MODULES=$(jdk/bin/jdeps -s build_setup/ice-adapter/faf-ice-adapter.jar | cut -d' ' -f 3 | grep java | xargs echo | tr ' ' ',')
+          jdk/bin/jlink --add-modules "$ICE_ADAPTER_JAVA_MODULES,jdk.crypto.ec,jdk.unsupported" --strip-debug --no-man-pages --no-header-files --compress "zip-6" --output "build_setup/ice-adapter/jre"
+
+      - name: Build application
+        run: |
+          python3 setup.py build
+          python3 post_setup.py
+          tar -C "build" -cvzf "faforever.tar.gz" "faf_python_client"
+
+      - name: Calculate checksum
+        id: checksum
+        run: |
+          TAR_SUM=$(echo faforever.tar.gz -n | sha256sum)
+          echo $TAR_SUM
+          echo "TAR_SUM=$TAR_SUM" >> "$env:GITHUB_ENV"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-linux
+          path: faforever.tar.gz
+
+  create-release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: client-windows
+          path: release-artifacts/
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: client-linux
+          path: release-artifacts/
+
       - name: Create draft release
         id: create_release
         uses: ncipollo/release-action@v1.14.0
         with:
           commit: ${{ github.sha }}
           tag: ${{ github.event.inputs.version }}
-          body: "SHA256: ${{ env.MSI_SUM }}"
+          body: "SHA256 (Windows): ${{ env.MSI_SUM }}\nSHA256 (Linux): ${{ env.TAR_SUM }}"
           draft: true
           prerelease: true
-          artifacts: dist/*
+          artifacts: "release-artifacts/*"

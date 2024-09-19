@@ -1,25 +1,19 @@
 import os
 import sys
 
-if sys.platform == "win32":
-    from cx_Freeze import Executable
-    from cx_Freeze import setup
-else:
-    from distutils.core import setup
+from cx_Freeze import Executable
+from cx_Freeze import setup
+
+from src.config import version
 
 company_name = "FAF Community"
 product_name = "Forged Alliance Forever"
 
-if sys.platform == "win32":
-    from src.config import version
-
-    root_dir = os.path.dirname(os.path.abspath(__file__))
-    res_dir = os.path.join(root_dir, "res")
-    build_version = os.getenv("BUILD_VERSION")
-    build_version = build_version.replace(" ", "")
-    version.write_version_file(build_version, res_dir)
-
-    msi_version = version.msi_version(build_version)
+root_dir = os.path.dirname(os.path.abspath(__file__))
+res_dir = os.path.join(root_dir, "res")
+build_version = os.getenv("BUILD_VERSION").replace(" ", "")
+version.write_version_file(build_version, res_dir)
+msi_version = version.msi_version(build_version)
 
 
 shortcut_table = [
@@ -54,52 +48,52 @@ bdist_msi_options = {
     "all_users": True,
 }
 
-# base="Win32GUI" should be used only for Windows GUI app
-base = "Win32GUI" if sys.platform == "win32" else None
-
 
 if sys.platform == "win32":
-    # Dependencies are automatically detected, but it might need fine tuning.
-    build_exe_options = {
-        "include_files": [
-            "res",
-            ("build_setup/faf-uid.exe", "natives/faf-uid.exe"),
-            ("build_setup/ice-adapter", "natives/ice-adapter"),
-        ],
-        "include_msvcr": True,
-        "optimize": 2,
-        "silent": True,
-
-        # copied from https://github.com/marcelotduarte/cx_Freeze/blob/5e42a97d2da321eae270cdcc65cdc777eb8e8fc4/samples/pyqt6-simplebrowser/setup.py  # noqa: E501
-        # and unexcluded overexcluded
-        "excludes": ["tkinter", "unittest", "tcl"],
-
-        "zip_include_packages": ["*"],
-        "zip_exclude_packages": [],
-    }
-
-    platform_options = {
-        "executables": [
-            Executable(
-                "src/__main__.py",
-                base=base,
-                target_name="FAForever.exe",
-                icon="res/faf.ico",
-            ),
-        ],
-        "options": {
-            "build_exe": build_exe_options,
-            "bdist_msi": bdist_msi_options,
-        },
-        "version": msi_version,
-    }
-
+    include_mvcr = True
+    exe_base = "Win32Gui"
+    exe_name = "FAForever.exe"
 else:
-    from setuptools import find_packages
-    platform_options = {
-        "packages": find_packages(),
-        "version": os.getenv("FAFCLIENT_VERSION"),
-    }
+    include_mvcr = False
+    exe_base = None
+    exe_name = "FAForever"
+
+
+# Dependencies are automatically detected, but it might need fine tuning.
+build_exe_options = {
+    "include_files": [
+        "res",
+        ("build_setup", "natives"),
+    ],
+    "include_msvcr": include_mvcr,
+    "optimize": 2,
+    "silent": True,
+
+    # copied from https://github.com/marcelotduarte/cx_Freeze/blob/5e42a97d2da321eae270cdcc65cdc777eb8e8fc4/samples/pyqt6-simplebrowser/setup.py  # noqa: E501
+    # and unexcluded overexcluded
+    "excludes": ["tkinter", "unittest", "tcl"],
+
+    "zip_include_packages": ["*"],
+    "zip_exclude_packages": [],
+
+    "build_exe": "build/faf_python_client",
+}
+
+platform_options = {
+    "executables": [
+        Executable(
+            "src/__main__.py",
+            base=exe_base,
+            target_name=exe_name,
+            icon="res/faf.ico",
+        ),
+    ],
+    "options": {
+        "build_exe": build_exe_options,
+        "bdist_msi": bdist_msi_options,
+    },
+    "version": msi_version,
+}
 
 setup(
     name=product_name,
