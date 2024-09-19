@@ -1,3 +1,4 @@
+import PyQt6.QtMultimedia
 from semantic_version import Version
 
 from src.util import ThemeSet

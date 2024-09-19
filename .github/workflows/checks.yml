@@ -23,15 +23,31 @@ jobs:
       - name: Install Linux dependencies
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          sudo apt-get update && sudo apt-get install libegl1 libgl1-mesa-dev -y
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libxkbcommon-x11-0 \
+            x11-utils \
+            libyaml-dev \
+            libegl1-mesa \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-xinerama0 \
+            libopengl0 \
+            libxcb-cursor0 \
+            pulseaudio
+
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install -r requirements.txt
+          python -m pip install pytest-xvfb
 
       - name: Install Windows dependencies
         if: startsWith(matrix.os, 'windows')
         run: |
           python -m pip install --upgrade pip
-          pip install -r win_requirements.txt
+          python -m pip install -r win_requirements.txt
 
       - name: Test with pytest
         run: |
