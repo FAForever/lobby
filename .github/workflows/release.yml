@@ -15,6 +15,8 @@ jobs:
   build-windows:
     environment: deploy
     runs-on: windows-latest
+    outputs:
+      MSI_SUM: ${{ steps.checksum.outputs.MSI_SUM }}
     steps:
       - uses: actions/checkout@v4
 
@@ -59,7 +61,7 @@ jobs:
         run: |
           $MSI_SUM = $(Get-FileHash dist/*).hash
           Write-Host $MSI_SUM
-          echo "MSI_SUM=$MSI_SUM" >> "$env:GITHUB_ENV"
+          echo "MSI_SUM=$MSI_SUM" >> "$env:GITHUB_OUTPUT"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -70,6 +72,8 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     environment: release
+    outputs:
+      TAR_SUM: ${{ steps.checksum.outputs.TAR_SUM }}
 
     steps:
       - uses: actions/checkout@v4
@@ -134,7 +138,7 @@ jobs:
         run: |
           TAR_SUM=$(echo faforever.tar.gz -n | sha256sum)
           echo $TAR_SUM
-          echo "TAR_SUM=$TAR_SUM" >> $GITHUB_ENV
+          echo "TAR_SUM=$TAR_SUM" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -167,7 +171,7 @@ jobs:
         with:
           commit: ${{ github.sha }}
           tag: ${{ github.event.inputs.version }}
-          body: "SHA256 (Windows): ${{ env.MSI_SUM }}\nSHA256 (Linux): ${{ env.TAR_SUM }}"
+          body: "SHA256 (Windows): ${{ needs.build-windows.outputs.MSI_SUM }}\nSHA256 (Linux): ${{ needs.build-linux.outputs.TAR_SUM }}"
           draft: true
           prerelease: true
           artifacts: "release-artifacts/*"
