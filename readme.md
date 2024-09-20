@@ -5,22 +5,13 @@ This is the legacy client. The offically supported version can be found [here](h
 FA Forever Client
 =================
 
-[![Stories in Ready](https://badge.waffle.io/faforever/client.png?label=ready&title=Ready)](http://waffle.io/faforever/client)
-
-------------------
-master|develop
- ------------ | -------------
-[![Build Status](https://travis-ci.org/FAForever/client.svg?branch=master)](https://travis-ci.org/FAForever/client) [![Appveyor Status](https://ci.appveyor.com/api/projects/status/p15sk71sp957ij72/branch/master?svg=true)](https://ci.appveyor.com/project/Sheeo/client) | [![Build Status](https://travis-ci.org/FAForever/client.svg?branch=develop)](https://travis-ci.org/FAForever/client) [![Appveyor Status](https://ci.appveyor.com/api/projects/status/p15sk71sp957ij72/branch/develop?svg=true)](https://ci.appveyor.com/project/Sheeo/client)
-[![Coverage Status](https://img.shields.io/coveralls/FAForever/client.svg?branch=master)](https://coveralls.io/r/FAForever/client) | [![Coverage Status](https://img.shields.io/coveralls/FAForever/client.svg?branch=develop)](https://coveralls.io/r/FAForever/client)
-
-
 This is the source code for the FA Forever Lobby.
 
 Pre-requisites are:
 
-- Python 3.4+
-- PyQt5 >=5.8
-- Requirements as in the [requirements](requirements.txt) file.
+- Python 3.12+
+- PyQt5 >=6.7
+- Requirements as in the [requirements](requirements.txt) (Linux) or [win_requirements](win_requirements.txt) (Windows) file.
 
 
     pip install -r requirements.txt
@@ -76,26 +67,26 @@ Create a python3(!) virtualenv for installing its dependencies:
 
 Now download the `faf-uid` executable:
 
-    wget https://github.com/FAForever/uid/releases/download/v4.0.4/faf-uid -O ./faf-client/lib/faf-uid
-    chmod +x ./faf-client/lib/faf-uid
+    mkdir ./faf-client/natives
+    wget https://github.com/FAForever/uid/releases/download/v4.0.6/faf-uid -O ./faf-client/natives/faf-uid
+    chmod +x ./faf-client/natives/faf-uid
 
 Note that the `faf-uid` smurf protection executable needs to run `xrandr`, `lspci`, `lsblk` and `uname` to gather unique system information. Additionally the `lsblk` command must support the "--json" flag, which was added in util-linux-2.27.
 
+You will also need [java-ice-adapter](https://github.com/faforever/java-ice-adapter) in `faf-client/natives/ice-adapter` and JRE (java runtime environment) in `faf-client/natives/ice-adapter/jre`
+
 Run the client:
 
-    cd ./faf-client && PATH=$PATH:./lib ../faf-client-venv/bin/python src/__main__.py
+    cd ./faf-client && PATH=$PATH:./natives && ./faf-client-venv/bin/python -m src
 
 For more information see [the wiki](http://wiki.faforever.com/index.php?title=Setting_Up_FAF_Linux).
 
 Running unit tests
 -------
-Before running unit tests, set PYTEST_QT_API as follows:
-
-    export PYTEST_QT_API='pyqt5'
 
 Run the lobby from the main directory using:
 
-    python3 src
+    python3 -m src
 
 Run the unit test suite using:
 
