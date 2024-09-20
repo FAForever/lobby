@@ -109,9 +109,9 @@ jobs:
       - name: Download ICE adapter and UID calculator
         run: |
           mkdir -p build_setup/ice-adapter
-          wget -O build_setup/faf-uid "https://github.com/FAForever/uid/releases/download/$($env:UID_VERSION)/faf-uid"
+          wget -O build_setup/faf-uid "https://github.com/FAForever/uid/releases/download/$UID_VERSION/faf-uid"
           chmod +x build_setup/faf-uid
-          wget "https://github.com//FAForever/java-ice-adapter/releases/download/$($env:ICE_ADAPTER_VERSION)/faf-ice-adapter-$($env:ICE_ADAPTER_VERSION)-win.jar" -O "build_setup/ice-adapter/faf-ice-adapter.jar"
+          wget "https://github.com//FAForever/java-ice-adapter/releases/download/$ICE_ADAPTER_VERSION/faf-ice-adapter-$ICE_ADAPTER_VERSION-win.jar" -O "build_setup/ice-adapter/faf-ice-adapter.jar"
 
       - name: Download JDK and create JRE
         run: |
@@ -134,7 +134,7 @@ jobs:
         run: |
           TAR_SUM=$(echo faforever.tar.gz -n | sha256sum)
           echo $TAR_SUM
-          echo "TAR_SUM=$TAR_SUM" >> "$env:GITHUB_ENV"
+          echo "TAR_SUM=$TAR_SUM" >> $GITHUB_ENV
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
