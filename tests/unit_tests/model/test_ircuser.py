@@ -1,4 +1,4 @@
-from model.ircuser import IrcUser
+from src.model.ircuser import IrcUser
 
 
 def test_simple_init():

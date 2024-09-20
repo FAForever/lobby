@@ -1,6 +1,6 @@
 import pytest
 
-from model.chat.channelchatter import ChannelChatter
+from src.model.chat.channelchatter import ChannelChatter
 
 
 @pytest.fixture

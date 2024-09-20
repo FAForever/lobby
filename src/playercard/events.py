@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import NamedTuple
 
-from api.models.PlayerEvent import PlayerEvent
-from fa.factions import Factions
+from src.api.models.PlayerEvent import PlayerEvent
+from src.fa.factions import Factions
 
 
 class PlayerEvents(Enum):

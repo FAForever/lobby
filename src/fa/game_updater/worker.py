@@ -10,20 +10,20 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtNetwork import QNetworkAccessManager
 
-import util
-from api.featured_mod_api import FeaturedModApiConnector
-from api.featured_mod_api import FeaturedModFilesApiConnector
-from api.models.FeaturedMod import FeaturedMod
-from api.models.FeaturedModFile import FeaturedModFile
-from config import Settings
-from downloadManager import FileDownload
-from fa.game_updater.misc import ProgressInfo
-from fa.game_updater.misc import UpdaterCancellation
-from fa.game_updater.misc import UpdaterFailure
-from fa.game_updater.misc import UpdaterResult
-from fa.game_updater.misc import log
-from fa.game_updater.patcher import FAPatcher
-from fa.utils import unpack_movies_and_sounds
+from src import util
+from src.api.featured_mod_api import FeaturedModApiConnector
+from src.api.featured_mod_api import FeaturedModFilesApiConnector
+from src.api.models.FeaturedMod import FeaturedMod
+from src.api.models.FeaturedModFile import FeaturedModFile
+from src.config import Settings
+from src.downloadManager import FileDownload
+from src.fa.game_updater.misc import ProgressInfo
+from src.fa.game_updater.misc import UpdaterCancellation
+from src.fa.game_updater.misc import UpdaterFailure
+from src.fa.game_updater.misc import UpdaterResult
+from src.fa.game_updater.misc import log
+from src.fa.game_updater.patcher import FAPatcher
+from src.fa.utils import unpack_movies_and_sounds
 
 logger = logging.getLogger(__name__)
 

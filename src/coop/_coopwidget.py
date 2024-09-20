@@ -10,27 +10,27 @@ from PyQt6.QtNetwork import QNetworkAccessManager
 from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
-import fa
-import util
-from api.coop_api import CoopApiAccessor
-from api.coop_api import CoopResultApiAccessor
-from api.models.CoopResult import CoopResult
-from api.models.CoopScenario import CoopScenario
-from coop.coopmapitem import CoopMapItem
-from coop.coopmapitem import CoopMapItemDelegate
-from coop.coopmodel import CoopGameFilterModel
-from coop.cooptableitemdelegate import CoopLeaderboardItemDelegate
-from coop.cooptablemodel import CoopLeaderBoardModel
-from fa.replay import replay
-from games.gameitem import GameViewBuilder
-from games.gamemodel import GameModel
-from games.hostgamewidget import GameLauncher
-from model.game import Game
-from qt.utils import qopen
-from ui.busy_widget import BusyWidget
+from src import fa
+from src import util
+from src.api.coop_api import CoopApiAccessor
+from src.api.coop_api import CoopResultApiAccessor
+from src.api.models.CoopResult import CoopResult
+from src.api.models.CoopScenario import CoopScenario
+from src.coop.coopmapitem import CoopMapItem
+from src.coop.coopmapitem import CoopMapItemDelegate
+from src.coop.coopmodel import CoopGameFilterModel
+from src.coop.cooptableitemdelegate import CoopLeaderboardItemDelegate
+from src.coop.cooptablemodel import CoopLeaderBoardModel
+from src.fa.replay import replay
+from src.games.gameitem import GameViewBuilder
+from src.games.gamemodel import GameModel
+from src.games.hostgamewidget import GameLauncher
+from src.model.game import Game
+from src.qt.utils import qopen
+from src.ui.busy_widget import BusyWidget
 
 if TYPE_CHECKING:
-    from client._clientwindow import ClientWindow
+    from src.client._clientwindow import ClientWindow
 
 logger = logging.getLogger(__name__)
 
@@ -228,7 +228,7 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
         if game.password_protected:
             passw, ok = QtWidgets.QInputDialog.getText(
                 self.client, "Passworded game", "Enter password :",
-                QtWidgets.QLineEdit.Normal, "",
+                QtWidgets.QLineEdit.EchoMode.Normal, "",
             )
             if ok:
                 self.client.join_game(uid=game.uid, password=passw)

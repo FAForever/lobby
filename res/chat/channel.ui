@@ -295,12 +295,12 @@
   <customwidget>
    <class>ChatLineEdit</class>
    <extends>QLineEdit</extends>
-   <header location="global">chat.chatlineedit</header>
+   <header location="global">src.chat.chatlineedit</header>
   </customwidget>
   <customwidget>
    <class>ChatterListView</class>
    <extends>QListView</extends>
-   <header location="global">chat.chatterlistview</header>
+   <header location="global">src.chat.chatterlistview</header>
   </customwidget>
  </customwidgets>
  <tabstops>

@@ -1,9 +1,9 @@
 from PyQt6.QtCore import pyqtSignal
 
-from model.modelitem import ModelItem
-from model.rating import Rating
-from model.rating import RatingType
-from model.transaction import transactional
+from src.model.modelitem import ModelItem
+from src.model.rating import Rating
+from src.model.rating import RatingType
+from src.model.transaction import transactional
 
 
 class Player(ModelItem):

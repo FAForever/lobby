@@ -3,12 +3,12 @@ import os
 from PyQt6.QtCore import QSize
 from PyQt6.QtGui import QPixmap
 
-import util
-from api.models.LeaderboardRating import LeaderboardRating
-from api.models.LeagueSeasonScore import LeagueSeasonScore
-from api.stats_api import LeagueSeasonScoreApiConnector
-from downloadManager import DownloadRequest
-from downloadManager import ImageDownloader
+from src import util
+from src.api.models.LeaderboardRating import LeaderboardRating
+from src.api.models.LeagueSeasonScore import LeagueSeasonScore
+from src.api.stats_api import LeagueSeasonScoreApiConnector
+from src.downloadManager import DownloadRequest
+from src.downloadManager import ImageDownloader
 
 FormClass, BaseClass = util.THEME.loadUiType("player_card/playerleague.ui")
 

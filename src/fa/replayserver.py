@@ -9,9 +9,9 @@ from PyQt6 import QtCore
 from PyQt6 import QtNetwork
 from PyQt6 import QtWidgets
 
-import fa
-import util
-from config import Settings
+from src import fa
+from src import util
+from src.config import Settings
 
 GPGNET_HOST = "lobby.faforever.com"
 GPGNET_PORT = 8000

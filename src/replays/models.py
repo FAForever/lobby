@@ -3,17 +3,17 @@ from __future__ import annotations
 from typing import Any
 from typing import Callable
 
+from pydantic import BaseModel
+from pydantic import Field
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QIcon
 
-import util
-from api.models.Player import Player
-from model.rating import Rating
-from pydantic import BaseModel
-from pydantic import Field
-from qt.models.qtlistmodel import QtListModel
+from src import util
+from src.api.models.Player import Player
+from src.model.rating import Rating
+from src.qt.models.qtlistmodel import QtListModel
 
 
 # FIXME - this is what the widget uses so far, we should define this

@@ -2,11 +2,11 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtCore import QTimer
 from PyQt6.QtCore import pyqtSignal
 
-from client.playercolors import PlayerColors
-from client.user import UserRelations
-from fa import maps
-from model.game import GameState
-from model.gameset import Gameset
+from src.client.playercolors import PlayerColors
+from src.client.user import UserRelations
+from src.fa import maps
+from src.model.game import GameState
+from src.model.gameset import Gameset
 
 
 class GameAnnouncer(QObject):

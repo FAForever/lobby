@@ -1,8 +1,8 @@
-from api.ApiAccessors import DataApiAccessor
-from api.models.CoopResult import CoopResult
-from api.models.CoopScenario import CoopScenario
-from api.parsers.CoopResultParser import CoopResultParser
-from api.parsers.CoopScenarioParser import CoopScenarioParser
+from src.api.ApiAccessors import DataApiAccessor
+from src.api.models.CoopResult import CoopResult
+from src.api.models.CoopScenario import CoopScenario
+from src.api.parsers.CoopResultParser import CoopResultParser
+from src.api.parsers.CoopScenarioParser import CoopScenarioParser
 
 
 class CoopApiAccessor(DataApiAccessor):

@@ -9,10 +9,10 @@ from PyQt6.QtGui import QPen
 from PyQt6.QtWidgets import QStyledItemDelegate
 from PyQt6.QtWidgets import QStyleOptionViewItem
 
-from qt.itemviews.styleditemdelegate import StyledItemDelegate
-from qt.utils import qpainter
-from replays.models import ScoreboardModel
-from replays.models import ScoreboardModelItem
+from src.qt.itemviews.styleditemdelegate import StyledItemDelegate
+from src.qt.utils import qpainter
+from src.replays.models import ScoreboardModel
+from src.replays.models import ScoreboardModelItem
 
 
 class ScoreboardItemDelegate(StyledItemDelegate):

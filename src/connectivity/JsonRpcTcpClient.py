@@ -5,7 +5,7 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtNetwork import QAbstractSocket
 from PyQt6.QtNetwork import QTcpSocket
 
-from decorators import with_logger
+from src.decorators import with_logger
 
 
 @with_logger

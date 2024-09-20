@@ -3,10 +3,10 @@ from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
-import util
-from config import Settings
-from downloadManager import DownloadRequest
-from fa import maps
+from src import util
+from src.config import Settings
+from src.downloadManager import DownloadRequest
+from src.fa import maps
 
 
 class TutorialItemDelegate(QtWidgets.QStyledItemDelegate):

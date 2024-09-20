@@ -7,78 +7,78 @@ from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 from PyQt6.QtNetwork import QNetworkAccessManager
 
-import config
-import fa
-import notifications as ns
-import util
-import util.crash
-from chat import ChatMVC
-from chat._avatarWidget import AvatarWidget
-from chat.channel_autojoiner import ChannelAutojoiner
-from chat.chat_announcer import ChatAnnouncer
-from chat.chat_controller import ChatController
-from chat.chat_greeter import ChatGreeter
-from chat.chat_view import ChatView
-from chat.chatter_model import ChatterLayoutElements
-from chat.ircconnection import IrcConnection
-from chat.language_channel_config import LanguageChannelConfig
-from chat.line_restorer import ChatLineRestorer
-from client.aliasviewer import AliasSearchWindow
-from client.aliasviewer import AliasWindow
-from client.chat_config import ChatConfig
-from client.clientstate import ClientState
-from client.connection import ConnectionState
-from client.connection import Dispatcher
-from client.connection import LobbyInfo
-from client.connection import ServerConnection
-from client.connection import ServerReconnecter
-from client.gameannouncer import GameAnnouncer
-from client.login import LoginWidget
-from client.playercolors import PlayerColors
-from client.theme_menu import ThemeMenu
-from client.user import User
-from client.user import UserRelationController
-from client.user import UserRelationModel
-from client.user import UserRelations
-from client.user import UserRelationTrackers
-from connectivity.ConnectivityDialog import ConnectivityDialog
-from contextmenu.playercontextmenu import PlayerContextMenu
-from coop import CoopWidget
-from downloadManager import ImageDownloader
-from downloadManager import MapSmallPreviewDownloader
-from fa.factions import Factions
-from fa.game_runner import GameRunner
-from fa.game_session import GameSession
-from fa.maps import getUserMapsFolder
-from games import GamesWidget
-from games.gameitem import GameViewBuilder
-from games.gamemodel import GameModel
-from games.hostgamewidget import build_launcher
-from mapGenerator.mapgenManager import MapGeneratorManager
-from model.chat.channel import ChannelID
-from model.chat.channel import ChannelType
-from model.chat.chat import Chat
-from model.chat.chatline import ChatLineMetadataBuilder
-from model.gameset import Gameset
-from model.gameset import PlayerGameIndex
-from model.player import Player
-from model.playerset import Playerset
-from model.rating import MatchmakerQueueType
-from model.rating import RatingType
-from news import NewsWidget
-from oauth.oauth_flow import OAuth2FlowInstance
-from power import PowerTools
-from replays import ReplaysWidget
-from secondaryServer import SecondaryServer
-from stats import StatsWidget
-from ui.busy_widget import BusyWidget
-from ui.status_logo import StatusLogo
-from unitdb.unitdbtab import UnitDBTab
-from updater import ClientUpdateTools
-from vaults.mapvault.mapvault import MapVault
-from vaults.modvault.modvault import ModVault
-from vaults.modvault.utils import getModFolder
-from vaults.modvault.utils import setModFolder
+import src.notifications as ns
+from src import config
+from src import fa
+from src import util
+from src.chat import ChatMVC
+from src.chat._avatarWidget import AvatarWidget
+from src.chat.channel_autojoiner import ChannelAutojoiner
+from src.chat.chat_announcer import ChatAnnouncer
+from src.chat.chat_controller import ChatController
+from src.chat.chat_greeter import ChatGreeter
+from src.chat.chat_view import ChatView
+from src.chat.chatter_model import ChatterLayoutElements
+from src.chat.ircconnection import IrcConnection
+from src.chat.language_channel_config import LanguageChannelConfig
+from src.chat.line_restorer import ChatLineRestorer
+from src.client.aliasviewer import AliasSearchWindow
+from src.client.aliasviewer import AliasWindow
+from src.client.chat_config import ChatConfig
+from src.client.clientstate import ClientState
+from src.client.connection import ConnectionState
+from src.client.connection import Dispatcher
+from src.client.connection import LobbyInfo
+from src.client.connection import ServerConnection
+from src.client.connection import ServerReconnecter
+from src.client.gameannouncer import GameAnnouncer
+from src.client.login import LoginWidget
+from src.client.playercolors import PlayerColors
+from src.client.theme_menu import ThemeMenu
+from src.client.user import User
+from src.client.user import UserRelationController
+from src.client.user import UserRelationModel
+from src.client.user import UserRelations
+from src.client.user import UserRelationTrackers
+from src.connectivity.ConnectivityDialog import ConnectivityDialog
+from src.contextmenu.playercontextmenu import PlayerContextMenu
+from src.coop import CoopWidget
+from src.downloadManager import ImageDownloader
+from src.downloadManager import MapSmallPreviewDownloader
+from src.fa.factions import Factions
+from src.fa.game_runner import GameRunner
+from src.fa.game_session import GameSession
+from src.fa.maps import getUserMapsFolder
+from src.games import GamesWidget
+from src.games.gameitem import GameViewBuilder
+from src.games.gamemodel import GameModel
+from src.games.hostgamewidget import build_launcher
+from src.mapGenerator.mapgenManager import MapGeneratorManager
+from src.model.chat.channel import ChannelID
+from src.model.chat.channel import ChannelType
+from src.model.chat.chat import Chat
+from src.model.chat.chatline import ChatLineMetadataBuilder
+from src.model.gameset import Gameset
+from src.model.gameset import PlayerGameIndex
+from src.model.player import Player
+from src.model.playerset import Playerset
+from src.model.rating import MatchmakerQueueType
+from src.model.rating import RatingType
+from src.news import NewsWidget
+from src.oauth.oauth_flow import OAuth2FlowInstance
+from src.power import PowerTools
+from src.replays import ReplaysWidget
+from src.secondaryServer import SecondaryServer
+from src.stats import StatsWidget
+from src.ui.busy_widget import BusyWidget
+from src.ui.status_logo import StatusLogo
+from src.unitdb.unitdbtab import UnitDBTab
+from src.updater import ClientUpdateTools
+from src.util import crash
+from src.vaults.mapvault.mapvault import MapVault
+from src.vaults.modvault.modvault import ModVault
+from src.vaults.modvault.utils import getModFolder
+from src.vaults.modvault.utils import setModFolder
 
 from .mouse_position import MousePosition
 
@@ -602,11 +602,11 @@ class ClientWindow(FormClass, BaseClass):
                 self.rubber_band.setGeometry(desktop)
                 self.rubber_band.show()
             elif event.globalPosition().x() == 0:
-                desktop.setRight(desktop.right() / 2.0)
+                desktop.setRight(round(desktop.right() / 2))
                 self.rubber_band.setGeometry(desktop)
                 self.rubber_band.show()
             elif event.globalPosition().x() == desktop.right():
-                desktop.setRight(desktop.right() / 2.0)
+                desktop.setRight(round(desktop.right() / 2))
                 desktop.moveLeft(desktop.right())
                 self.rubber_band.setGeometry(desktop)
                 self.rubber_band.show()
@@ -1367,7 +1367,7 @@ class ClientWindow(FormClass, BaseClass):
             self,
             'Set autojoin channels',
             text_of_autojoin_settings_dialog,
-            QtWidgets.QLineEdit.Normal,
+            QtWidgets.QLineEdit.EchoMode.Normal,
             ';'.join(autojoin_channels_list),
         )
         if ok:
@@ -1713,7 +1713,7 @@ class ClientWindow(FormClass, BaseClass):
         self.me.onLogin(self.login, self.id)
         logger.info("Login success")
 
-        util.crash.CRASH_REPORT_USER = self.login
+        crash.CRASH_REPORT_USER = self.login
 
         self.update_options()
 

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from api.models.AbstractEntity import AbstractEntity
-from api.models.AvatarAssignment import AvatarAssignment
-from api.models.NameRecord import NameRecord
 from pydantic import Field
+
+from src.api.models.AbstractEntity import AbstractEntity
+from src.api.models.AvatarAssignment import AvatarAssignment
+from src.api.models.NameRecord import NameRecord
 
 
 class Player(AbstractEntity):

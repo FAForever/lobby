@@ -2,8 +2,8 @@
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
-import util
-from vaults.modvault import utils
+from src import util
+from src.vaults.modvault import utils
 
 FormClass, BaseClass = util.THEME.loadUiType("vaults/modvault/uimod.ui")
 

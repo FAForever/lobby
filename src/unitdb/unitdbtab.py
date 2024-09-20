@@ -1,8 +1,8 @@
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
 
-import util
-from config import Settings
+from src import util
+from src.config import Settings
 
 FormClass, BaseClass = util.THEME.loadUiType("unitdb/unitdb.ui")
 

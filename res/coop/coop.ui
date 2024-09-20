@@ -371,7 +371,7 @@ p, li { white-space: pre-wrap; }
   <customwidget>
    <class>CoopLeaderboardTableView</class>
    <extends>QTableView</extends>
-   <header>coop.cooptableview</header>
+   <header>src.coop.cooptableview</header>
   </customwidget>
  </customwidgets>
  <resources/>

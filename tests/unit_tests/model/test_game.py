@@ -2,7 +2,7 @@ import copy
 
 import pytest
 
-from model import game
+from src.model import game
 
 DEFAULT_DICT = {
     "uid": 1,

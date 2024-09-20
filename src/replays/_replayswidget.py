@@ -3,6 +3,7 @@ import logging
 import os
 import time
 
+from pydantic import ValidationError
 from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
@@ -11,23 +12,22 @@ from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 from PyQt6.QtWidgets import QTreeWidgetItem
 
-import client
-import fa
-import util
-from api.models.Leaderboard import Leaderboard
-from api.replaysapi import ReplaysApiConnector
-from api.stats_api import LeaderboardApiConnector
-from config import Settings
-from downloadManager import DownloadRequest
-from fa.replay import replay
-from model.game import GameState
-from pydantic import ValidationError
-from replays.models import MetadataModel
-from replays.replayitem import ReplayItem
-from replays.replayitem import ReplayItemDelegate
-from replays.replayToolbox import ReplayToolboxHandler
-from util.gameurl import GameUrl
-from util.gameurl import GameUrlType
+from src import client
+from src import fa
+from src import util
+from src.api.models.Leaderboard import Leaderboard
+from src.api.replaysapi import ReplaysApiConnector
+from src.api.stats_api import LeaderboardApiConnector
+from src.config import Settings
+from src.downloadManager import DownloadRequest
+from src.fa.replay import replay
+from src.model.game import GameState
+from src.replays.models import MetadataModel
+from src.replays.replayitem import ReplayItem
+from src.replays.replayitem import ReplayItemDelegate
+from src.replays.replayToolbox import ReplayToolboxHandler
+from src.util.gameurl import GameUrl
+from src.util.gameurl import GameUrlType
 
 logger = logging.getLogger(__name__)
 

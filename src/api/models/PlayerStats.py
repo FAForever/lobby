@@ -1,7 +1,7 @@
 from pydantic import Field
 
-from api.models.ConfiguredModel import ConfiguredModel
-from api.models.Player import Player
+from src.api.models.ConfiguredModel import ConfiguredModel
+from src.api.models.Player import Player
 
 
 class PlayerStats(ConfiguredModel):

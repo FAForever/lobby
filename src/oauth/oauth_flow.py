@@ -7,8 +7,8 @@ from PyQt6.QtNetwork import QNetworkAccessManager
 from PyQt6.QtNetworkAuth import QOAuth2AuthorizationCodeFlow
 from PyQt6.QtNetworkAuth import QOAuthHttpServerReplyHandler
 
-from config import Settings
-from decorators import with_logger
+from src.config import Settings
+from src.decorators import with_logger
 
 
 class OAuthReplyHandler(QOAuthHttpServerReplyHandler):

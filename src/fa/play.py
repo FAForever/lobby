@@ -1,5 +1,5 @@
-import util
-from config import Settings
+from src import util
+from src.config import Settings
 
 from .game_process import instance
 

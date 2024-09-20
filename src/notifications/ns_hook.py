@@ -9,7 +9,7 @@ self.button.clicked.connect(self.dialog.show)
 """
 from PyQt6 import QtWidgets
 
-from config import Settings
+from src.config import Settings
 
 
 class NsHook():

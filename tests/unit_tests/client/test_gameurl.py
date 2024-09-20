@@ -1,6 +1,7 @@
 import pytest
 
-from util.gameurl import GameUrl, GameUrlType
+from src.util.gameurl import GameUrl
+from src.util.gameurl import GameUrlType
 
 # NOTE - any time url format gets updated, fix below URLs to be correct
 # in everything except what we test for!

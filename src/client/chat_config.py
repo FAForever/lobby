@@ -1,7 +1,7 @@
 from PyQt6 import QtCore
 
-from chat.chatter_model import ChatterLayoutElements
-from client.user import SignallingSet  # TODO - move to util
+from src.chat.chatter_model import ChatterLayoutElements
+from src.client.user import SignallingSet  # TODO - move to util
 
 
 def signal_property(public):

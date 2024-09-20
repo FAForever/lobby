@@ -6,10 +6,10 @@ from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
-import util
-from api.models.ModType import ModType
-from util import strtodate
-from vaults.modvault.moditem import ModListItem
+from src import util
+from src.api.models.ModType import ModType
+from src.util import strtodate
+from src.vaults.modvault.moditem import ModListItem
 
 from .modvault import utils
 

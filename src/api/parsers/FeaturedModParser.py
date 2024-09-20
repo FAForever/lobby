@@ -1,4 +1,4 @@
-from api.models.FeaturedMod import FeaturedMod
+from src.api.models.FeaturedMod import FeaturedMod
 
 
 class FeaturedModParser:

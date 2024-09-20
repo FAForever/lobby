@@ -1,6 +1,7 @@
+import PyQt6.QtMultimedia
 from semantic_version import Version
 
-from util import ThemeSet
+from src.util import ThemeSet
 
 THEME_FILE_FUNS = [
     "pixmap",

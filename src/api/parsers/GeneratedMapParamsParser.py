@@ -1,5 +1,5 @@
-from api.models.Map import Map
 from src.api.models.GeneratedMapParams import GeneratedMapParams
+from src.api.models.Map import Map
 
 
 class GeneratedMapParamsParser:

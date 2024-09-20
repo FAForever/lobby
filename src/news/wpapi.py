@@ -6,7 +6,7 @@ from PyQt6.QtNetwork import QNetworkAccessManager
 from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 
-from config import Settings
+from src.config import Settings
 
 logger = logging.getLogger(__name__)
 

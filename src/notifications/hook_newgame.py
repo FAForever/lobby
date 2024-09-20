@@ -3,11 +3,11 @@ Settings for notifications: if a new game is hosted.
 """
 from PyQt6 import QtCore
 
-import config
-import notifications as ns
-import util
-from config import Settings
-from notifications.ns_hook import NsHook
+import src.notifications as ns
+from src import config
+from src import util
+from src.config import Settings
+from src.notifications.ns_hook import NsHook
 
 
 class NsHookNewGame(NsHook):

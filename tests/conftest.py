@@ -1,14 +1,45 @@
 import pytest
 
-from model.game import Game
-from model.gameset import Gameset
-from model.player import Player
-from model.playerset import Playerset
+from src.model.game import Game
+from src.model.gameset import Gameset
+from src.model.player import Player
+from src.model.playerset import Playerset
+
+
+@pytest.fixture(scope="module")
+def application(qapp, request):
+    return qapp
+
+
+@pytest.fixture(scope="function")
+def signal_receiver(application):
+    from PyQt6 import QtCore
+
+    class SignalReceiver(QtCore.QObject):
+        def __init__(self, parent=None):
+            QtCore.QObject.__init__(self, parent)
+            self.int_values = []
+            self.generic_values = []
+            self.string_values = []
+
+        @QtCore.pyqtSlot()
+        def generic_slot(self):
+            self.generic_values.append(None)
+
+        @QtCore.pyqtSlot(str)
+        def string_slot(self, value):
+            self.string_values.append(value)
+
+        @QtCore.pyqtSlot(int)
+        def int_slot(self, value):
+            self.int_values.append(value)
+
+    return SignalReceiver(application)
 
 
 @pytest.fixture
 def client_instance():
-    from client import instance
+    from src.client import instance
     return instance
 
 
@@ -34,5 +65,5 @@ def gameset(mocker):
 
 @pytest.fixture
 def mouse_position(client_instance):
-    from client.mouse_position import MousePosition
+    from src.client.mouse_position import MousePosition
     return MousePosition(client_instance)

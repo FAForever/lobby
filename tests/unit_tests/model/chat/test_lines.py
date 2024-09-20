@@ -1,6 +1,6 @@
 import pytest
 
-from model.chat.channel import Lines
+from src.model.chat.channel import Lines
 
 
 def test_lines_dont_care_about_line_internals():

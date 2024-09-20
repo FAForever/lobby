@@ -15,12 +15,12 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtGui import QFont
 from PyQt6.QtGui import QPainter
 
-from api.models.LeaderboardRating import LeaderboardRating
-from api.models.PlayerEvent import PlayerEvent
-from playercard.events import BUILT_LOST_METRICS
-from playercard.events import EXPERIMENTALS_BUILT_LOST_METRICS
-from playercard.events import FACTION_PLAYS_METRICS
-from playercard.events import PlayerEventMetric
+from src.api.models.LeaderboardRating import LeaderboardRating
+from src.api.models.PlayerEvent import PlayerEvent
+from src.playercard.events import BUILT_LOST_METRICS
+from src.playercard.events import EXPERIMENTALS_BUILT_LOST_METRICS
+from src.playercard.events import FACTION_PLAYS_METRICS
+from src.playercard.events import PlayerEventMetric
 
 
 class ChartsBuilder:

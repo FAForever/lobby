@@ -1,4 +1,4 @@
-from api.models.LeaderboardRating import LeaderboardRating
+from src.api.models.LeaderboardRating import LeaderboardRating
 
 
 class LeaderboardRatingParser:

@@ -1,5 +1,5 @@
-from games.gamemodel import GameSortModel
-from model.game import GameState
+from src.games.gamemodel import GameSortModel
+from src.model.game import GameState
 
 
 class CoopGameFilterModel(GameSortModel):

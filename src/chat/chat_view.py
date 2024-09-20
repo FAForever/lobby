@@ -1,7 +1,7 @@
-from chat.channel_tab import ChannelTab
-from chat.channel_view import ChannelView
-from chat.chat_widget import ChatWidget
-from model.chat.channel import ChannelType
+from src.chat.channel_tab import ChannelTab
+from src.chat.channel_view import ChannelView
+from src.chat.chat_widget import ChatWidget
+from src.model.chat.channel import ChannelType
 
 
 class ChatView:

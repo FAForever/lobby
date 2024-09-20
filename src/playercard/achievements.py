@@ -15,16 +15,16 @@ from PyQt6.QtWidgets import QProgressBar
 from PyQt6.QtWidgets import QSizePolicy
 from PyQt6.QtWidgets import QWidget
 
-from api.models.Achievement import Achievement
-from api.models.Achievement import ProgressType
-from api.models.Achievement import State
-from api.models.PlayerAchievement import PlayerAchievement
-from api.stats_api import AchievementsApiAccessor
-from api.stats_api import PlayerAchievementApiAccessor
-from downloadManager import DownloadRequest
-from downloadManager import ImageDownloader
-from util import ACHIEVEMENTS_CACHE_DIR
-from util import THEME
+from src.api.models.Achievement import Achievement
+from src.api.models.Achievement import ProgressType
+from src.api.models.Achievement import State
+from src.api.models.PlayerAchievement import PlayerAchievement
+from src.api.stats_api import AchievementsApiAccessor
+from src.api.stats_api import PlayerAchievementApiAccessor
+from src.downloadManager import DownloadRequest
+from src.downloadManager import ImageDownloader
+from src.util import ACHIEVEMENTS_CACHE_DIR
+from src.util import THEME
 
 FormClass, BaseClass = THEME.loadUiType("player_card/achievement.ui")
 

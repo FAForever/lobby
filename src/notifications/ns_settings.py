@@ -8,13 +8,13 @@ from typing import Any
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
-import notifications as ns
-import util
-from config import Settings
-from notifications.hook_gamefull import NsHookGameFull
-from notifications.hook_newgame import NsHookNewGame
-from notifications.hook_partyinvite import NsHookPartyInvite
-from notifications.hook_useronline import NsHookUserOnline
+import src.notifications as ns
+from src import util
+from src.config import Settings
+from src.notifications.hook_gamefull import NsHookGameFull
+from src.notifications.hook_newgame import NsHookNewGame
+from src.notifications.hook_partyinvite import NsHookPartyInvite
+from src.notifications.hook_useronline import NsHookUserOnline
 
 
 class IngameNotification(Enum):

@@ -18,13 +18,13 @@ from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QMessageBox
 
-import fafpath
-from config import VERSION as VERSION_STRING
-from config import Settings
-from config import _settings  # Stolen from Config because reasons
-from mapGenerator import mapgenUtils
-from util.theme import Theme
-from util.theme import ThemeSet
+from src import fafpath
+from src.config import VERSION as VERSION_STRING
+from src.config import Settings
+from src.config import _settings  # Stolen from Config because reasons
+from src.mapGenerator import mapgenUtils
+from src.util.theme import Theme
+from src.util.theme import ThemeSet
 
 if sys.platform == 'win32':
     import win32service
@@ -490,10 +490,9 @@ def uniqueID(session):
                 " for smurf protection. This service could not be found.",
             )
 
+    exe_path = os.path.join(fafpath.get_libdir(), "faf-uid")
     if sys.platform == 'win32':
-        exe_path = os.path.join(fafpath.get_libdir(), "faf-uid.exe")
-    else:   # Expect it to be in PATH already
-        exe_path = "faf-uid"
+        exe_path += ".exe"
     try:
         uid_p = subprocess.Popen(
             [exe_path, session],

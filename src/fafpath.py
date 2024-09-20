@@ -60,4 +60,7 @@ def get_libdir():
 
 
 def get_java_path():
-    return os.path.join(get_libdir(), "ice-adapter", "jre", "bin", "java.exe")
+    exe = "java"
+    if sys.platform == "win32":
+        exe += ".exe"
+    return os.path.join(get_libdir(), "ice-adapter", "jre", "bin", exe)

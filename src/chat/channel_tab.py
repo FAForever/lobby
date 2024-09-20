@@ -3,7 +3,7 @@ from enum import IntEnum
 from PyQt6.QtCore import QTimer
 from PyQt6.QtMultimedia import QSoundEffect
 
-from chat.chat_widget import TabIcon
+from src.chat.chat_widget import TabIcon
 
 
 class TabInfo(IntEnum):

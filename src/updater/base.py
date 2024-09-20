@@ -8,8 +8,8 @@ from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtNetwork import QNetworkRequest
 from semantic_version import Version
 
-from config import Settings
-from decorators import with_logger
+from src.config import Settings
+from src.decorators import with_logger
 
 
 class UpdateChannel(Enum):

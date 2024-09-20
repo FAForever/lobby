@@ -4,14 +4,14 @@ Each event_type has a NsHook to customize it.
 """
 from PyQt6 import QtCore
 
-import util
-from config import Settings
-from fa import maps
-from model.game import Game
-from model.player import Player
-from notifications.ns_dialog import NotificationDialog
-from notifications.ns_settings import IngameNotification
-from notifications.ns_settings import NsSettingsDialog
+from src import util
+from src.config import Settings
+from src.fa import maps
+from src.model.game import Game
+from src.model.player import Player
+from src.notifications.ns_dialog import NotificationDialog
+from src.notifications.ns_settings import IngameNotification
+from src.notifications.ns_settings import NsSettingsDialog
 
 
 class Notifications:

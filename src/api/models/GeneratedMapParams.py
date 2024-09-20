@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pydantic import Field
 
-from api.models.ConfiguredModel import ConfiguredModel
-from api.models.Map import Map
-from api.models.MapType import MapType
-from api.models.MapVersion import MapVersion
+from src.api.models.ConfiguredModel import ConfiguredModel
+from src.api.models.Map import Map
+from src.api.models.MapType import MapType
+from src.api.models.MapVersion import MapVersion
 
 
 class GeneratedMapParams(ConfiguredModel):

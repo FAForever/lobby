@@ -3,9 +3,9 @@ import os
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
-import client
-import util
-from api.models.FeaturedMod import FeaturedMod
+from src import client
+from src import util
+from src.api.models.FeaturedMod import FeaturedMod
 
 # Maps names of featured mods to ModItem objects.
 mods = {}

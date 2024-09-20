@@ -1,7 +1,8 @@
-from api.models.ConfiguredModel import ConfiguredModel
-from api.models.LeagueSeason import LeagueSeason
-from api.models.LeagueSubdivision import LeagueSubdivision
 from pydantic import Field
+
+from src.api.models.ConfiguredModel import ConfiguredModel
+from src.api.models.LeagueSeason import LeagueSeason
+from src.api.models.LeagueSubdivision import LeagueSubdivision
 
 
 class LeagueSeasonScore(ConfiguredModel):

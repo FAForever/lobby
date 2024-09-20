@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from api.models.AbstractEntity import AbstractEntity
 from pydantic import Field
-from util import StringValuedEnum
+
+from src.api.models.AbstractEntity import AbstractEntity
+from src.util import StringValuedEnum
 
 
 class State(StringValuedEnum):

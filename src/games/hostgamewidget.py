@@ -5,22 +5,24 @@ from typing import TYPE_CHECKING
 
 from PyQt6 import QtCore
 
-import fa.check
-import util
-import vaults.modvault.utils
-from client.user import User
-from downloadManager import MapPreviewDownloader
-from fa import maps
-from games.gameitem import GameViewBuilder
-from games.gamemodel import GameModel
-from games.mapgenoptionsdialog import MapGenDialog
-from model.game import Game
-from model.game import GameState
-from model.game import GameVisibility
-from model.playerset import Playerset
+from src import fa
+from src import util
+from src.client.user import User
+from src.downloadManager import MapPreviewDownloader
+from src.fa import maps
+from src.games.gameitem import GameViewBuilder
+from src.games.gamemodel import GameModel
+from src.games.mapgenoptionsdialog import MapGenDialog
+from src.model.game import Game
+from src.model.game import GameState
+from src.model.game import GameVisibility
+from src.model.playerset import Playerset
+from src.vaults.modvault.utils import getActiveMods
+from src.vaults.modvault.utils import getInstalledMods
+from src.vaults.modvault.utils import setActiveMods
 
 if TYPE_CHECKING:
-    from client._clientwindow import ClientWindow
+    from src.client._clientwindow import ClientWindow
 
 
 logger = logging.getLogger(__name__)
@@ -96,7 +98,7 @@ class GameLauncher:
         ):
             return
 
-        vaults.modvault.utils.setActiveMods(mods, True, False)
+        setActiveMods(mods, True, False)
 
         self._client.host_game(
             title=game.title,
@@ -153,7 +155,7 @@ class HostGameWidget(FormClass, BaseClass):
         self.setupMapList()
 
         # this makes it so you can select every non-ui_only mod
-        for mod in vaults.modvault.utils.getInstalledMods():
+        for mod in getInstalledMods():
             if mod.ui_only:
                 continue
             self.mods[mod.totalname] = mod
@@ -161,10 +163,7 @@ class HostGameWidget(FormClass, BaseClass):
 
         names = [
             mod.totalname
-            for mod in vaults.modvault.utils.getActiveMods(
-                uimods=False,
-                temporary=False,
-            )
+            for mod in getActiveMods(uimods=False, temporary=False)
         ]
         logger.debug("Active Mods detected: {}".format(str(names)))
         for name in names:
@@ -245,7 +244,7 @@ class HostGameWidget(FormClass, BaseClass):
             for moditem in self.modList.selectedItems()
         ]
         mods = [self.mods[modstr] for modstr in modnames]
-        vaults.modvault.utils.setActiveMods(mods, True, False)
+        setActiveMods(mods, True, False)
 
         self.launch.emit(self.game, password, mods)
         self.done(1)

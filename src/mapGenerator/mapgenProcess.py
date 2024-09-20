@@ -9,8 +9,8 @@ from PyQt6.QtWidgets import QMessageBox
 from PyQt6.QtWidgets import QProgressBar
 from PyQt6.QtWidgets import QProgressDialog
 
-import fafpath
-from config import setup_file_handler
+from src import fafpath
+from src.config import setup_file_handler
 
 from . import mapgenUtils
 

@@ -1,7 +1,7 @@
 from pydantic import Field
 
-from api.models.ConfiguredModel import ConfiguredModel
-from api.models.CoopMission import CoopMission
+from src.api.models.ConfiguredModel import ConfiguredModel
+from src.api.models.CoopMission import CoopMission
 
 
 class CoopScenario(ConfiguredModel):

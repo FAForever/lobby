@@ -4,8 +4,8 @@ from PyQt6.QtGui import QPainter
 from PyQt6.QtWidgets import QStyle
 from PyQt6.QtWidgets import QStyleOptionViewItem
 
-from qt.itemviews.tableitemdelegte import TableItemDelegate
-from qt.utils import qpainter
+from src.qt.itemviews.tableitemdelegte import TableItemDelegate
+from src.qt.utils import qpainter
 
 
 class CoopLeaderboardItemDelegate(TableItemDelegate):

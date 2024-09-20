@@ -3,8 +3,8 @@ from enum import Enum
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import pyqtSignal
 
-from model.modelitem import ModelItem
-from model.transaction import transactional
+from src.model.modelitem import ModelItem
+from src.model.transaction import transactional
 
 PARTY_CHANNEL_SUFFIX = "'sParty"
 

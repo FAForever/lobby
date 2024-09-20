@@ -1,6 +1,6 @@
-from model.modelitemset import ModelItemSet
-from model.player import Player
-from model.transaction import transactional
+from src.model.modelitemset import ModelItemSet
+from src.model.player import Player
+from src.model.transaction import transactional
 
 
 class Playerset(ModelItemSet):

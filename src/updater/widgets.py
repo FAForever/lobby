@@ -1,10 +1,10 @@
 from PyQt6.QtWidgets import QLayout
 
-import util
-from decorators import with_logger
-from updater.base import ReleaseType
-from updater.base import UpdateChannel
-from updater.process import ClientUpdater
+from src import util
+from src.decorators import with_logger
+from src.updater.base import ReleaseType
+from src.updater.base import UpdateChannel
+from src.updater.process import ClientUpdater
 
 FormClass, BaseClass = util.THEME.loadUiType("client/update.ui")
 

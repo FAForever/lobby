@@ -4,7 +4,7 @@ from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
-import util
+from src import util
 
 logger = logging.getLogger(__name__)
 

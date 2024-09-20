@@ -5,17 +5,17 @@ from typing import TYPE_CHECKING
 from PyQt6 import QtCore
 from PyQt6 import QtWidgets
 
-import util
-from api.player_api import PlayerApiConnector
-from api.stats_api import LeaderboardRatingApiConnector
-from config import Settings
+from src import util
+from src.api.player_api import PlayerApiConnector
+from src.api.stats_api import LeaderboardRatingApiConnector
+from src.config import Settings
 
 from .itemviews.leaderboarditemdelegate import LeaderboardItemDelegate
 from .models.leaderboardfiltermodel import LeaderboardFilterModel
 from .models.leaderboardtablemodel import LeaderboardTableModel
 
 if TYPE_CHECKING:
-    from client._clientwindow import ClientWindow
+    from src.client._clientwindow import ClientWindow
 
 FormClass, BaseClass = util.THEME.loadUiType("stats/leaderboard.ui")
 

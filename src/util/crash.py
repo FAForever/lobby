@@ -5,12 +5,12 @@ import traceback
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
 
-import config
-import util
-from config import Settings
-from util import APPDATA_DIR
-from util import PERSONAL_DIR
-from util import VERSION_STRING
+from src import config
+from src import util
+from src.config import Settings
+from src.util import APPDATA_DIR
+from src.util import PERSONAL_DIR
+from src.util import VERSION_STRING
 
 CRASH_REPORT_USER = "pre-login"
 

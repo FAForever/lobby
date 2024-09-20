@@ -1,7 +1,7 @@
 import time
 from enum import Enum
 
-from util.magic_dict import MagicDict
+from src.util.magic_dict import MagicDict
 
 
 # Notices differ from messages in that notices in public channels are visible

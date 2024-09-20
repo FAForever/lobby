@@ -1,6 +1,7 @@
-from api.models.AbstractEntity import AbstractEntity
-from api.models.Avatar import Avatar
 from pydantic import Field
+
+from src.api.models.AbstractEntity import AbstractEntity
+from src.api.models.Avatar import Avatar
 
 
 class AvatarAssignment(AbstractEntity):

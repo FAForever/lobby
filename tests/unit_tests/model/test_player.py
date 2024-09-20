@@ -1,5 +1,5 @@
-from model.player import Player
-from model.rating import RatingType
+from src.model.player import Player
+from src.model.rating import RatingType
 
 DEFAULT_DICT = {
     "id_": 17,

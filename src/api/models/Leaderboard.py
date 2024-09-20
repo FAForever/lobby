@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from api.models.AbstractEntity import AbstractEntity
 from pydantic import Field
+
+from src.api.models.AbstractEntity import AbstractEntity
 
 
 class Leaderboard(AbstractEntity):

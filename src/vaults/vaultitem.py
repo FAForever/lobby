@@ -8,14 +8,14 @@ from PyQt6.QtWidgets import QListWidgetItem
 from PyQt6.QtWidgets import QStyle
 from PyQt6.QtWidgets import QStyledItemDelegate
 
-import util
-from api.models.Map import Map
-from api.models.Mod import Mod
-from downloadManager import Downloader
-from downloadManager import DownloadRequest
+from src import util
+from src.api.models.Map import Map
+from src.api.models.Mod import Mod
+from src.downloadManager import Downloader
+from src.downloadManager import DownloadRequest
 
 if TYPE_CHECKING:
-    from vaults.vault import Vault
+    from src.vaults.vault import Vault
 
 
 class VaultListItem(QListWidgetItem):

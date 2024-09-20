@@ -12,11 +12,11 @@ from PyQt6.QtWidgets import QListView
 from PyQt6.QtWidgets import QVBoxLayout
 from PyQt6.QtWidgets import QWidget
 
-from contextmenu.playercontextmenu import PlayerContextMenu
-from replays.models import ScoreboardModel
-from replays.models import ScoreboardModelItem
-from replays.scoreboarditemdelegate import ScoreboardItemDelegate
-from replays.scoreboardlistview import ScoreboardListView
+from src.contextmenu.playercontextmenu import PlayerContextMenu
+from src.replays.models import ScoreboardModel
+from src.replays.models import ScoreboardModelItem
+from src.replays.scoreboarditemdelegate import ScoreboardItemDelegate
+from src.replays.scoreboardlistview import ScoreboardListView
 
 
 class GameResult(Enum):

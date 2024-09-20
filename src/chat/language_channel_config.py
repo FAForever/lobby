@@ -1,7 +1,7 @@
 from PyQt6.QtCore import QAbstractListModel
 from PyQt6.QtCore import Qt
 
-from chat.lang import LANGUAGE_CHANNELS
+from src.chat.lang import LANGUAGE_CHANNELS
 
 
 class ChannelEntry:

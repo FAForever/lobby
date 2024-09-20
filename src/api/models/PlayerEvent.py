@@ -1,7 +1,8 @@
-from api.models.AbstractEntity import AbstractEntity
-from api.models.Event import Event
-from api.models.Player import Player
 from pydantic import Field
+
+from src.api.models.AbstractEntity import AbstractEntity
+from src.api.models.Event import Event
+from src.api.models.Player import Player
 
 
 class PlayerEvent(AbstractEntity):

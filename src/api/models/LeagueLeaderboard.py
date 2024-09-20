@@ -1,5 +1,6 @@
-from api.models.ConfiguredModel import ConfiguredModel
 from pydantic import Field
+
+from src.api.models.ConfiguredModel import ConfiguredModel
 
 
 class LeagueLeaderboard(ConfiguredModel):

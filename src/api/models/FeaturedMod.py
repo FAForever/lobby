@@ -1,6 +1,6 @@
 from pydantic import Field
 
-from api.models.ConfiguredModel import ConfiguredModel
+from src.api.models.ConfiguredModel import ConfiguredModel
 
 
 class FeaturedMod(ConfiguredModel):

@@ -2,22 +2,22 @@ from __future__ import annotations
 
 from PyQt6.QtWidgets import QTableWidgetItem
 
-import util
-from api.models.AvatarAssignment import AvatarAssignment
-from api.models.LeaderboardRating import LeaderboardRating
-from api.models.NameRecord import NameRecord
-from api.models.Player import Player
-from api.models.PlayerEvent import PlayerEvent
-from api.player_api import PlayerApiConnector
-from api.stats_api import LeaderboardRatingApiConnector
-from api.stats_api import LeagueSeasonScoreApiConnector
-from api.stats_api import PlayerEventApiAccessor
-from downloadManager import ImageDownloader
-from playercard.achievements import AchievementsHandler
-from playercard.avatarhandler import AvatarHandler
-from playercard.leagueformatter import league_formatter_factory
-from playercard.ratingtabwidget import RatingTabWidgetController
-from playercard.statistics import StatsCharts
+from src import util
+from src.api.models.AvatarAssignment import AvatarAssignment
+from src.api.models.LeaderboardRating import LeaderboardRating
+from src.api.models.NameRecord import NameRecord
+from src.api.models.Player import Player
+from src.api.models.PlayerEvent import PlayerEvent
+from src.api.player_api import PlayerApiConnector
+from src.api.stats_api import LeaderboardRatingApiConnector
+from src.api.stats_api import LeagueSeasonScoreApiConnector
+from src.api.stats_api import PlayerEventApiAccessor
+from src.downloadManager import ImageDownloader
+from src.playercard.achievements import AchievementsHandler
+from src.playercard.avatarhandler import AvatarHandler
+from src.playercard.leagueformatter import league_formatter_factory
+from src.playercard.ratingtabwidget import RatingTabWidgetController
+from src.playercard.statistics import StatsCharts
 
 FormClass, BaseClass = util.THEME.loadUiType("player_card/playercard.ui")
 

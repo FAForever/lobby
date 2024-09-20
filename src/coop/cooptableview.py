@@ -3,7 +3,7 @@ from PyQt6.QtCore import QUrl
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QMouseEvent
 
-from qt.itemviews.tableview import TableView
+from src.qt.itemviews.tableview import TableView
 
 
 class CoopLeaderboardTableView(TableView):

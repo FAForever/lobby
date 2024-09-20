@@ -1,6 +1,6 @@
-from model.chat.channel import ChannelType
-from model.modelitemset import ModelItemSet
-from model.transaction import transactional
+from src.model.chat.channel import ChannelType
+from src.model.modelitemset import ModelItemSet
+from src.model.transaction import transactional
 
 
 class Channelset(ModelItemSet):

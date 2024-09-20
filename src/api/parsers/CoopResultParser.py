@@ -1,4 +1,4 @@
-from api.models.CoopResult import CoopResult
+from src.api.models.CoopResult import CoopResult
 
 
 class CoopResultParser:

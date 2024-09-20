@@ -1,4 +1,4 @@
-from api.models.Player import Player
+from src.api.models.Player import Player
 
 
 class PlayerParser:

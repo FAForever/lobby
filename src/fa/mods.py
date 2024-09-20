@@ -2,11 +2,11 @@ import logging
 
 from PyQt6 import QtWidgets
 
-import config
-from api.sim_mod_updater import SimModFiles
-from vaults.modvault.utils import downloadMod
-from vaults.modvault.utils import getInstalledMods
-from vaults.modvault.utils import setActiveMods
+from src import config
+from src.api.sim_mod_updater import SimModFiles
+from src.vaults.modvault.utils import downloadMod
+from src.vaults.modvault.utils import getInstalledMods
+from src.vaults.modvault.utils import setActiveMods
 
 logger = logging.getLogger(__name__)
 

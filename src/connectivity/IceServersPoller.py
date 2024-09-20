@@ -1,9 +1,9 @@
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import pyqtSignal
 
-from api.ApiAccessors import ApiAccessor
-from connectivity.IceAdapterClient import IceAdapterClient
-from decorators import with_logger
+from src.api.ApiAccessors import ApiAccessor
+from src.connectivity.IceAdapterClient import IceAdapterClient
+from src.decorators import with_logger
 
 
 @with_logger

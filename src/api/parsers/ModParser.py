@@ -1,4 +1,4 @@
-from api.models.Mod import Mod
+from src.api.models.Mod import Mod
 
 
 class ModParser:

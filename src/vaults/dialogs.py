@@ -8,9 +8,9 @@ from PyQt6 import QtCore
 from PyQt6 import QtNetwork
 from PyQt6 import QtWidgets
 
-from downloadManager import FileDownload
-from downloadManager import ZipDownloadExtract
-from util import capitalize
+from src.downloadManager import FileDownload
+from src.downloadManager import ZipDownloadExtract
+from src.util import capitalize
 
 logger = logging.getLogger(__name__)
 

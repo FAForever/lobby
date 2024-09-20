@@ -2,7 +2,7 @@ import logging
 
 from PyQt6.QtCore import pyqtSignal
 
-from api.ApiBase import ApiBase
+from src.api.ApiBase import ApiBase
 
 logger = logging.getLogger(__name__)
 

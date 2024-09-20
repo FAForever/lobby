@@ -2,10 +2,10 @@ import json
 
 from PyQt6.QtCore import pyqtSignal
 
-import client
-from client.connection import ConnectionState
-from connectivity.JsonRpcTcpClient import JsonRpcTcpClient
-from decorators import with_logger
+from src import client
+from src.client.connection import ConnectionState
+from src.connectivity.JsonRpcTcpClient import JsonRpcTcpClient
+from src.decorators import with_logger
 
 
 @with_logger

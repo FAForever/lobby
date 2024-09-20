@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING
 
 from PyQt6 import QtCore
 
-import util
-from ui.busy_widget import BusyWidget
-from vaults.vaultitem import VaultItemDelegate
-from vaults.vaultitem import VaultListItem
+from src import util
+from src.ui.busy_widget import BusyWidget
+from src.vaults.vaultitem import VaultItemDelegate
+from src.vaults.vaultitem import VaultListItem
 
 if TYPE_CHECKING:
-    from client._clientwindow import ClientWindow
+    from src.client._clientwindow import ClientWindow
 
 logger = logging.getLogger(__name__)
 

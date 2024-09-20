@@ -1,7 +1,7 @@
 from pydantic import Field
 
-from api.models.AbstractEntity import AbstractEntity
-from api.models.ModType import ModType
+from src.api.models.AbstractEntity import AbstractEntity
+from src.api.models.ModType import ModType
 
 
 class ModVersion(AbstractEntity):

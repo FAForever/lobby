@@ -4,7 +4,7 @@ import logging
 from PyQt6 import QtCore
 from PyQt6 import QtNetwork
 
-from config import Settings
+from src.config import Settings
 
 logger = logging.getLogger(__name__)
 

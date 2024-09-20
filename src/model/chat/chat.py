@@ -1,10 +1,10 @@
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import pyqtSignal
 
-from model.chat.channelchatterset import ChannelChatterRelation
-from model.chat.channelchatterset import ChannelChatterset
-from model.chat.channelset import Channelset
-from model.chat.chatterset import Chatterset
+from src.model.chat.channelchatterset import ChannelChatterRelation
+from src.model.chat.channelchatterset import ChannelChatterset
+from src.model.chat.channelset import Channelset
+from src.model.chat.chatterset import Chatterset
 
 
 class Chat(QObject):

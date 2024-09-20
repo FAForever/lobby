@@ -1,4 +1,4 @@
-from api.models.CoopScenario import CoopScenario
+from src.api.models.CoopScenario import CoopScenario
 
 
 class CoopScenarioParser:

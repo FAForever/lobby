@@ -2,7 +2,7 @@ from PyQt6.QtCore import QAbstractTableModel
 from PyQt6.QtCore import QModelIndex
 from PyQt6.QtCore import Qt
 
-from util import utctolocal
+from src.util import utctolocal
 
 
 class LeaderboardTableModel(QAbstractTableModel):

@@ -9,12 +9,12 @@ from PyQt6.QtCore import QThread
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QTabWidget
 
-from api.models.Leaderboard import Leaderboard
-from api.stats_api import LeaderboardApiConnector
-from api.stats_api import LeaderboardRatingJournalApiConnector
-from model.rating import Rating
-from playercard.plot import LineSeries
-from playercard.plot import PlotController
+from src.api.models.Leaderboard import Leaderboard
+from src.api.stats_api import LeaderboardApiConnector
+from src.api.stats_api import LeaderboardRatingJournalApiConnector
+from src.model.rating import Rating
+from src.playercard.plot import LineSeries
+from src.playercard.plot import PlotController
 
 
 class LineSeriesParser(QThread):

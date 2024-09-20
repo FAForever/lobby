@@ -7,15 +7,15 @@ from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
-import util
-from downloadManager import DownloadRequest
-from downloadManager import MapLargePreviewDownloader
-from fa import maps
-from mapGenerator import mapgenUtils
-from vaults.mapvault.mapitem import MapListItem
+from src import util
+from src.downloadManager import DownloadRequest
+from src.downloadManager import MapLargePreviewDownloader
+from src.fa import maps
+from src.mapGenerator import mapgenUtils
+from src.vaults.mapvault.mapitem import MapListItem
 
 if TYPE_CHECKING:
-    from vaults.mapvault.mapvault import MapVault
+    from src.vaults.mapvault.mapvault import MapVault
 
 FormClass, BaseClass = util.THEME.loadUiType("vaults/mapvault/map.ui")
 

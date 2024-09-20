@@ -1,7 +1,7 @@
 from pydantic import Field
 
-from api.models.ConfiguredModel import ConfiguredModel
-from api.models.Game import Game
+from src.api.models.ConfiguredModel import ConfiguredModel
+from src.api.models.Game import Game
 
 
 class CoopResult(ConfiguredModel):

@@ -4,12 +4,12 @@ from PyQt6.QtWidgets import QDialog
 from PyQt6.QtWidgets import QMessageBox
 from semantic_version import Version
 
-from updater.base import Releases
-from updater.base import UpdateChecker
-from updater.base import UpdateNotifier
-from updater.base import UpdateSettings
-from updater.widgets import UpdateDialog
-from updater.widgets import UpdateSettingsDialog
+from src.updater.base import Releases
+from src.updater.base import UpdateChecker
+from src.updater.base import UpdateNotifier
+from src.updater.base import UpdateSettings
+from src.updater.widgets import UpdateDialog
+from src.updater.widgets import UpdateSettingsDialog
 
 
 class ClientUpdateTools(QObject):

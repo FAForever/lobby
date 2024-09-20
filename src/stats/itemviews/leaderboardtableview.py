@@ -2,7 +2,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
 from PyQt6.QtGui import QMouseEvent
 
-from qt.itemviews.tableview import TableView
+from src.qt.itemviews.tableview import TableView
 
 
 class LeaderboardTableView(TableView):

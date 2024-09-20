@@ -6,9 +6,9 @@ from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
-import util
-from fa import maps
-from qt.itemviews.styleditemdelegate import StyledItemDelegate
+from src import util
+from src.fa import maps
+from src.qt.itemviews.styleditemdelegate import StyledItemDelegate
 
 
 class GameView(QtCore.QObject):

@@ -6,7 +6,7 @@ from typing import Any
 from PyQt6.QtWidgets import QComboBox
 from PyQt6.QtWidgets import QSpinBox
 
-import config
+from src import config
 
 
 class OptionMixin:

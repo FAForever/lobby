@@ -6,10 +6,10 @@ from PyQt6.QtWidgets import QHeaderView
 from PyQt6.QtWidgets import QInputDialog
 from PyQt6.QtWidgets import QTableWidgetItem
 
-import client as clientwindow
-from connectivity.IceAdapterClient import IceAdapterClient
-from decorators import with_logger
-from util import THEME
+from src import client as clientwindow
+from src.connectivity.IceAdapterClient import IceAdapterClient
+from src.decorators import with_logger
+from src.util import THEME
 
 
 @with_logger

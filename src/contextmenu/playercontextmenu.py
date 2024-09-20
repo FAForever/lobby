@@ -11,17 +11,17 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtWidgets import QWidget
 
-from chat._avatarWidget import AvatarWidget
-from client.aliasviewer import AliasWindow
-from client.user import User
-from fa.game_runner import GameRunner
-from model.game import GameState
-from model.player import Player
-from playercard.playerinfodialog import PlayerInfoDialog
-from power import PowerTools
+from src.chat._avatarWidget import AvatarWidget
+from src.client.aliasviewer import AliasWindow
+from src.client.user import User
+from src.fa.game_runner import GameRunner
+from src.model.game import GameState
+from src.model.player import Player
+from src.playercard.playerinfodialog import PlayerInfoDialog
+from src.power import PowerTools
 
 if TYPE_CHECKING:
-    from client._clientwindow import ClientWindow
+    from src.client._clientwindow import ClientWindow
 
 logger = logging.getLogger(__name__)
 

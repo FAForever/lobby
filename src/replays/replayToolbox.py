@@ -5,10 +5,10 @@ from PyQt6 import QtCore
 from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 
-from config import Settings
-from downloadManager import DownloadRequest
-from downloadManager import MapLargePreviewDownloader
-from util import MAP_PREVIEW_LARGE_DIR
+from src.config import Settings
+from src.downloadManager import DownloadRequest
+from src.downloadManager import MapLargePreviewDownloader
+from src.util import MAP_PREVIEW_LARGE_DIR
 
 logger = logging.getLogger(__name__)
 

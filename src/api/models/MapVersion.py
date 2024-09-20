@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from pydantic import Field
 
-from api.models.AbstractEntity import AbstractEntity
+from src.api.models.AbstractEntity import AbstractEntity
 
 
 @dataclass

@@ -5,8 +5,8 @@ from PyQt6.QtWidgets import QStyle
 from PyQt6.QtWidgets import QStyleOptionViewItem
 from PyQt6.QtWidgets import QTableView
 
-from qt.itemviews.styleditemdelegate import StyledItemDelegate
-from qt.utils import qpainter
+from src.qt.itemviews.styleditemdelegate import StyledItemDelegate
+from src.qt.utils import qpainter
 
 
 class TableItemDelegate(StyledItemDelegate):

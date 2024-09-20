@@ -9,12 +9,12 @@ from PyQt6 import QtGui
 from PyQt6 import QtWidgets
 from PyQt6.QtGui import QAction
 
-import util
-from config import Settings
-from downloadManager import DownloadRequest
-from fa import maps
-from games.moditem import mods
-from replays.scoreboard import Scoreboard
+from src import util
+from src.config import Settings
+from src.downloadManager import DownloadRequest
+from src.fa import maps
+from src.games.moditem import mods
+from src.replays.scoreboard import Scoreboard
 
 
 class ReplayItemDelegate(QtWidgets.QStyledItemDelegate):
