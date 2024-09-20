@@ -602,11 +602,11 @@ class ClientWindow(FormClass, BaseClass):
                 self.rubber_band.setGeometry(desktop)
                 self.rubber_band.show()
             elif event.globalPosition().x() == 0:
-                desktop.setRight(desktop.right() / 2.0)
+                desktop.setRight(round(desktop.right() / 2))
                 self.rubber_band.setGeometry(desktop)
                 self.rubber_band.show()
             elif event.globalPosition().x() == desktop.right():
-                desktop.setRight(desktop.right() / 2.0)
+                desktop.setRight(round(desktop.right() / 2))
                 desktop.moveLeft(desktop.right())
                 self.rubber_band.setGeometry(desktop)
                 self.rubber_band.show()
