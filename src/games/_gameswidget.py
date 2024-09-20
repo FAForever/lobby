@@ -248,7 +248,7 @@ class GamesWidget(FormClass, BaseClass):
                     self.client,
                     "Passworded game",
                     "Enter password :",
-                    QtWidgets.QLineEdit.Normal,
+                    QtWidgets.QLineEdit.EchoMode.Normal,
                     "",
                 )
                 if ok:

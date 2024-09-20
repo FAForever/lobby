@@ -1367,7 +1367,7 @@ class ClientWindow(FormClass, BaseClass):
             self,
             'Set autojoin channels',
             text_of_autojoin_settings_dialog,
-            QtWidgets.QLineEdit.Normal,
+            QtWidgets.QLineEdit.EchoMode.Normal,
             ';'.join(autojoin_channels_list),
         )
         if ok:

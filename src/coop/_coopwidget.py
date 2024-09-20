@@ -228,7 +228,7 @@ class CoopWidget(FormClass, BaseClass, BusyWidget):
         if game.password_protected:
             passw, ok = QtWidgets.QInputDialog.getText(
                 self.client, "Passworded game", "Enter password :",
-                QtWidgets.QLineEdit.Normal, "",
+                QtWidgets.QLineEdit.EchoMode.Normal, "",
             )
             if ok:
                 self.client.join_game(uid=game.uid, password=passw)
