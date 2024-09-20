@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
 """
 Created on Dec 1, 2011
 
 @author: thygrrr
 """
 
+import argparse
 import os
 import sys
 from types import TracebackType
@@ -20,6 +20,10 @@ from src import util
 from src.config import Settings
 from src.util import crash
 
+# clientwindow has FramelessWindowHint flag with custom frame implementation,
+# which doesn't work well with 'wayland'
+os.environ["QT_QPA_PLATFORM"] = "xcb"
+
 # Some linux distros (like Gentoo) make package scripts available
 # by copying and modifying them. This breaks path to our modules.
 
@@ -33,7 +37,6 @@ if __package__ is None and not hasattr(sys, 'frozen'):
         path = os.path.realpath(fafclient.__file__)
         sys.path.insert(0, os.path.dirname(path))
 
-import argparse
 
 cmd_parser = argparse.ArgumentParser(
     description='FAF client commandline arguments.',

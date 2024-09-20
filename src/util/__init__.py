@@ -490,10 +490,9 @@ def uniqueID(session):
                 " for smurf protection. This service could not be found.",
             )
 
+    exe_path = os.path.join(fafpath.get_libdir(), "faf-uid")
     if sys.platform == 'win32':
-        exe_path = os.path.join(fafpath.get_libdir(), "faf-uid.exe")
-    else:   # Expect it to be in PATH already
-        exe_path = "faf-uid"
+        exe_path += ".exe"
     try:
         uid_p = subprocess.Popen(
             [exe_path, session],
