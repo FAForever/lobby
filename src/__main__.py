@@ -20,9 +20,10 @@ from src import util
 from src.config import Settings
 from src.util import crash
 
-# clientwindow has FramelessWindowHint flag with custom frame implementation,
-# which doesn't work well with 'wayland'
-os.environ["QT_QPA_PLATFORM"] = "xcb"
+if os.getenv("XDG_SESSION_TYPE") == "wayland":
+    # clientwindow has FramelessWindowHint flag with custom frame implementation,
+    # which doesn't work well with 'wayland'
+    os.environ["QT_QPA_PLATFORM"] = "xcb"
 
 # Some linux distros (like Gentoo) make package scripts available
 # by copying and modifying them. This breaks path to our modules.
