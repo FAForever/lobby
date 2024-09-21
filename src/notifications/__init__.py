@@ -116,11 +116,12 @@ class Notifications:
             self.checkEvent()
 
     def is_enabled(self, event_type: str) -> bool:
-        if not self.settings.enabled or self.disabledStartup:
+        if not self.settings.enabled:
             return False
 
-        if not self.settings.popupEnabled(event_type):
-            return False
+        if event_type in self.settings.hooks:
+            if self.disabledStartup or not self.settings.popupEnabled(event_type):
+                return False
 
         if self.game_running:
             return (
