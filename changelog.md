@@ -1,6 +1,15 @@
 0.x.x
 =====
 
+0.22.2
+* Freeze application for linux and ship it as tar.gz archive
+* Fix dragging window near screen edges
+* Download sim mods for replays
+* Fix some notifications not being shown
+
+0.22.1
+* Hotfix OAuth
+
 0.22.0
 * Add player profile card
 * Add access to player's context menu via replay scoreboard
