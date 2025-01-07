@@ -396,6 +396,26 @@
           </widget>
          </item>
          <item>
+          <widget class="QLabel" name="gamesShownCountLabel">
+           <property name="text">
+            <string>Games shown:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="manageGameFiltersButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Manage Filters</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QLabel" name="labelSortGames">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
@@ -442,6 +462,13 @@
            </property>
            <property name="text">
             <string>Hide Private Games</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="hideGamesWithMods">
+           <property name="text">
+            <string>Hide Modded Games</string>
            </property>
           </widget>
          </item>

@@ -15,10 +15,10 @@ from src import fa
 from src import util
 from src.api.featured_mod_api import FeaturedModApiConnector
 from src.client.user import User
-from src.config import Settings
 from src.games.automatchframe import MatchmakerQueue
+from src.games.filters.controller import GamesSortFilterController
+from src.games.filters.sortfiltermodel import CustomGameFilterModel
 from src.games.gameitem import GameViewBuilder
-from src.games.gamemodel import CustomGameFilterModel
 from src.games.gamemodel import GameModel
 from src.games.hostgamewidget import GameLauncher
 from src.games.moditem import ModItem
@@ -74,18 +74,6 @@ class PartyMember:
 
 
 class GamesWidget(FormClass, BaseClass):
-
-    hide_private_games = Settings.persisted_property(
-        "play/hidePrivateGames",
-        default_value=False,
-        type=bool,
-    )
-    sort_games_index = Settings.persisted_property(
-        "play/sortGames",
-        default_value=0,
-        type=int,
-    )
-
     matchmaker_search_info = pyqtSignal(dict)
     match_found_message = pyqtSignal(dict)
     stop_search_ranked_game = pyqtSignal()
@@ -105,13 +93,21 @@ class GamesWidget(FormClass, BaseClass):
         self._me = me
         self.client = client  # type - ClientWindow
         self.mods = {}
-        self._game_model = CustomGameFilterModel(self.client.user_relations, game_model)
+        self._game_filter_model = CustomGameFilterModel(self.client.user_relations, game_model)
+        self._game_filter_controller = GamesSortFilterController(
+            self._game_filter_model,
+            self.gamesShownCountLabel,
+            self.hideGamesWithPw,
+            self.hideGamesWithMods,
+            self.manageGameFiltersButton,
+            self.sortGamesComboBox,
+        )
         self._game_launcher = game_launcher
 
         self.apiConnector = FeaturedModApiConnector()
         self.apiConnector.data_ready.connect(self.process_mod_info)
 
-        self.gameview = gameview_builder(self._game_model, self.gameList)
+        self.gameview = gameview_builder(self._game_filter_model, self.gameList)
         self.gameview.game_double_clicked.connect(self.gameDoubleClicked)
 
         self.matchFoundQueueName = ""
@@ -122,29 +118,6 @@ class GamesWidget(FormClass, BaseClass):
         self.client.game_enter.connect(self.stopSearch)
         self.client.viewing_replay.connect(self.stopSearch)
         self.client.authorized.connect(self.onAuthorized)
-
-        self.sortGamesComboBox.addItems([
-            'By Players',
-            'By avg. Player Rating',
-            'By Map',
-            'By Host',
-            'By Age',
-        ])
-        self.sortGamesComboBox.currentIndexChanged.connect(
-            self.sortGamesComboChanged,
-        )
-        try:
-            CustomGameFilterModel.SortType(self.sort_games_index)
-            safe_sort_index = self.sort_games_index
-        except ValueError:
-            safe_sort_index = 0
-        # This only triggers the signal if the index actually changes,
-        # so let's initialize it ourselves
-        self.sortGamesComboBox.setCurrentIndex(safe_sort_index)
-        self.sortGamesComboChanged(safe_sort_index)
-
-        self.hideGamesWithPw.stateChanged.connect(self.togglePrivateGames)
-        self.hideGamesWithPw.setChecked(self.hide_private_games)
 
         self.modList.itemDoubleClicked.connect(self.hostGameClicked)
         self.teamList.itemPressed.connect(self.teamListItemClicked)
@@ -209,11 +182,6 @@ class GamesWidget(FormClass, BaseClass):
 
             self.client.replays.modList.addItem(mod)
 
-    @pyqtSlot(int)
-    def togglePrivateGames(self, state):
-        self.hide_private_games = state
-        self._game_model.hide_private_games = state
-
     def stopSearch(self):
         self.searching = {"ladder1v1": False}
         self.client.labelAutomatchInfo.setText("")
@@ -273,10 +241,6 @@ class GamesWidget(FormClass, BaseClass):
             return
         self.stopSearch()
         self._game_launcher.host_game(item.name, item.mod)
-
-    def sortGamesComboChanged(self, index):
-        self.sort_games_index = index
-        self._game_model.sort_type = CustomGameFilterModel.SortType(index)
 
     def teamListItemClicked(self, item):
         if QtWidgets.QApplication.mouseButtons() == Qt.MouseButton.LeftButton:

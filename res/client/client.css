@@ -530,6 +530,17 @@ QTableWidget::item::hover
     border-radius: 3px;
 }
 
+QTableWidget#filtersTableWidget::item:hover
+{
+    background: none;
+}
+
+QTableWidget#filtersTableWidget::item:selected
+{
+    color: white;
+    background-color: #306030;
+}
+
 QTableWidget#nameHistoryTableWidget::item::hover
 {
     background: none;
@@ -747,7 +758,7 @@ QScrollBar::sub-page
     background-color: #1f1f1f;
 }
 
-QCheckBox#hideGamesWithPw
+QCheckBox#hideGamesWithPw,#hideGamesWithMods
 {
     color:white;
     background-color: #111111;
@@ -781,6 +792,10 @@ QLabel#VSLabel
     margin: 0px;
 }
 
+QLabel#gameFiltersManagerDescription
+{
+    color: gold;
+}
 
 QGroupBox
 {
@@ -993,6 +1008,12 @@ QPushButton#showAllButton
     background-color: rgb(39, 39, 45);
     border: 1px solid rgb(70, 70, 70);
     border-radius: 2px;
+}
+
+QPushButton#manageGameFiltersButton:hover
+{
+    color: white;
+    background-color: #808080;
 }
 
 QSpinBox, QDoubleSpinBox
