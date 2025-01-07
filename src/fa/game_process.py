@@ -173,10 +173,12 @@ class GameProcess(QtCore.QProcess):
 
             progress.close()
 
-            if self.running():
-                self.kill()
-
+            self.kill_if_running()
             self.close()
+
+    def kill_if_running(self) -> None:
+        if self.running():
+            self.kill()
 
 
 instance = GameProcess()

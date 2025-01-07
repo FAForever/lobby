@@ -1,6 +1,7 @@
 import logging
 import time
 from functools import partial
+from typing import Any
 
 from PyQt6 import QtCore
 from PyQt6 import QtGui
@@ -85,6 +86,8 @@ from .mouse_position import MousePosition
 logger = logging.getLogger(__name__)
 
 FormClass, BaseClass = util.THEME.loadUiType("client/client.ui")
+
+ServerMessage = dict[str, Any]
 
 
 class ClientWindow(FormClass, BaseClass):
@@ -1613,23 +1616,20 @@ class ClientWindow(FormClass, BaseClass):
         self.game_exit.emit()
 
     @QtCore.pyqtSlot(QtCore.QProcess.ProcessError)
-    def error_fa(self, error_code):
+    def error_fa(self, error: QtCore.QProcess.ProcessError) -> None:
         """
         Slot hooked up to fa.instance when the process has failed to start.
         """
         logger.error("FA has died with error: " + fa.instance.errorString())
-        if error_code == 0:
+        if error == QtCore.QProcess.ProcessError.FailedToStart:
             logger.error("FA has failed to start")
             QtWidgets.QMessageBox.critical(
                 self, "Error from FA", "FA has failed to start.",
             )
-        elif error_code == 1:
+        elif error == QtCore.QProcess.ProcessError.Crashed:
             logger.error("FA has crashed or killed after starting")
         else:
-            text = (
-                "FA has failed to start with error code: {}"
-                .format(error_code)
-            )
+            text = f"FA has failed to start with error code: {error}"
             logger.error(text)
             QtWidgets.QMessageBox.critical(self, "Error from FA", text)
         self.game_exit.emit()
@@ -1772,11 +1772,16 @@ class ClientWindow(FormClass, BaseClass):
         self.games.handleMatchFound(message)
         self.lobby_connection.send(dict(command="match_ready"))
 
-    def handle_match_cancelled(self, message):
-        logger.info("Received match_cancelled via JSON {}".format(message))
+    def handle_match_cancelled(self, message: ServerMessage) -> None:
+        logger.info(f"Received match_cancelled via JSON {message}")
+
+        if self.game_session is None or message["game_id"] != self.game_session.game_uid:
+            return
+
         self.labelAutomatchInfo.setText("")
         self.labelAutomatchInfo.hide()
-        self.games.handleMatchCancelled(message)
+        fa.instance.kill_if_running()
+        QtWidgets.QMessageBox.information(self, "Cancelled", "Automatch was cancelled by server")
 
     def host_game(
         self,
