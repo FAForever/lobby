@@ -4,6 +4,7 @@ import logging
 import time
 
 from irc.client import Reactor
+from irc.client import ServerConnectionError
 from PyQt6.QtCore import QEventLoop
 from PyQt6.QtCore import QObject
 from PyQt6.QtCore import QUrl
@@ -19,16 +20,31 @@ class WebSocketToSocket(QObject):
     """ Allows to use QWebSocket as a 'socket' """
 
     message_received = pyqtSignal()
+    error_occurred = pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
         self.socket = QWebSocket()
         self.socket.binaryMessageReceived.connect(self.on_bin_message_received)
         self.socket.errorOccurred.connect(self.on_socket_error)
+        self.socket.stateChanged.connect(self.on_socket_state_changed)
         self.buffer = b""
+
+        self._connect_loop = QEventLoop()
+        self.socket.connected.connect(self._connect_loop.exit)
+        self.socket.errorOccurred.connect(self._connect_loop.exit)
+
+        self._close_intended = False
 
     def on_socket_error(self, error: QAbstractSocket.SocketError) -> None:
         logger.error(f"SocketAdapter error: {error}. Details: {self.socket.errorString()}")
+
+    def on_socket_state_changed(self, state: QAbstractSocket.SocketState) -> None:
+        logger.debug(f"SocketAdapter state changed: {state}")
+        # socket state can change without errors, that's why we emit `error_occurred` signal
+        # here and not in the `on_socket_error` method
+        if state == QAbstractSocket.SocketState.UnconnectedState and not self._close_intended:
+            self.error_occurred.emit()
 
     def on_bin_message_received(self, message: bytes) -> None:
         # according to https://ircv3.net/specs/extensions/websocket
@@ -69,17 +85,26 @@ class WebSocketToSocket(QObject):
     def connect(self, server_address: tuple[str, int]) -> None:
         self.socket.open(self._prepare_request(server_address))
 
-        # FIXME: maybe there are too many usages of this loop trick
-        loop = QEventLoop()
-        self.socket.connected.connect(loop.exit)
-        self.socket.errorOccurred.connect(loop.exit)
-        loop.exec()
+        # UnknownSocketError is the default and here means "No Error"
+        if self.socket.error() != QAbstractSocket.SocketError.UnknownSocketError:
+            raise ServerConnectionError(self.socket.errorString())
+
+        if self.socket.state != QAbstractSocket.SocketState.ConnectedState:
+            self._connect_loop.exec()
 
     def close(self) -> None:
+        self._close_intended = True
         self.socket.close()
 
 
-class ReactorForSocketAdapter(Reactor):
+class ReactorForSocketAdapter(Reactor, QObject):
+    socket_error = pyqtSignal()
+
+    def __init__(self) -> None:
+        QObject.__init__(self)
+        Reactor.__init__(self)
+        self._on_connect = self.on_connect
+
     def process_once(self, timeout: float = 0.01) -> None:
         if self.sockets:
             self.process_data(self.sockets)
@@ -87,9 +112,16 @@ class ReactorForSocketAdapter(Reactor):
             time.sleep(timeout)
         self.process_timeout()
 
+    def on_connect(self, socket: WebSocketToSocket) -> None:
+        socket.message_received.connect(self.process_once)
+        socket.error_occurred.connect(self.on_socket_error)
+
+    def on_socket_error(self) -> None:
+        self.socket_error.emit()
+
 
 class ConnectionFactory:
-    def connect(self, server_address: tuple[str, int]) -> None:
+    def connect(self, server_address: tuple[str, int]) -> WebSocketToSocket:
         sock = WebSocketToSocket()
         sock.connect(server_address)
         return sock

@@ -5,12 +5,14 @@ import re
 import sys
 
 from irc.client import Event
-from irc.client import IRCError
 from irc.client import ServerConnection
+from irc.client import ServerConnectionError
 from irc.client import SimpleIRCClient
 from irc.client import is_channel
 from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QTimer
 from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtNetwork import QNetworkReply
 
 from src import config
 from src import util
@@ -80,14 +82,40 @@ class IrcSignals(QObject):
     connected = pyqtSignal()
     disconnected = pyqtSignal()
 
-    def __init__(self):
+
+class Reconnector(QObject):
+    def __init__(self, connection: IrcConnection) -> None:
         QObject.__init__(self)
+        self.connection = connection
+        self.timer = QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.reconnect)
+        self.failures = 0
+
+    def on_connect(self) -> None:
+        logger.debug("Chat reactor is connected!")
+        self.failures = 0
+        self.timer.stop()
+
+    def reconnect(self) -> None:
+        self.connection.begin_connection_process()
+
+    def on_connect_failure(self, reply: QNetworkReply) -> None:
+        self.failures += 1
+        self.on_disconnect()
+
+    def on_disconnect(self) -> None:
+        if self.failures < 3:
+            logger.info("Chat: reconnecting immediately")
+            self.reconnect()
+        else:
+            t = self.failures * 10_000
+            self.timer.start(t)
+            logger.info(f"Scheduling chat reconnect in {t / 1000}")
 
 
-class IrcConnection(IrcSignals, SimpleIRCClient):
+class IrcConnection(SimpleIRCClient, IrcSignals):
     reactor_class = ReactorForSocketAdapter
-
-    token_received = pyqtSignal(str)
 
     def __init__(self, host: int, port: int) -> None:
         IrcSignals.__init__(self)
@@ -96,7 +124,6 @@ class IrcConnection(IrcSignals, SimpleIRCClient):
         self.host = host
         self.port = port
         self.api_accessor = UserApiAccessor()
-        self.token_received.connect(self.on_token_received)
         self.connect_factory = ConnectionFactory()
 
         self._password = None
@@ -104,6 +131,9 @@ class IrcConnection(IrcSignals, SimpleIRCClient):
 
         self._nickserv_registered = False
         self._connected = False
+
+        self.reconnector = Reconnector(self)
+        self.reactor.socket_error.connect(self.reconnector.reconnect)
 
     @classmethod
     def build(cls, settings: config.Settings, **kwargs) -> IrcConnection:
@@ -125,14 +155,18 @@ class IrcConnection(IrcSignals, SimpleIRCClient):
         self._username = username
 
     def begin_connection_process(self) -> None:
-        self.api_accessor.get_by_endpoint("/irc/ergochat/token", self.handle_irc_token)
+        self.api_accessor.get_by_endpoint(
+            "/irc/ergochat/token",
+            self.handle_irc_token,
+            self.reconnector.on_connect_failure,
+        )
 
     def handle_irc_token(self, data: dict) -> None:
         irc_token = data["value"]
-        self.token_received.emit(irc_token)
-
-    def on_token_received(self, token: str) -> None:
-        self.connect_(self._nick, self._username, f"token:{token}")
+        if self.connect_(self._nick, self._username, f"token:{irc_token}"):
+            self.reconnector.on_connect()
+        else:
+            self.reconnector.reconnect()
 
     def connect_(self, nick: str, username: str, password: str) -> bool:
         logger.info(f"Connecting to IRC at: {self.host}:{self.port}")
@@ -151,9 +185,8 @@ class IrcConnection(IrcSignals, SimpleIRCClient):
                 sasl_login=username,
                 password=password,
             )
-            self.connection.socket.message_received.connect(self.reactor.process_once)
             return True
-        except IRCError:
+        except ServerConnectionError:
             logger.debug("Unable to connect to IRC server.")
             logger.error("IRC Exception", exc_info=sys.exc_info())
             return False
@@ -423,6 +456,8 @@ class IrcConnection(IrcSignals, SimpleIRCClient):
     def on_disconnect(self, c: ServerConnection, e: Event) -> None:
         self._connected = False
         self.disconnected.emit()
+        message = e.arguments[0]
+        logger.info(f"Disconnected from chat: {message}")
 
     def on_privmsg(self, c, e):
         chatter = self._event_to_chatter(e)

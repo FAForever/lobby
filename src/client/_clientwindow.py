@@ -873,8 +873,8 @@ class ClientWindow(FormClass, BaseClass):
         self._update_tools.mandatory_update_aborted.connect(self.close)
         self._update_tools.checker.check()
 
-    def _connect_chat(self, me):
-        if not self.use_chat:
+    def _connect_chat(self, me: Player) -> None:
+        if not self.use_chat or self._chatMVC.connection.is_connected():
             return
         self._chatMVC.connection.set_nick_and_username(me.login, f"{me.login}@FAF")
         self._chatMVC.connection.begin_connection_process()
