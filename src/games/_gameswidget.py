@@ -411,13 +411,6 @@ class GamesWidget(FormClass, BaseClass):
         self.matchFoundQueueName = message.get("queue_name", "")
         self.match_found_message.emit(message)
 
-    def handleMatchCancelled(self, message):
-        # the match cancelled message from the server can appear way too late,
-        # so any notifications or actions may be confusing if the user found a
-        # match but then aborted it and found a new one or joined/hosted a
-        # custom game
-        ...
-
     def isInGame(self, player_id):
         if self.client.players[player_id].currentGame is None:
             return False
