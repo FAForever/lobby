@@ -1,4 +1,4 @@
-from src.games.gamemodel import GameSortModel
+from src.games.filters.sortfiltermodel import GameSortModel
 from src.model.game import GameState
 
 

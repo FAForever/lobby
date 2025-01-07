@@ -10,7 +10,7 @@ class QtListModel(QAbstractListModel):
         self._itemlist = []  # For queries
         self._item_builder = item_builder
 
-    def rowCount(self, parent):
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         if parent.isValid():
             return 0
         return len(self._itemlist)

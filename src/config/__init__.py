@@ -4,6 +4,8 @@ import logging
 import os
 import sys
 import traceback
+from collections.abc import Generator
+from contextlib import contextmanager
 from logging.handlers import MemoryHandler
 from logging.handlers import RotatingFileHandler
 
@@ -40,6 +42,15 @@ class Settings:
     This wraps QSettings, fetching default values from the
     selected configuration module if the key isn't found.
     """
+
+    @contextmanager
+    @staticmethod
+    def group(name: str) -> Generator[QtCore.QSettings, None, None]:
+        try:
+            _settings.beginGroup(name)
+            yield _settings
+        finally:
+            _settings.endGroup()
 
     @staticmethod
     def get(key, default=None, type=str):
