@@ -1,6 +1,5 @@
 import json
 import logging
-from typing import Any
 from typing import Callable
 
 from PyQt6 import QtWidgets
@@ -26,6 +25,9 @@ DO_NOT_ENCODE.append(b":/?&=.,")
 class ApiBase(QObject):
     oauth: OAuth2Flow = OAuth2FlowInstance
 
+    def __do_nothing(*args, **kwargs) -> None:
+        pass
+
     def __init__(self, route: str = "") -> None:
         QObject.__init__(self)
         self.route = route
@@ -33,7 +35,8 @@ class ApiBase(QObject):
         self.manager = QNetworkAccessManager()
         self.manager.finished.connect(self.onRequestFinished)
         self._running = False
-        self.handlers: dict[QNetworkReply | None, Callable[[dict], Any]] = {}
+        self.handlers: dict[QNetworkReply | None, Callable] = {}
+        self.error_handlers: dict[QNetworkReply | None, Callable] = {}
 
     @classmethod
     def set_oauth(cls, oauth: OAuth2Flow) -> None:
@@ -57,13 +60,23 @@ class ApiBase(QObject):
         return QUrl(Settings.get(self.host_config_key))
 
     # query arguments like filter=login==Rhyza
-    def get_by_query(self, query_dict: dict, response_handler: Callable[[dict], Any]) -> None:
+    def get_by_query(
+            self,
+            query_dict: dict,
+            response_handler: Callable,
+            error_handler: Callable = __do_nothing,
+    ) -> None:
         url = self.build_query_url(query_dict)
-        self.get(url, response_handler)
+        self.get(url, response_handler, error_handler)
 
-    def get_by_endpoint(self, endpoint: str, response_handler: Callable[[dict], Any]) -> None:
+    def get_by_endpoint(
+            self,
+            endpoint: str,
+            response_handler: Callable,
+            error_handler: Callable = __do_nothing,
+    ) -> None:
         url = self._get_host_url().resolved(QUrl(endpoint))
-        self.get(url, response_handler)
+        self.get(url, response_handler, error_handler)
 
     @staticmethod
     def prepare_request(url: QUrl | None) -> QNetworkRequest:
@@ -74,11 +87,17 @@ class ApiBase(QObject):
         request.setAttribute(QNetworkRequest.Attribute.Http2AllowedAttribute, False)
         return request
 
-    def get(self, url: QUrl, response_handler: Callable[[dict], Any]) -> None:
+    def get(
+            self,
+            url: QUrl,
+            response_handler: Callable,
+            error_handler: Callable = __do_nothing,
+    ) -> None:
         self._running = True
         logger.debug("Sending API request with URL: {}".format(url.toString()))
         reply = self.manager.get(self.prepare_request(url))
         self.handlers[reply] = response_handler
+        self.error_handlers[reply] = error_handler
 
     def parse_message(self, message: dict) -> dict:
         return message
@@ -86,13 +105,15 @@ class ApiBase(QObject):
     def onRequestFinished(self, reply: QNetworkReply) -> None:
         self._running = False
         if reply.error() != QNetworkReply.NetworkError.NoError:
-            logger.error("API request error: {}".format(reply.error()))
+            logger.error(f"API request error: {reply.error()}")
+            self.error_handlers[reply](reply)
         else:
             message_bytes = reply.readAll().data()
             message = json.loads(message_bytes.decode('utf-8'))
             result = self.parse_message(message)
             self.handlers[reply](result)
         self.handlers.pop(reply)
+        self.error_handlers.pop(reply)
         reply.deleteLater()
 
     def waitForCompletion(self):

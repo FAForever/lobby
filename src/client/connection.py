@@ -9,6 +9,7 @@ from PyQt6 import QtCore
 from PyQt6 import QtNetwork
 from PyQt6.QtCore import QByteArray
 from PyQt6.QtCore import QUrl
+from PyQt6.QtNetwork import QNetworkReply
 from PyQt6.QtWebSockets import QWebSocket
 
 from src import fa
@@ -159,7 +160,6 @@ class ServerConnection(QtCore.QObject):
     connected = QtCore.pyqtSignal()
     disconnected = QtCore.pyqtSignal()
     message_received = QtCore.pyqtSignal()
-    access_url_ready = QtCore.pyqtSignal(QtCore.QUrl)
 
     def __init__(self, host, port, dispatch):
         QtCore.QObject.__init__(self)
@@ -178,7 +178,6 @@ class ServerConnection(QtCore.QObject):
         self._dispatch = dispatch
 
         self.api_accessor = UserApiAccessor()
-        self.access_url_ready.connect(self.open_websocket)
 
     def on_socket_state_change(self, state):
         states = QtNetwork.QAbstractSocket.SocketState
@@ -237,20 +236,23 @@ class ServerConnection(QtCore.QObject):
     def do_connect(self):
         self._disconnect_requested = False
         self.state = ConnectionState.CONNECTING
-        self.api_accessor.get_by_endpoint("/lobby/access", self.handle_lobby_access_api_response)
+        self.api_accessor.get_by_endpoint(
+            "/lobby/access",
+            self.handle_lobby_access_api_response,
+            self.on_lobby_access_api_error,
+        )
 
-    def extract_url_from_api_response(self, data: dict) -> None:
+    def extract_url_from_api_response(self, data: dict) -> QUrl:
         # FIXME: remove this workaround when bug is resolved
         # see https://bugreports.qt.io/browse/QTBUG-120492
         url = data["accessUrl"].replace("?verify", "/?verify")
         return QUrl(url)
 
+    def on_lobby_access_api_error(self, reply: QNetworkReply) -> None:
+        self.state = ConnectionState.DISCONNECTED
+
     def handle_lobby_access_api_response(self, data: dict) -> None:
         url = self.extract_url_from_api_response(data)
-        self.access_url_ready.emit(url)
-
-    @QtCore.pyqtSlot(QtCore.QUrl)
-    def open_websocket(self, url: QUrl) -> None:
         logger.debug(f"Opening WebSocket url: {url}")
         self.socket.open(url)
 
