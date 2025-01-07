@@ -273,6 +273,7 @@ class ClientWindow(FormClass, BaseClass):
         self.lobby_dispatch["match_found"] = self.handle_match_found_message
         self.lobby_dispatch["match_cancelled"] = self.handle_match_cancelled
         self.lobby_dispatch["search_info"] = self.handle_search_info
+        self.lobby_dispatch["search_violation"] = self.handle_search_violation
         self.lobby_info.social.connect(self.handle_social)
 
         # Process used to run Forged Alliance (managed in module fa)
@@ -2064,3 +2065,9 @@ class ClientWindow(FormClass, BaseClass):
     def handle_search_info(self, message):
         logger.info("Handling search_info via JSON: {}".format(message))
         self.games.handleMatchmakerSearchInfo(message)
+
+    def handle_search_violation(self, message: ServerMessage) -> None:
+        # server handles violations and sends notice with each of them
+        # in addition to this message (which contains count and time)
+        # and currently there's no apparent reason to handle it
+        pass
