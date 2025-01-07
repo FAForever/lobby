@@ -223,8 +223,8 @@ class LiveReplaysWidgetHandler(object):
         menu = QtWidgets.QMenu(self.liveTree)
 
         # Actions for Games and Replays
-        actionReplay = QtWidgets.QAction("Replay in FA", menu)
-        actionLink = QtWidgets.QAction("Copy Link", menu)
+        actionReplay = QtGui.QAction("Replay in FA", menu)
+        actionLink = QtGui.QAction("Copy Link", menu)
 
         # Adding to menu
         menu.addAction(actionReplay)
@@ -515,8 +515,8 @@ class LocalReplaysWidgetHandler(object):
         menu = QtWidgets.QMenu(self.myTree)
 
         # Actions for Games and Replays
-        actionReplay = QtWidgets.QAction("Replay", menu)
-        actionExplorer = QtWidgets.QAction("Show in Explorer", menu)
+        actionReplay = QtGui.QAction("Replay", menu)
+        actionExplorer = QtGui.QAction("Show in Explorer", menu)
 
         # Adding to menu
         menu.addAction(actionReplay)

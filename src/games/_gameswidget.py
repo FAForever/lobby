@@ -7,6 +7,7 @@ from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtGui import QAction
 from PyQt6.QtGui import QColor
 from PyQt6.QtGui import QCursor
 
@@ -290,7 +291,7 @@ class GamesWidget(FormClass, BaseClass):
             playerLogin = item.data(0)
             playerId = self.client.players[playerLogin].id
             menu = QtWidgets.QMenu(self)
-            actionKick = QtWidgets.QAction("Kick from party", menu)
+            actionKick = QAction("Kick from party", menu)
             actionKick.triggered.connect(
                 lambda: self.kickPlayerFromParty(playerId),
             )

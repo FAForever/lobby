@@ -1677,16 +1677,11 @@ class ClientWindow(FormClass, BaseClass):
             if self.mod_menu is None:
                 self.mod_menu = self.menu.addMenu("Administration")
 
-            action_lobby_kick = QtWidgets.QAction(
-                "Close player's FAF Client...", self.mod_menu,
-            )
+            action_lobby_kick = QtGui.QAction("Close player's FAF Client...", self.mod_menu)
             action_lobby_kick.triggered.connect(self._on_lobby_kick_triggered)
             self.mod_menu.addAction(action_lobby_kick)
 
-            action_close_fa = QtWidgets.QAction(
-                "Close Player's Game...",
-                self.mod_menu,
-            )
+            action_close_fa = QtGui.QAction("Close Player's Game...", self.mod_menu)
             action_close_fa.triggered.connect(self._close_game_dialog)
             self.mod_menu.addAction(action_close_fa)
 
