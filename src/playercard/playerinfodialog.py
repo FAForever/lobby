@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import QTableWidgetItem
 
 from src import util
@@ -95,3 +96,7 @@ class PlayerInfoDialog(FormClass, BaseClass):
     def process_player_events(self, events: list[PlayerEvent]) -> None:
         for chartview in self.stats_charts.player_events_charts(events):
             self.statsChartsLayout.addWidget(chartview)
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self.tab_widget_ctrl.close()
+        BaseClass.closeEvent(self, event)

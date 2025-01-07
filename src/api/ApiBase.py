@@ -99,3 +99,8 @@ class ApiBase(QObject):
         waitFlag = QEventLoop.ProcessEventsFlag.WaitForMoreEvents
         while self._running:
             QtWidgets.QApplication.processEvents(waitFlag)
+
+    def abort(self) -> None:
+        for reply in self.handlers.copy():
+            if reply is not None:
+                reply.abort()

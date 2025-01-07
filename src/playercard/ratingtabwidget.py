@@ -91,6 +91,10 @@ class RatingsPlotTab(QObject):
         self.workers = []
 
     def __del__(self) -> None:
+        self.close()
+
+    def close(self) -> None:
+        self.ratings_history_api.abort()
         try:
             self.clear_threads()
         except RuntimeError:
@@ -141,6 +145,10 @@ class RatingTabWidgetController:
 
     def run(self) -> None:
         self.leaderboards_api.requestData()
+
+    def close(self) -> None:
+        for tab in self.tabs.values():
+            tab.close()
 
     def populate_leaderboards(self, message: dict[str, list[Leaderboard]]) -> None:
         for index, leaderboard in enumerate(message["values"]):
