@@ -1947,17 +1947,15 @@ class ClientWindow(FormClass, BaseClass):
             self.power_tools.power = message["power"]
             self.manage_power()
 
-    def handle_player_info(self, message):
+    def handle_player_info(self, message: ServerMessage) -> None:
         players = message["players"]
 
-        # Fix id being a Python keyword
         for player in players:
-            player["id_"] = player["id"]
-            del player["id"]
+            # Fix id being a Python keyword
+            player["id_"] = player.pop("id")
 
-        for player in players:
             id_ = int(player["id_"])
-            logger.debug('Received update about player {}'.format(id_))
+            logger.debug(f"Received update about player {id_}")
             if id_ in self.players:
                 self.players[id_].update(**player)
             else:
