@@ -10,9 +10,9 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QGridLayout
 from PyQt6.QtWidgets import QLabel
-from PyQt6.QtWidgets import QLayout
 from PyQt6.QtWidgets import QProgressBar
 from PyQt6.QtWidgets import QSizePolicy
+from PyQt6.QtWidgets import QVBoxLayout
 from PyQt6.QtWidgets import QWidget
 
 from src.api.models.Achievement import Achievement
@@ -80,6 +80,7 @@ class AchievementWidget(FormClass, BaseClass):
 
     def set_icon(self, pixmap: QPixmap) -> None:
         self.iconLabel.setPixmap(pixmap)
+        self.iconLabel.setEnabled(self.player_achievement.current_state == State.UNLOCKED)
 
     def on_icon_downloaded(self, _: str, pixmap: QPixmap) -> None:
         self.set_icon(pixmap)
@@ -89,7 +90,7 @@ class AchievementWidget(FormClass, BaseClass):
 
 
 class AchievementsHandler:
-    def __init__(self, layout: QLayout, player_id: str) -> None:
+    def __init__(self, layout: QVBoxLayout, player_id: str) -> None:
         self.player_id = player_id
         self.layout = layout
         self.player_achievements_api = PlayerAchievementApiAccessor()
@@ -156,9 +157,9 @@ class AchievementsHandler:
             self,
             player_achievements: Iterator[PlayerAchievement],
     ) -> AchievementGroup:
-        unlocked, locked, included_ids = [], [], []
+        unlocked, locked, progressed_any_percent = [], [], []
         for player_achievement in player_achievements:
-            included_ids.append(player_achievement.achievement.xd)
+            progressed_any_percent.append(player_achievement.achievement.xd)
             if player_achievement.current_state == State.UNLOCKED:
                 unlocked.append(player_achievement)
             else:
@@ -166,7 +167,7 @@ class AchievementsHandler:
         locked.extend((
             self.mock_player_achievement(entry)
             for entry in self.all_achievements
-            if entry.xd not in included_ids
+            if entry.xd not in progressed_any_percent
         ))
         return AchievementGroup(locked, unlocked)
 
