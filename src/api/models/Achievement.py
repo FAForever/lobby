@@ -1,17 +1,18 @@
 from __future__ import annotations
 
+from enum import Enum
+
 from pydantic import Field
 
 from src.api.models.AbstractEntity import AbstractEntity
-from src.util import StringValuedEnum
 
 
-class State(StringValuedEnum):
+class State(Enum):
     REVEALED = "REVEALED"
     UNLOCKED = "UNLOCKED"
 
 
-class ProgressType(StringValuedEnum):
+class ProgressType(Enum):
     STANDARD = "STANDARD"
     INCREMENTAL = "INCREMENTAL"
 
@@ -34,8 +35,8 @@ class Achievement(AbstractEntity):
 
     @property
     def init_state(self) -> State:
-        return State.from_string(self.initial_state)
+        return State(self.initial_state)
 
     @property
     def progress_type(self) -> ProgressType:
-        return ProgressType.from_string(self.typ)
+        return ProgressType(self.typ)

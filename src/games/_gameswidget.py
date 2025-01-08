@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING
+from typing import Self
 
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt
@@ -34,43 +35,29 @@ FormClass, BaseClass = util.THEME.loadUiType("games/games.ui")
 
 
 class Party:
-    def __init__(self, owner_id=-1, owner=None):
+    def __init__(self, owner_id: int = -1, owner: PartyMember | None = None) -> None:
         self.owner_id = owner_id
         self.members = [owner] if owner else []
 
     @property
-    def memberCount(self):
-        return len(self.memberList)
+    def member_count(self) -> int:
+        return len(self.members)
+
+    def add_member(self, member: PartyMember) -> None:
+        self.members.append(member)
 
     @property
-    def memberList(self):
-        return self.members
+    def member_ids(self) -> list[int]:
+        return [member.id_ for member in self.members]
 
-    def addMember(self, member):
-        self.memberList.append(member)
-
-    @property
-    def memberIds(self):
-        uids = []
-        if len(self.members) > 0:
-            for member in self.members:
-                uids.append(member.id_)
-        return uids
-
-    def __eq__(self, other):
-        if (
-            sorted(self.memberIds) == sorted(other.memberIds)
-            and self.owner_id == other.owner_id
-        ):
-            return True
-        else:
-            return False
+    def __eq__(self, other: Self) -> bool:
+        return set(self.member_ids) == set(other.member_ids) and self.owner_id == other.owner_id
 
 
 class PartyMember:
-    def __init__(self, id_=-1, factions=None):
+    def __init__(self, id_: int = -1, factions: list[str] | None = None) -> None:
         self.id_ = id_
-        self.factions = ["uef", "cybran", "aeon", "seraphim"]
+        self.factions = factions
 
 
 class GamesWidget(FormClass, BaseClass):
@@ -199,7 +186,7 @@ class GamesWidget(FormClass, BaseClass):
 
         if (
             self.party is not None
-            and self.party.memberCount > 1
+            and self.party.member_count > 1
             and not self.leave_party()
         ):
             return
@@ -235,7 +222,7 @@ class GamesWidget(FormClass, BaseClass):
 
         if (
             self.party is not None
-            and self.party.memberCount > 1
+            and self.party.member_count > 1
             and not self.leave_party()
         ):
             return
@@ -263,9 +250,7 @@ class GamesWidget(FormClass, BaseClass):
             menu.popup(QCursor.pos())
 
     def updateParty(self, message):
-        players_ids = []
-        for member in message["members"]:
-            players_ids.append(member["player"])
+        players_ids = [member["player"] for member in message["members"]]
 
         old_owner = self.client.players[self.party.owner_id]
         new_owner = self.client.players[message["owner"]]
@@ -283,17 +268,15 @@ class GamesWidget(FormClass, BaseClass):
             new_party.owner_id = new_owner.id
             for member in message["members"]:
                 players_id = member["player"]
-                new_party.addMember(
-                    PartyMember(id_=players_id, factions=member["factions"]),
-                )
+                new_party.add_member(PartyMember(id_=players_id, factions=member["factions"]))
         else:
             new_party.owner_id = self._me.id
-            new_party.addMember(PartyMember(id_=self._me.id))
+            new_party.add_member(PartyMember(id_=self._me.id))
 
         if self.party != new_party:
             self.stopSearch()
             self.party = new_party
-            if self.party.memberCount > 1:
+            if self.party.member_count > 1:
                 self.client._chatMVC.connection.join(
                     "#{}{}".format(new_owner.login, PARTY_CHANNEL_SUFFIX),
                 )
@@ -308,15 +291,15 @@ class GamesWidget(FormClass, BaseClass):
     def hidePartyInfo(self):
         self.partyInfo.hide()
 
-    def updatePartyInfoFrame(self):
-        if self.party.memberCount > 1:
+    def updatePartyInfoFrame(self) -> None:
+        if self.party.member_count > 1:
             self.showPartyInfo()
         else:
             self.hidePartyInfo()
 
-    def updateTeamList(self):
+    def updateTeamList(self) -> None:
         self.teamList.clear()
-        for member_id in self.party.memberIds:
+        for member_id in self.party.member_ids:
             if member_id != self._me.id:
                 item = QtWidgets.QListWidgetItem(
                     self.client.players[member_id].login,

@@ -10,7 +10,6 @@ class ModType(Enum):
 
     @staticmethod
     def from_string(string: str) -> ModType:
-        for modtype in list(ModType):
-            if modtype.value == string:
-                return modtype
+        if string in ModType:
+            return ModType(string)
         return ModType.OTHER

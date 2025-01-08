@@ -7,8 +7,6 @@ import re
 import shutil
 import subprocess
 import sys
-from enum import Enum
-from typing import Self
 
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import QDateTime
@@ -529,13 +527,3 @@ def capitalize(string: str) -> str:
     Capitalize the first letter only, leave the rest as it is
     """
     return f"{string[0].upper()}{string[1:]}"
-
-
-class StringValuedEnum(Enum):
-
-    @classmethod
-    def from_string(cls, string: str) -> Self:
-        for member in iter(cls):
-            if member.value == string:
-                return member
-        raise ValueError("Unsupported value")
