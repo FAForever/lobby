@@ -1,6 +1,12 @@
 0.x.x
 =====
 
+0.22.3
+* Allow user to create custom game filters
+* Improve broken reconnection (hopefully fix)
+* Fix broken QActions
+* Fix crashes on player card early closing
+
 0.22.2
 * Freeze application for linux and ship it as tar.gz archive
 * Fix dragging window near screen edges
