@@ -88,7 +88,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Set rules upon which games will be EXCLUDED from game list</string>
+         <string>Set rules upon which games will be EXCLUDED from game list. Case insensitive</string>
         </property>
        </widget>
       </item>
