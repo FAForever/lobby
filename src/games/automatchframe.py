@@ -148,7 +148,7 @@ class MatchmakerQueue(FormClass, BaseClass):
 
     def startSearchRanked(self):
         if (
-            self.games.party.memberCount > self.teamSize
+            self.games.party.member_count > self.teamSize
             or self.games.party.owner_id != self.client.me.id
         ):
             return
@@ -196,7 +196,7 @@ class MatchmakerQueue(FormClass, BaseClass):
 
     def handlePartyUpdate(self):
         if (
-            self.games.party.memberCount > self.teamSize
+            self.games.party.member_count > self.teamSize
             or self.games.party.owner_id != self.client.me.id
         ):
             self.rankedPlay.setEnabled(False)

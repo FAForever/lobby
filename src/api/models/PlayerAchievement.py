@@ -15,4 +15,4 @@ class PlayerAchievement(AbstractEntity):
 
     @property
     def current_state(self) -> State:
-        return State.from_string(self.state)
+        return State(self.state)

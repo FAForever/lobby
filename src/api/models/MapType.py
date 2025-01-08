@@ -10,8 +10,6 @@ class MapType(Enum):
 
     @staticmethod
     def from_string(map_type: str) -> MapType:
-        for mtype in list(MapType):
-            if mtype.value == map_type:
-                return mtype
-        else:
-            return MapType.OTHER
+        if map_type in MapType:
+            return MapType(map_type)
+        return MapType.OTHER

@@ -172,11 +172,8 @@ class PlayerContextMenu:
         if online_player is None:
             return
 
-        if online_player.id in self._client_window.games.party.memberIds:
-            if (
-                self._me.player.id
-                == self._client_window.games.party.owner_id
-            ):
+        if online_player.id in self._client_window.games.party.member_ids:
+            if self._me.player.id == self._client_window.games.party.owner_id:
                 yield PlayerMenuItem.KICK_FROM_PARTY
         elif online_player.currentGame is not None:
             return
