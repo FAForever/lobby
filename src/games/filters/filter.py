@@ -50,7 +50,7 @@ class GameFilter(NamedTuple):
                 return op(game.average_rating, int(self.value))
             except (TypeError, ValueError):
                 pass
-        return True
+        return False
 
     def accepts(self, game: Game) -> bool:
         return not self.rejects(game)
